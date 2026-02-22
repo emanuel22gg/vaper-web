@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { Upload } from 'lucide-react';
+import { ImageSelector } from '../shared/ImageSelector';
 import { toast } from "sonner";
 
 interface Categoria {
@@ -74,6 +74,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [selectedImageId, setSelectedImageId] = useState<number | undefined>(undefined);
 
   // Cargar datos del producto cuando se abre el diálogo
   useEffect(() => {
@@ -91,6 +92,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       });
       setImagePreview(producto.imagen || '');
       setImageFile(null);
+      setSelectedImageId(undefined);
     }
   }, [producto, isOpen]);
 
@@ -101,24 +103,41 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validar tamaño máximo de 5MB
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("La imagen no debe superar los 5MB");
-        return;
-      }
-      
-      setImageFile(file);
-      
-      // Crear preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleImageFileSelect = (file: File) => {
+    // Validar tipo de archivo (solo PNG y JPG)
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Solo se permiten archivos PNG o JPG");
+      return;
     }
+    
+    // Validar tamaño máximo de 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen no debe superar los 5MB");
+      return;
+    }
+    
+    setImageFile(file);
+    setSelectedImageId(undefined);
+    
+    // Crear preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageGallerySelect = (id: number, url: string) => {
+    setSelectedImageId(id);
+    setImagePreview(url);
+    setImageFile(null);
+  };
+
+  const handleImageClear = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setSelectedImageId(undefined);
   };
 
   const validateForm = () => {
@@ -134,11 +153,13 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       toast.error("Debe seleccionar una categoría");
       return false;
     }
-    if (!formData.precio || parseFloat(formData.precio) <= 0) {
-      toast.error("El precio debe ser mayor a 0");
+    // Validar precio solo si está ingresado y no es vacío
+    if (formData.precio && parseFloat(formData.precio) < 0) {
+      toast.error("El precio no puede ser negativo");
       return false;
     }
-    if (!formData.stock || parseInt(formData.stock) < 0) {
+    // Validar stock solo si está ingresado y no es vacío
+    if (formData.stock && parseInt(formData.stock) < 0) {
       toast.error("El stock no puede ser negativo");
       return false;
     }
@@ -167,9 +188,13 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
 
       // Determinar el estado basado en el stock
       let estado = formData.estado;
-      if (parseInt(formData.stock) === 0) {
+      if (formData.stock && parseInt(formData.stock) === 0) {
         estado = 'agotado';
       }
+
+      // Mantener valores originales si los campos están vacíos
+      const precioActualizado = formData.precio ? parseFloat(formData.precio) : producto.precio;
+      const stockActualizado = formData.stock ? parseInt(formData.stock) : producto.stock;
 
       const productoActualizado: Producto = {
         ...producto,
@@ -177,8 +202,8 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
         categoria,
-        precio: parseFloat(formData.precio),
-        stock: parseInt(formData.stock),
+        precio: precioActualizado,
+        stock: stockActualizado,
         estado,
         imagen: imagePreview || formData.imagen.trim() || undefined,
         puffs: formData.puffs ? parseInt(formData.puffs) : undefined,
@@ -249,21 +274,19 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
           {/* Precio y Stock */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="precio">Precio de Venta ($) *</Label>
+              <Label htmlFor="precio">Precio de Venta (Opcional)</Label>
               <Input
                 id="precio"
                 type="number"
-                min="0"
-                step="0.01"
+                min=""
                 value={formData.precio}
                 onChange={(e) => handleInputChange('precio', e.target.value)}
                 placeholder="25000"
-                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="stock">Stock *</Label>
+              <Label htmlFor="stock">Stock (Opcional)</Label>
               <Input
                 id="stock"
                 type="number"
@@ -271,7 +294,6 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
                 value={formData.stock}
                 onChange={(e) => handleInputChange('stock', e.target.value)}
                 placeholder="100"
-                required
               />
             </div>
           </div>
@@ -291,37 +313,13 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
           </div>
 
           {/* Imagen del Producto */}
-          <div className="space-y-2">
-            <Label htmlFor="imagen">Imagen del Producto</Label>
-            <div className="space-y-2">
-              <input
-                type="file"
-                id="imagen-file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('imagen-file')?.click()}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Subir Imagen
-              </Button>
-              {imagePreview && (
-                <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Tamaño máximo: 5MB</p>
-            </div>
-          </div>
+          <ImageSelector
+            selectedImageId={selectedImageId}
+            previewUrl={imagePreview}
+            onImageSelect={handleImageGallerySelect}
+            onFileSelect={handleImageFileSelect}
+            onClear={handleImageClear}
+          />
 
           {/* Descripción */}
           <div className="space-y-2">
@@ -340,7 +338,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-yellow-400 hover:bg-yellow-500 text-black border-none">
+<Button type="submit" disabled={isLoading} className="bg-black hover:bg-gray-800 text-white border-none">
               {isLoading ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </DialogFooter>

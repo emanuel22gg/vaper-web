@@ -8,6 +8,7 @@ import { getAllImages } from '../../services/api';
 import { ImageneDto } from '../../types';
 import { Image, Upload, X, Check } from 'lucide-react';
 import { cn } from '../ui/utils';
+import { toast } from "sonner";
 
 interface ImageSelectorProps {
     // Current selection
@@ -45,6 +46,12 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validar que solo sean archivos PNG o JPG
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+            if (!allowedTypes.includes(file.type)) {
+                toast.error("Solo se permiten archivos PNG o JPG");
+                return;
+            }
             onFileSelect(file);
         }
     };
@@ -63,7 +70,7 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
             <div className="border rounded-md p-4 bg-gray-50/50">
                 {previewUrl ? (
                     <div className="flex flex-col items-center justify-center p-4 space-y-2">
-                        <div className="relative h-40 w-full max-w-xs overflow-hidden rounded-md border bg-white shadow-sm">
+                        <div className="relative h-24 w-full max-w-xs overflow-hidden rounded-md border bg-white shadow-sm">
                             <img
                                 src={previewUrl}
                                 alt="Selected"
@@ -73,9 +80,6 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
                         <p className="text-sm text-gray-500">
                             {selectedImageId ? `Imagen ID: ${selectedImageId}` : 'Nueva imagen seleccionada'}
                         </p>
-                        <Button variant="outline" size="sm" onClick={onClear}>
-                            Cambiar Imagen
-                        </Button>
                     </div>
                 ) : (
                     <Tabs defaultValue="upload" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -99,11 +103,18 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
                                 <Input
                                     id="image-upload"
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/png, image/jpeg, image/jpg"
                                     className="hidden"
                                     onChange={handleFileChange}
                                 />
-                                <Button variant="outline" onClick={() => document.getElementById('image-upload')?.click()}>
+                                <Button 
+                                    variant="outline" 
+                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        document.getElementById('image-upload')?.click();
+                                    }}
+                                >
                                     Seleccionar Archivo
                                 </Button>
                             </div>

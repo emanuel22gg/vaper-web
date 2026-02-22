@@ -21,6 +21,7 @@ export const filtrarCategorias = (
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
     categoriasFiltradas = categoriasFiltradas.filter(categoria =>
+      String(categoria.id).includes(term) ||
       (categoria.nombreCategoria?.toLowerCase() || '').includes(term) ||
       (categoria.descripcion?.toLowerCase() || '').includes(term)
     );
