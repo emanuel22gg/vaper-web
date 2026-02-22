@@ -50,6 +50,12 @@ export interface User {
   password?: string;
   firstName: string;
   lastName: string;
+  numeroDocumento: string;
+  tipoDocumento: string;
+  telefono: string;
+  direccion: string;
+  barrio: string;
+  fechaNacimiento: string;
   role: Role;
   isActive: boolean;
   createdAt: Date;

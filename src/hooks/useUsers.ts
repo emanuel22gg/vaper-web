@@ -61,6 +61,12 @@ export const useUsers = () => {
                     email: u.correo,
                     firstName: u.nombres,
                     lastName: u.apellidos,
+                    numeroDocumento: u.numeroDocumento,
+                    tipoDocumento: u.tipoDocumento,
+                    telefono: u.telefono,
+                    direccion: u.direccion,
+                    barrio: u.barrio,
+                    fechaNacimiento: u.fechaNacimiento,
                     role: userRole,
                     isActive: u.estadoUsuario,
                     createdAt: new Date(u.fechaNacimiento)
@@ -174,11 +180,24 @@ export const useUsers = () => {
         },
         deleteRole: async (roleId: string) => {
             try {
+                // 1. Verificar si hay usuarios asignados (esto ya lo hacía, pero lo mantenemos)
                 const usersWithRole = users.filter(u => u.role.id === roleId);
                 if (usersWithRole.length > 0) {
                     throw new Error('No se puede eliminar un rol que está siendo usado por usuarios');
                 }
 
+                // 2. IMPORTANTE: Antes de eliminar el rol, debemos eliminar sus asociaciones en RolesPermisoes
+                // de lo contrario la API fallará por restricción de clave foránea.
+                const allRolesPermisos = await apiService.getRolesPermisos();
+                const associationsToRemove = allRolesPermisos.filter(rp => rp.rolId === parseInt(roleId));
+
+                if (associationsToRemove.length > 0) {
+                    console.log(`Eliminando ${associationsToRemove.length} asociaciones de permisos para el rol ${roleId}...`);
+                    const removePromises = associationsToRemove.map(rp => apiService.deleteRolPermiso(rp.id));
+                    await Promise.all(removePromises);
+                }
+
+                // 3. Ahora sí podemos eliminar el rol
                 await apiService.deleteRol(parseInt(roleId));
                 await loadData();
             } catch (error) {
