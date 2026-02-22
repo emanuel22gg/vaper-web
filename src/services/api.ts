@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian } from '../types';
 
 const API_URL = '/api';
 
@@ -9,6 +9,10 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
+});
+
+const geographyApi = axios.create({
+    baseURL: 'https://api-colombia.com/api/v1',
 });
 
 // Categories Service
@@ -84,6 +88,18 @@ export const createUsuario = async (usuario: Omit<UsuarioDto, 'id'>): Promise<Us
     return response.data;
 };
 
+export const updateUsuario = async (id: number, usuario: UsuarioDto): Promise<UsuarioDto> => {
+    const response = await api.put(`/Usuarios/${id}`, {
+        ...usuario,
+        id
+    });
+    return response.data;
+};
+
+export const deleteUsuario = async (id: number): Promise<void> => {
+    await api.delete(`/Usuarios/${id}`);
+};
+
 // Roles & Permissions Service
 export const getRoles = async (): Promise<RolDto[]> => {
     const response = await api.get('/Roles');
@@ -148,4 +164,73 @@ export const resetPassword = async (request: { correo: string; codigo: string; n
         console.error('Error en resetPassword service:', error);
         throw error;
     }
+};
+
+// Products Service
+export const getProductos = async (): Promise<Producto[]> => {
+    const response = await api.get('/Productoes');
+    return response.data;
+};
+
+export const createProducto = async (producto: ProductoDto): Promise<Producto> => {
+    const response = await api.post('/Productoes', producto);
+    return response.data;
+};
+
+export const updateProducto = async (id: number, producto: ProductoDto): Promise<Producto> => {
+    const response = await api.put(`/Productoes/${id}`, {
+        ...producto,
+        id
+    });
+    return response.data;
+};
+
+export const deleteProducto = async (id: number): Promise<void> => {
+    await api.delete(`/Productoes/${id}`);
+};
+
+// VentaPedidos Service
+export const getVentaPedidos = async (): Promise<VentaPedidoDto[]> => {
+    const response = await api.get('/VentaPedidos');
+    return response.data;
+};
+
+export const getVentaPedidoById = async (id: number): Promise<VentaPedidoDto> => {
+    const response = await api.get(`/VentaPedidos/${id}`);
+    return response.data;
+};
+
+export const createVentaPedido = async (ventaPedido: VentaPedidoDto): Promise<VentaPedidoDto> => {
+    const response = await api.post('/VentaPedidos', ventaPedido);
+    return response.data;
+};
+
+export const updateVentaPedido = async (id: number, ventaPedido: VentaPedidoDto): Promise<VentaPedidoDto> => {
+    const response = await api.put(`/VentaPedidos/${id}`, {
+        ...ventaPedido,
+        id
+    });
+    return response.data;
+};
+
+export const deleteVentaPedido = async (id: number): Promise<void> => {
+    await api.delete(`/VentaPedidos/${id}`);
+};
+
+// Search Usuarios by Documento (for Clients)
+export const getUsuarioByDocumento = async (documento: string): Promise<UsuarioDto | null> => {
+    const response = await api.get('/Usuarios');
+    const usuarios: UsuarioDto[] = response.data;
+    return usuarios.find(u => u.numeroDocumento === documento) || null;
+};
+
+// Colombian Geography Services
+export const getDepartments = async (): Promise<DepartmentColombian[]> => {
+    const response = await geographyApi.get('/Department');
+    return response.data;
+};
+
+export const getCitiesByDepartment = async (departmentId: number): Promise<CityColombian[]> => {
+    const response = await geographyApi.get(`/Department/${departmentId}/cities`);
+    return response.data;
 };

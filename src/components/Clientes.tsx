@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -14,7 +14,18 @@ import { Textarea } from './ui/textarea';
 import { Separator } from './ui/separator';
 import { TablePagination } from './ui/TablePagination';
 import { toast } from "sonner";
-import { Cliente } from '../types';
+import { cn } from "./ui/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "./ui/command";
+import { UsuarioDto, DepartmentColombian, CityColombian } from '../types';
+import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getDepartments, getCitiesByDepartment } from '../services/api';
 import { UniversalDeleteDialog } from './UniversalDeleteDialog';
 import {
   Plus,
@@ -30,181 +41,17 @@ import {
   XCircle,
   Ban,
   Filter,
-  UserPlus
+  UserPlus,
+  Loader2,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react';
 
-// Datos simulados
-const mockClientes: Cliente[] = [
-  {
-    id: '1',
-    codigo: 'CLI-001',
-    nombre: 'Ana',
-    apellido: 'García',
-    email: 'ana.garcia@email.com',
-    telefono: '+57 300 111 2222',
-    celular: '+57 300 111 2222',
-    direccion: 'Carrera 65 #45-30',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1990-05-15'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '1234567890',
-    tipo: 'Minorista',
-    estado: 'Activo',
-    fechaRegistro: new Date('2023-01-15'),
-    totalCompras: 1250000,
-    cantidadOrdenes: 28,
-    ultimaCompra: new Date('2024-03-10'),
-    genero: 'Femenino',
-    recibePromociones: true,
-    observaciones: 'Cliente activo, excelente historial de compras.'
-  },
-  {
-    id: '2',
-    codigo: 'CLI-002',
-    nombre: 'Carlos',
-    apellido: 'Rodríguez',
-    email: 'carlos.rodriguez@email.com',
-    telefono: '+57 310 333 4444',
-    celular: '+57 310 333 4444',
-    direccion: 'Calle 50 #20-15',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1985-08-22'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '2345678901',
-    tipo: 'Mayorista',
-    estado: 'Activo',
-    fechaRegistro: new Date('2023-03-20'),
-    totalCompras: 2800000,
-    cantidadOrdenes: 45,
-    ultimaCompra: new Date('2024-03-08'),
-    genero: 'Masculino',
-    recibePromociones: true,
-    observaciones: 'Cliente mayorista con excelente capacidad de pago.'
-  },
-  {
-    id: '3',
-    codigo: 'CLI-003',
-    nombre: 'Lucia',
-    apellido: 'Martínez',
-    email: 'lucia.martinez@email.com',
-    telefono: '+57 320 555 6666',
-    direccion: 'Avenida Las Palmas #15-45',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1995-12-03'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '3456789012',
-    tipo: 'Minorista',
-    estado: 'Activo',
-    fechaRegistro: new Date('2024-01-10'),
-    totalCompras: 450000,
-    cantidadOrdenes: 12,
-    ultimaCompra: new Date('2024-03-05'),
-    genero: 'Femenino',
-    recibePromociones: true,
-    observaciones: 'Cliente activa, muy participativa.'
-  },
-  {
-    id: '4',
-    codigo: 'CLI-004',
-    nombre: 'Pedro',
-    apellido: 'López',
-    email: 'pedro.lopez@email.com',
-    telefono: '+57 315 444 5555',
-    celular: '+57 315 444 5555',
-    direccion: 'Carrera 80 #50-25',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1992-07-18'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '4567890123',
-    tipo: 'Minorista',
-    estado: 'Activo',
-    fechaRegistro: new Date('2023-05-12'),
-    totalCompras: 750000,
-    cantidadOrdenes: 18,
-    ultimaCompra: new Date('2024-03-15'),
-    genero: 'Masculino',
-    recibePromociones: true,
-    observaciones: 'Cliente regular con compras constantes.'
-  },
-  {
-    id: '5',
-    codigo: 'CLI-005',
-    nombre: 'Sofia',
-    apellido: 'Hernández',
-    email: 'sofia.hernandez@email.com',
-    telefono: '+57 318 777 8888',
-    direccion: 'Calle 25 #40-10',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1988-11-25'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '5678901234',
-    tipo: 'Mayorista',
-    estado: 'Activo',
-    fechaRegistro: new Date('2023-08-30'),
-    totalCompras: 3200000,
-    cantidadOrdenes: 52,
-    ultimaCompra: new Date('2024-03-20'),
-    genero: 'Femenino',
-    recibePromociones: false,
-    observaciones: 'Cliente mayorista VIP, excelente volumen de compras.'
-  },
-  {
-    id: '6',
-    codigo: 'CLI-006',
-    nombre: 'Miguel',
-    apellido: 'Torres',
-    email: 'miguel.torres@email.com',
-    telefono: '+57 312 999 0000',
-    celular: '+57 312 999 0000',
-    direccion: 'Avenida 33 #15-20',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1993-04-08'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '6789012345',
-    tipo: 'Minorista',
-    estado: 'Inactivo',
-    fechaRegistro: new Date('2023-09-15'),
-    totalCompras: 320000,
-    cantidadOrdenes: 8,
-    ultimaCompra: new Date('2024-01-10'),
-    genero: 'Masculino',
-    recibePromociones: true,
-    observaciones: 'Cliente inactivo, no ha realizado compras recientes.'
-  },
-  {
-    id: '7',
-    codigo: 'CLI-007',
-    nombre: 'Isabella',
-    apellido: 'Ramírez',
-    email: 'isabella.ramirez@email.com',
-    telefono: '+57 316 123 4567',
-    celular: '+57 316 123 4567',
-    direccion: 'Calle 70 #25-30',
-    ciudad: 'Medellín',
-    pais: 'Colombia',
-    fechaNacimiento: new Date('1991-09-12'),
-    tipoDocumento: 'CC',
-    numeroDocumento: '7890123456',
-    tipo: 'Mayorista',
-    estado: 'Suspendido',
-    fechaRegistro: new Date('2023-04-18'),
-    totalCompras: 1800000,
-    cantidadOrdenes: 25,
-    ultimaCompra: new Date('2024-02-20'),
-    genero: 'Femenino',
-    recibePromociones: false,
-    observaciones: 'Cliente suspendido por pagos pendientes.'
-  }
-];
+// Eliminados mockClientes para usar API real
 
 export const Clientes: React.FC = () => {
-  const [clientes, setClientes] = useState<Cliente[]>(mockClientes);
+  const [clientes, setClientes] = useState<UsuarioDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -213,42 +60,170 @@ export const Clientes: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Errores de validación en tiempo real
+  const [numDocError, setNumDocError] = useState<string | null>(null);
+  const [editNumDocError, setEditNumDocError] = useState<string | null>(null);
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
+  const [selectedCliente, setSelectedCliente] = useState<UsuarioDto | null>(null);
+  const [editingCliente, setEditingCliente] = useState<UsuarioDto | null>(null);
+  const [clienteToDelete, setClienteToDelete] = useState<UsuarioDto | null>(null);
 
-  const [newCliente, setNewCliente] = useState<Partial<Cliente>>({
-    codigo: '',
-    nombre: '',
-    apellido: '',
-    email: '',
+  // Estados para Geografía
+  const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
+  const [cities, setCities] = useState<CityColombian[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
+  const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
+  const [isEditDeptPopoverOpen, setIsEditDeptPopoverOpen] = useState(false);
+  const [isEditCityPopoverOpen, setIsEditCityPopoverOpen] = useState(false);
+
+  // Estados para Dirección Estructurada (Creación)
+  const [addrParts, setAddrParts] = useState({
+    tipoVia: '',
+    viaPrincipal: '',
+    viaSecundaria: '',
+    placa: ''
+  });
+
+  // Estados para Dirección Estructurada (Edición)
+  const [editAddrParts, setEditAddrParts] = useState({
+    tipoVia: '',
+    viaPrincipal: '',
+    viaSecundaria: '',
+    placa: ''
+  });
+
+  // Tipos de Vía Estándar
+  const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
+
+  const [newCliente, setNewCliente] = useState<Partial<UsuarioDto>>({
+    nombres: '',
+    apellidos: '',
+    correo: '',
     telefono: '',
-    celular: '',
     direccion: '',
     ciudad: '',
-    pais: 'Colombia',
+    barrio: '',
     tipoDocumento: 'CC',
     numeroDocumento: '',
-    tipo: 'Minorista',
-    estado: 'Activo',
-    recibePromociones: true
+    fechaNacimiento: new Date().toISOString().split('T')[0],
+    rolId: 3, // Rol de Cliente
+    estadoUsuario: true
   });
+
+  useEffect(() => {
+    fetchData();
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = async () => {
+    try {
+      const data = await getDepartments();
+      // Ordenar alfabéticamente
+      const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+      setDepartments(sortedData);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDepartment) {
+      const fetchCities = async () => {
+        try {
+          const dept = departments.find(d => d.name === selectedDepartment);
+          if (dept) {
+            const data = await getCitiesByDepartment(dept.id);
+            // Ordenar alfabéticamente
+            const sortedCities = [...data].sort((a, b) => a.name.localeCompare(b.name));
+            setCities(sortedCities);
+          }
+        } catch (error) {
+          console.error("Error fetching cities:", error);
+        }
+      };
+      fetchCities();
+    } else {
+      setCities([]);
+    }
+  }, [selectedDepartment, departments]);
+
+  // Efecto para concatenar dirección de creación
+  useEffect(() => {
+    const { tipoVia, viaPrincipal, viaSecundaria, placa } = addrParts;
+    if (tipoVia && viaPrincipal && viaSecundaria && placa) {
+      const fullAddr = `${tipoVia} ${viaPrincipal} # ${viaSecundaria}-${placa}`;
+      setNewCliente(prev => ({ ...prev, direccion: fullAddr }));
+    }
+  }, [addrParts]);
+
+  // Efecto para concatenar dirección de edición
+  useEffect(() => {
+    const { tipoVia, viaPrincipal, viaSecundaria, placa } = editAddrParts;
+    if (tipoVia && viaPrincipal && viaSecundaria && placa) {
+      const fullAddr = `${tipoVia} ${viaPrincipal} # ${viaSecundaria}-${placa}`;
+      setEditingCliente(prev => prev ? ({ ...prev, direccion: fullAddr }) : null);
+    }
+  }, [editAddrParts]);
+
+  // Validación de documento en tiempo real (Creación)
+  useEffect(() => {
+    const doc = newCliente.numeroDocumento?.trim();
+    if (doc && doc.length > 3) {
+      const exists = clientes.some(c => c.numeroDocumento === doc);
+      setNumDocError(exists ? `⚠️ Esta cédula ya está registrada a otro cliente.` : null);
+    } else {
+      setNumDocError(null);
+    }
+  }, [newCliente.numeroDocumento, clientes]);
+
+  // Validación de documento en tiempo real (Edición)
+  useEffect(() => {
+    const doc = editingCliente?.numeroDocumento?.trim();
+    if (doc && doc.length > 3 && editingCliente) {
+      const exists = clientes.some(c => c.numeroDocumento === doc && c.id !== editingCliente.id);
+      setEditNumDocError(exists ? `⚠️ Esta cédula ya pertenece a otro cliente.` : null);
+    } else {
+      setEditNumDocError(null);
+    }
+  }, [editingCliente?.numeroDocumento, editingCliente?.id, clientes]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await getUsuarios();
+      // En la API, el rolId 3 suele ser cliente, pero por ahora mostramos todos
+      setClientes(data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Error al cargar los clientes");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtrar clientes
   const filteredClientes = clientes.filter(cliente => {
-    const matchesSearch = cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cliente.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cliente.numeroDocumento.includes(searchTerm);
+    const nombres = (cliente.nombres || '').toLowerCase();
+    const apellidos = (cliente.apellidos || '').toLowerCase();
+    const correo = (cliente.correo || '').toLowerCase();
+    const documento = (cliente.numeroDocumento || '');
 
-    const matchesType = filterType === 'all' || cliente.tipo === filterType;
-    const matchesStatus = filterStatus === 'all' || cliente.estado === filterStatus;
+    const matchesSearch = nombres.includes(searchTerm.toLowerCase()) ||
+      apellidos.includes(searchTerm.toLowerCase()) ||
+      correo.includes(searchTerm.toLowerCase()) ||
+      documento.includes(searchTerm);
 
-    return matchesSearch && matchesType && matchesStatus;
+    // Nota: filterType (Mayorista/Minorista) es solo visual por ahora
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'Activo' && cliente.estadoUsuario) ||
+      (filterStatus === 'Inactivo' && !cliente.estadoUsuario);
+
+    return matchesSearch && matchesStatus;
   });
 
   // Calcular paginación
@@ -263,87 +238,194 @@ export const Clientes: React.FC = () => {
   }, [searchTerm, filterType, filterStatus]);
 
   // Funciones CRUD
-  const handleCreateCliente = () => {
-    const nuevoCliente: Cliente = {
-      ...newCliente as Cliente,
-      id: String(clientes.length + 1),
-      fechaRegistro: new Date(),
-      totalCompras: 0,
-      cantidadOrdenes: 0
-    };
+  const validateCliente = (data: Partial<UsuarioDto>, isEdit = false, originalId?: number): boolean => {
+    const { nombres, apellidos, correo, telefono, numeroDocumento, fechaNacimiento, ciudad, direccion } = data;
 
-    setClientes([...clientes, nuevoCliente]);
-    resetNewClienteForm();
-    setIsCreateDialogOpen(false);
-    toast.success('Cliente creado exitosamente');
+    // 1. Campos Obligatorios
+    if (!nombres || !apellidos || !correo || !telefono || !numeroDocumento || !ciudad || !direccion) {
+      toast.error("Por favor, complete todos los campos obligatorios (*)");
+      return false;
+    }
+
+    // 2. Formato de Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo)) {
+      toast.error("El formato del correo electrónico no es válido");
+      return false;
+    }
+
+    // 3. Documento Numérico
+    if (!/^\d+$/.test(numeroDocumento)) {
+      toast.error("El número de documento debe contener solo dígitos");
+      return false;
+    }
+
+    // 4. Teléfono Numérico y Longitud
+    const cleanPhone = telefono.replace(/\D/g, '');
+    if (cleanPhone.length < 7) {
+      toast.error("El teléfono debe tener al menos 7 dígitos numéricos");
+      return false;
+    }
+
+    // 5. Mayoría de Edad (18+)
+    if (fechaNacimiento) {
+      const birthDate = new Date(fechaNacimiento);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        toast.error("El cliente debe ser mayor de 18 años");
+        return false;
+      }
+    }
+
+    // 6. Duplicados (Cédula y Correo)
+    const normalizedDoc = numeroDocumento.trim();
+    const normalizedEmail = correo.trim().toLowerCase();
+
+    const duplicateDoc = clientes.find(c =>
+      c.numeroDocumento === normalizedDoc && (!isEdit || c.id !== originalId)
+    );
+    if (duplicateDoc) {
+      toast.error(`Ya existe un cliente con el documento ${normalizedDoc}`);
+      return false;
+    }
+
+    const duplicateEmail = clientes.find(c =>
+      c.correo.toLowerCase() === normalizedEmail && (!isEdit || c.id !== originalId)
+    );
+    if (duplicateEmail) {
+      toast.error(`El correo ${normalizedEmail} ya está registrado`);
+      return false;
+    }
+
+    return true;
   };
 
-  const handleViewCliente = (cliente: Cliente) => {
+  const handleCreateCliente = async () => {
+    if (!validateCliente(newCliente)) return;
+
+    try {
+      setLoading(true);
+      const dataToSave = {
+        ...newCliente,
+        rolId: 3, // Forzamos rol de cliente
+        estadoUsuario: true
+      } as UsuarioDto;
+
+      await createUsuario(dataToSave);
+      toast.success('Cliente creado exitosamente');
+      fetchData();
+      resetNewClienteForm();
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast.error("Error al crear el cliente");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewCliente = (cliente: UsuarioDto) => {
     setSelectedCliente(cliente);
     setIsViewDialogOpen(true);
   };
 
-  const handleEditCliente = (cliente: Cliente) => {
+  const handleEditCliente = (cliente: UsuarioDto) => {
     setEditingCliente(cliente);
+    // Intentar parsear la dirección si cumple el formato estándar
+    const addrRegex = /^([A-Za-z]+)\s+([0-9]+)\s+#\s+([0-9]+)-([0-9]+)$/;
+    const match = (cliente.direccion || '').match(addrRegex);
+    if (match) {
+      setEditAddrParts({
+        tipoVia: match[1],
+        viaPrincipal: match[2],
+        viaSecundaria: match[3],
+        placa: match[4]
+      });
+    } else {
+      setEditAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
+    }
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateCliente = () => {
+  const handleUpdateCliente = async () => {
     if (editingCliente) {
-      setClientes(clientes.map(c =>
-        c.id === editingCliente.id ? editingCliente : c
-      ));
-      setIsEditDialogOpen(false);
-      setEditingCliente(null);
-      toast.success('Cliente actualizado exitosamente');
+      if (!validateCliente(editingCliente, true, editingCliente.id)) return;
+
+      try {
+        setLoading(true);
+        await updateUsuario(editingCliente.id, editingCliente);
+        toast.success('Cliente actualizado exitosamente');
+        fetchData();
+        setIsEditDialogOpen(false);
+        setEditingCliente(null);
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast.error("Error al actualizar el cliente");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleDeleteCliente = () => {
+  const handleDeleteCliente = async () => {
     if (clienteToDelete) {
-      setClientes(clientes.filter(c => c.id !== clienteToDelete.id));
-      setIsDeleteDialogOpen(false);
-      setClienteToDelete(null);
-      toast.success('Cliente eliminado exitosamente');
+      try {
+        setLoading(true);
+        await deleteUsuario(clienteToDelete.id);
+        toast.success('Cliente eliminado exitosamente');
+        fetchData();
+        setIsDeleteDialogOpen(false);
+        setClienteToDelete(null);
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast.error("Error al eliminar el cliente");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const openDeleteDialog = (cliente: Cliente) => {
+  const openDeleteDialog = (cliente: UsuarioDto) => {
     setClienteToDelete(cliente);
     setIsDeleteDialogOpen(true);
   };
 
   const resetNewClienteForm = () => {
     setNewCliente({
-      codigo: '',
-      nombre: '',
-      apellido: '',
-      email: '',
+      nombres: '',
+      apellidos: '',
+      correo: '',
       telefono: '',
-      celular: '',
       direccion: '',
       ciudad: '',
-      pais: 'Colombia',
+      barrio: '',
       tipoDocumento: 'CC',
       numeroDocumento: '',
-      tipo: 'Minorista',
-      estado: 'Activo',
-      recibePromociones: true
+      fechaNacimiento: new Date().toISOString().split('T')[0],
+      rolId: 3,
+      estadoUsuario: true
     });
+    setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
+    setSelectedDepartment('');
   };
 
-  // Función para cambiar el estado con switch (Activo/Inactivo)
-  const handleToggleEstado = (clienteId: string, isActive: boolean) => {
-    const nuevoEstado = isActive ? 'Activo' : 'Inactivo';
-    setClientes(clientes.map(cliente =>
-      cliente.id === clienteId
-        ? { ...cliente, estado: nuevoEstado as 'Activo' | 'Inactivo' | 'Suspendido' }
-        : cliente
-    ));
-
+  const handleToggleEstado = async (clienteId: number, isActive: boolean) => {
     const cliente = clientes.find(c => c.id === clienteId);
     if (cliente) {
-      toast.success(`${cliente.nombre} ${cliente.apellido} ${isActive ? 'activado' : 'desactivado'} exitosamente`);
+      try {
+        const updatedCliente = { ...cliente, estadoUsuario: isActive };
+        await updateUsuario(clienteId, updatedCliente);
+        toast.success(`${cliente.nombres} ${isActive ? 'activado' : 'desactivado'} exitosamente`);
+        fetchData();
+      } catch (error) {
+        console.error("Error toggling user status:", error);
+        toast.error("Error al cambiar el estado");
+      }
     }
   };
 
@@ -356,13 +438,8 @@ export const Clientes: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (estado: string) => {
-    switch (estado) {
-      case 'Activo': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'Inactivo': return <XCircle className="h-4 w-4 text-gray-500" />;
-      case 'Suspendido': return <Ban className="h-4 w-4 text-red-500" />;
-      default: return <User className="h-4 w-4" />;
-    }
+  const getStatusIcon = (estado: boolean) => {
+    return estado ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-500" />;
   };
 
   return (
@@ -402,20 +479,20 @@ export const Clientes: React.FC = () => {
                   <TabsContent value="basic" className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="nombre">Nombre *</Label>
+                        <Label htmlFor="nombre">Nombres *</Label>
                         <Input
                           id="nombre"
-                          value={newCliente.nombre || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, nombre: e.target.value })}
+                          value={newCliente.nombres || ''}
+                          onChange={(e) => setNewCliente({ ...newCliente, nombres: e.target.value })}
                           placeholder="Ana"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="apellido">Apellido *</Label>
+                        <Label htmlFor="apellido">Apellidos *</Label>
                         <Input
                           id="apellido"
-                          value={newCliente.apellido || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, apellido: e.target.value })}
+                          value={newCliente.apellidos || ''}
+                          onChange={(e) => setNewCliente({ ...newCliente, apellidos: e.target.value })}
                           placeholder="García"
                         />
                       </div>
@@ -426,7 +503,7 @@ export const Clientes: React.FC = () => {
                         <Label htmlFor="tipoDocumento">Tipo Documento</Label>
                         <Select
                           value={newCliente.tipoDocumento || 'CC'}
-                          onValueChange={(value) => setNewCliente({ ...newCliente, tipoDocumento: value as any })}
+                          onValueChange={(value: string) => setNewCliente({ ...newCliente, tipoDocumento: value as any })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Tipo" />
@@ -446,7 +523,13 @@ export const Clientes: React.FC = () => {
                           value={newCliente.numeroDocumento || ''}
                           onChange={(e) => setNewCliente({ ...newCliente, numeroDocumento: e.target.value })}
                           placeholder="1234567890"
+                          className={cn(numDocError ? "border-red-500 focus-visible:ring-red-500" : "")}
                         />
+                        {numDocError && (
+                          <p className="text-[10px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100 animate-in fade-in slide-in-from-top-1">
+                            {numDocError}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -455,25 +538,24 @@ export const Clientes: React.FC = () => {
                       <Input
                         id="fechaNacimiento"
                         type="date"
-                        value={newCliente.fechaNacimiento?.toISOString().split('T')[0] || ''}
-                        onChange={(e) => setNewCliente({ ...newCliente, fechaNacimiento: new Date(e.target.value) })}
+                        value={newCliente.fechaNacimiento || ''}
+                        onChange={(e) => setNewCliente({ ...newCliente, fechaNacimiento: e.target.value })}
                       />
                     </div>
                   </TabsContent>
 
                   <TabsContent value="contact" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={newCliente.email || ''}
-                        onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })}
-                        placeholder="ana.garcia@email.com"
-                      />
-                    </div>
-
                     <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newCliente.correo || ''}
+                          onChange={(e) => setNewCliente({ ...newCliente, correo: e.target.value })}
+                          placeholder="ana.garcia@email.com"
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="telefono">Teléfono *</Label>
                         <Input
@@ -483,56 +565,174 @@ export const Clientes: React.FC = () => {
                           placeholder="+57 300 123 4567"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="celular">Celular</Label>
-                        <Input
-                          id="celular"
-                          value={newCliente.celular || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, celular: e.target.value })}
-                          placeholder="+57 310 123 4567"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="direccion">Dirección *</Label>
-                      <Input
-                        id="direccion"
-                        value={newCliente.direccion || ''}
-                        onChange={(e) => setNewCliente({ ...newCliente, direccion: e.target.value })}
-                        placeholder="Carrera 65 #45-30"
-                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="ciudad">Ciudad *</Label>
-                        <Input
-                          id="ciudad"
-                          value={newCliente.ciudad || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, ciudad: e.target.value })}
-                          placeholder="Medellín"
-                        />
+                        <Label>Departamento *</Label>
+                        <Popover open={isDeptPopoverOpen} onOpenChange={setIsDeptPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={isDeptPopoverOpen}
+                              className="w-full justify-between"
+                            >
+                              {selectedDepartment
+                                ? departments.find((dept) => dept.name === selectedDepartment)?.name
+                                : "Seleccionar Departamento"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar departamento..." />
+                              <CommandList>
+                                <CommandEmpty>No se encontró el departamento.</CommandEmpty>
+                                <CommandGroup>
+                                  {departments.map((dept) => (
+                                    <CommandItem
+                                      key={dept.id}
+                                      value={dept.name}
+                                      onSelect={() => {
+                                        setSelectedDepartment(dept.name);
+                                        setIsDeptPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedDepartment === dept.name ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {dept.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="departamento">Departamento *</Label>
-                        <Input
-                          id="departamento"
-                          value={newCliente.departamento || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, departamento: e.target.value })}
-                          placeholder="Antioquia"
-                        />
+                        <Label>Ciudad *</Label>
+                        <Popover open={isCityPopoverOpen} onOpenChange={setIsCityPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={isCityPopoverOpen}
+                              className="w-full justify-between"
+                              disabled={!selectedDepartment}
+                            >
+                              {newCliente.ciudad
+                                ? cities.find((city) => city.name === newCliente.ciudad)?.name
+                                : "Seleccionar Ciudad"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar ciudad..." />
+                              <CommandList>
+                                <CommandEmpty>No se encontró la ciudad.</CommandEmpty>
+                                <CommandGroup>
+                                  {cities.map((city) => (
+                                    <CommandItem
+                                      key={city.id}
+                                      value={city.name}
+                                      onSelect={() => {
+                                        setNewCliente({ ...newCliente, ciudad: city.name });
+                                        setIsCityPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          newCliente.ciudad === city.name ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {city.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="barrio">Barrio</Label>
+                      <Input
+                        id="barrio"
+                        value={newCliente.barrio || ''}
+                        onChange={(e) => setNewCliente({ ...newCliente, barrio: e.target.value })}
+                        placeholder="El Poblado"
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-blue-600 font-semibold">Dirección Estructural *</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Tipo Vía</Label>
+                          <Select
+                            value={addrParts.tipoVia}
+                            onValueChange={(val: string) => setAddrParts({ ...addrParts, tipoVia: val })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tiposVia.map(tipo => (
+                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">N° Principal</Label>
+                          <Input
+                            placeholder="67"
+                            value={addrParts.viaPrincipal}
+                            onChange={(e) => setAddrParts({ ...addrParts, viaPrincipal: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">N° Secundario</Label>
+                          <div className="flex items-center">
+                            <span className="mr-1 text-gray-500">#</span>
+                            <Input
+                              placeholder="102"
+                              value={addrParts.viaSecundaria}
+                              onChange={(e) => setAddrParts({ ...addrParts, viaSecundaria: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">N° Placa</Label>
+                          <div className="flex items-center">
+                            <span className="mr-1 text-gray-500">-</span>
+                            <Input
+                              placeholder="25"
+                              value={addrParts.placa}
+                              onChange={(e) => setAddrParts({ ...addrParts, placa: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-2 rounded border text-sm italic text-gray-600">
+                        Vista previa: {newCliente.direccion || 'Ingrese los campos de dirección'}
                       </div>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="commercial" className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo Cliente *</Label>
-                      <Select
-                        value={newCliente.tipo || 'Minorista'}
-                        onValueChange={(value) => setNewCliente({ ...newCliente, tipo: value as any })}
-                      >
+                      <Label htmlFor="tipo">Tipo Cliente (Visual)</Label>
+                      <Select defaultValue="Minorista">
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar tipo" />
                         </SelectTrigger>
@@ -543,29 +743,13 @@ export const Clientes: React.FC = () => {
                       </Select>
                     </div>
 
-                    {newCliente.tipo === 'Mayorista' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="descuento">Descuento (%) *</Label>
-                        <Input
-                          id="descuento"
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={newCliente.descuento || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, descuento: Number(e.target.value) })}
-                          placeholder="Ej: 15"
-                        />
-                        <p className="text-sm text-gray-500">Porcentaje de descuento para este cliente mayorista</p>
-                      </div>
-                    )}
-
                     <div className="flex items-center space-x-2 pt-2">
                       <Switch
-                        id="recibePromociones"
-                        checked={newCliente.recibePromociones || false}
-                        onCheckedChange={(checked) => setNewCliente({ ...newCliente, recibePromociones: checked })}
+                        id="estadoUsuario"
+                        checked={newCliente.estadoUsuario || false}
+                        onCheckedChange={(checked: boolean) => setNewCliente({ ...newCliente, estadoUsuario: checked })}
                       />
-                      <Label htmlFor="recibePromociones">Recibe promociones</Label>
+                      <Label htmlFor="estadoUsuario">Usuario Activo</Label>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -574,7 +758,8 @@ export const Clientes: React.FC = () => {
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleCreateCliente} disabled={!newCliente.nombre || !newCliente.apellido || !newCliente.email}>
+                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleCreateCliente} disabled={!newCliente.nombres || !newCliente.apellidos || !newCliente.correo || loading}>
+                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Crear Cliente
                   </Button>
                 </DialogFooter>
@@ -597,17 +782,6 @@ export const Clientes: React.FC = () => {
             </div>
 
             <div className="flex gap-2">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Minorista">Minorista</SelectItem>
-                  <SelectItem value="Mayorista">Mayorista</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Estado" />
@@ -630,7 +804,6 @@ export const Clientes: React.FC = () => {
                   <TableHead>Tipo Documento</TableHead>
                   <TableHead>Número Documento</TableHead>
                   <TableHead>Contacto</TableHead>
-                  <TableHead>Tipo</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
@@ -639,7 +812,7 @@ export const Clientes: React.FC = () => {
                 {currentClientes.map((cliente) => (
                   <TableRow key={cliente.id}>
                     <TableCell>
-                      <div className="font-medium">{cliente.nombre} {cliente.apellido}</div>
+                      <div className="font-medium">{cliente.nombres} {cliente.apellidos}</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{cliente.tipoDocumento}</div>
@@ -648,28 +821,23 @@ export const Clientes: React.FC = () => {
                       <div className="text-sm">{cliente.numeroDocumento}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{cliente.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${getTypeColor(cliente.tipo)} text-white`}>
-                        {cliente.tipo}
-                      </Badge>
+                      <div className="text-sm">{cliente.correo}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
                           className={
-                            cliente.estado === "Activo"
+                            cliente.estadoUsuario
                               ? "bg-black text-white border-black"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-200"
                           }
                         >
-                          {cliente.estado}
+                          {cliente.estadoUsuario ? 'Activo' : 'Inactivo'}
                         </Badge>
                         <Switch
-                          checked={cliente.estado === 'Activo'}
-                          onCheckedChange={(checked) => handleToggleEstado(cliente.id, checked)}
+                          checked={cliente.estadoUsuario}
+                          onCheckedChange={(checked: boolean) => handleToggleEstado(cliente.id, checked)}
                         />
                       </div>
                     </TableCell>
@@ -744,9 +912,9 @@ export const Clientes: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">Identificación</h3>
                     <div className="flex items-center space-x-2">
-                      {getStatusIcon(selectedCliente.estado)}
-                      <Badge className={`${getTypeColor(selectedCliente.tipo)} text-white`}>
-                        {selectedCliente.tipo}
+                      {getStatusIcon(selectedCliente.estadoUsuario)}
+                      <Badge className="bg-blue-500 text-white">
+                        Minorista
                       </Badge>
                     </div>
                   </div>
@@ -755,12 +923,9 @@ export const Clientes: React.FC = () => {
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Estado</Label>
                       <div className="flex items-center space-x-2">
-                        {getStatusIcon(selectedCliente.estado)}
-                        <span className={`font-semibold ${selectedCliente.estado === 'Activo' ? 'text-green-600' :
-                            selectedCliente.estado === 'Inactivo' ? 'text-gray-500' :
-                              'text-red-500'
-                          }`}>
-                          {selectedCliente.estado}
+                        {getStatusIcon(selectedCliente.estadoUsuario)}
+                        <span className={`font-semibold ${selectedCliente.estadoUsuario ? 'text-green-600' : 'text-gray-500'}`}>
+                          {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
                     </div>
@@ -770,11 +935,7 @@ export const Clientes: React.FC = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Nombre Completo</Label>
-                    <p className="font-semibold">{selectedCliente.nombre} {selectedCliente.apellido}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Género</Label>
-                    <p>{selectedCliente.genero || 'No especificado'}</p>
+                    <p className="font-semibold">{selectedCliente.nombres} {selectedCliente.apellidos}</p>
                   </div>
                 </div>
 
@@ -796,22 +957,13 @@ export const Clientes: React.FC = () => {
                 {selectedCliente.fechaNacimiento && (
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Fecha de Nacimiento</Label>
-                    <p>{selectedCliente.fechaNacimiento.toLocaleDateString('es-CO', {
+                    <p>{new Date(selectedCliente.fechaNacimiento).toLocaleDateString('es-CO', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
                     })}</p>
                   </div>
                 )}
-
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Fecha de Registro</Label>
-                  <p>{selectedCliente.fechaRegistro?.toLocaleDateString('es-CO', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}</p>
-                </div>
               </TabsContent>
 
               {/* Pestaña Contacto */}
@@ -824,27 +976,25 @@ export const Clientes: React.FC = () => {
                       <Mail className="h-5 w-5 text-blue-500" />
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Email</Label>
-                        <p className="font-semibold">{selectedCliente.email}</p>
+                        <p className="font-semibold">{selectedCliente.correo}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-3">
                       <Phone className="h-5 w-5 text-green-500" />
                       <div>
-                        <Label className="text-sm font-medium text-gray-500">Teléfono Principal</Label>
+                        <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
                         <p className="font-semibold">{selectedCliente.telefono}</p>
                       </div>
                     </div>
 
-                    {selectedCliente.celular && selectedCliente.celular !== selectedCliente.telefono && (
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-5 w-5 text-purple-500" />
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">Celular</Label>
-                          <p className="font-semibold">{selectedCliente.celular}</p>
-                        </div>
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="h-5 w-5 text-purple-500" />
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Barrio</Label>
+                        <p className="font-semibold">{selectedCliente.barrio}</p>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
 
@@ -865,10 +1015,6 @@ export const Clientes: React.FC = () => {
                         <Label className="text-sm font-medium text-gray-500">Ciudad</Label>
                         <p>{selectedCliente.ciudad}</p>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">País</Label>
-                        <p>{selectedCliente.pais}</p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -881,100 +1027,34 @@ export const Clientes: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Tipo de Cliente</Label>
+                      <Label className="text-sm font-medium text-gray-500">Tipo de Cliente (Visual)</Label>
                       <div className="mt-1">
-                        <Badge className={`${getTypeColor(selectedCliente.tipo)} text-white text-sm px-3 py-1`}>
-                          {selectedCliente.tipo}
+                        <Badge className="bg-green-600 text-white text-sm px-3 py-1">
+                          Minorista
                         </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Recibe Promociones</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Switch checked={selectedCliente.recibePromociones} disabled />
-                        <span className={selectedCliente.recibePromociones ? 'text-green-600' : 'text-gray-500'}>
-                          {selectedCliente.recibePromociones ? 'Sí' : 'No'}
-                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {selectedCliente.tipo === 'Mayorista' && selectedCliente.descuento && (
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <Label className="text-sm font-medium text-gray-500">Descuento Especial</Label>
-                    <p className="mt-1 text-2xl font-bold text-yellow-600">{selectedCliente.descuento}%</p>
-                  </div>
-                )}
               </TabsContent>
 
               {/* Pestaña Historial */}
               <TabsContent value="history" className="space-y-6 mt-6">
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Historial de Compras</h3>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <Label className="text-sm font-medium text-gray-500">Total Compras</Label>
-                      <p className="text-2xl font-bold text-green-600">
-                        ${selectedCliente.totalCompras?.toLocaleString('es-CO') || '0'}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <Label className="text-sm font-medium text-gray-500">Número de Órdenes</Label>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {selectedCliente.cantidadOrdenes || 0}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <Label className="text-sm font-medium text-gray-500">Promedio por Orden</Label>
-                      <p className="text-2xl font-bold text-purple-600">
-                        ${selectedCliente.cantidadOrdenes && selectedCliente.totalCompras ?
-                          Math.round(selectedCliente.totalCompras / selectedCliente.cantidadOrdenes).toLocaleString('es-CO') : '0'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Última Compra</Label>
-                      <p className="font-semibold">
-                        {selectedCliente.ultimaCompra?.toLocaleDateString('es-CO', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        }) || 'Sin compras registradas'}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Cliente desde</Label>
-                      <p className="font-semibold">
-                        {selectedCliente.fechaRegistro?.toLocaleDateString('es-CO', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <p className="text-gray-500 py-8">Las métricas de historial no están disponibles en esta versión.</p>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-semibold mb-3">Estado del Cliente</h4>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      {getStatusIcon(selectedCliente.estado)}
-                      <span className={`font-semibold ${selectedCliente.estado === 'Activo' ? 'text-green-600' :
-                          selectedCliente.estado === 'Inactivo' ? 'text-gray-500' :
-                            'text-red-500'
-                        }`}>
-                        {selectedCliente.estado}
+                      {getStatusIcon(selectedCliente.estadoUsuario)}
+                      <span className={`font-semibold ${selectedCliente.estadoUsuario ? 'text-green-600' : 'text-gray-500'}`}>
+                        {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
                       </span>
                     </div>
-                    <Badge className={`${getTypeColor(selectedCliente.tipo)} text-white`}>
-                      {selectedCliente.tipo}
+                    <Badge className="bg-blue-500 text-white">
+                      Minorista
                     </Badge>
                   </div>
                 </div>
@@ -1019,19 +1099,19 @@ export const Clientes: React.FC = () => {
               <TabsContent value="basic" className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-nombre">Nombre *</Label>
+                    <Label htmlFor="edit-nombre">Nombres *</Label>
                     <Input
                       id="edit-nombre"
-                      value={editingCliente.nombre || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, nombre: e.target.value })}
+                      value={editingCliente.nombres || ''}
+                      onChange={(e) => setEditingCliente({ ...editingCliente, nombres: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-apellido">Apellido *</Label>
+                    <Label htmlFor="edit-apellido">Apellidos *</Label>
                     <Input
                       id="edit-apellido"
-                      value={editingCliente.apellido || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, apellido: e.target.value })}
+                      value={editingCliente.apellidos || ''}
+                      onChange={(e) => setEditingCliente({ ...editingCliente, apellidos: e.target.value })}
                     />
                   </div>
                 </div>
@@ -1041,7 +1121,7 @@ export const Clientes: React.FC = () => {
                     <Label htmlFor="edit-tipoDocumento">Tipo Documento</Label>
                     <Select
                       value={editingCliente.tipoDocumento || 'CC'}
-                      onValueChange={(value) => setEditingCliente({ ...editingCliente, tipoDocumento: value as any })}
+                      onValueChange={(value: string) => setEditingCliente({ ...editingCliente, tipoDocumento: value as any })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1060,7 +1140,13 @@ export const Clientes: React.FC = () => {
                       id="edit-numeroDocumento"
                       value={editingCliente.numeroDocumento || ''}
                       onChange={(e) => setEditingCliente({ ...editingCliente, numeroDocumento: e.target.value })}
+                      className={cn(editNumDocError ? "border-red-500 focus-visible:ring-red-500" : "")}
                     />
+                    {editNumDocError && (
+                      <p className="text-[10px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100 animate-in fade-in slide-in-from-top-1">
+                        {editNumDocError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1070,25 +1156,24 @@ export const Clientes: React.FC = () => {
                     <Input
                       id="edit-fechaNacimiento"
                       type="date"
-                      value={editingCliente.fechaNacimiento?.toISOString().split('T')[0] || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, fechaNacimiento: new Date(e.target.value) })}
+                      value={editingCliente.fechaNacimiento || ''}
+                      onChange={(e) => setEditingCliente({ ...editingCliente, fechaNacimiento: e.target.value })}
                     />
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="contact" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email *</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editingCliente.email || ''}
-                    onChange={(e) => setEditingCliente({ ...editingCliente, email: e.target.value })}
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email *</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editingCliente.correo || ''}
+                      onChange={(e) => setEditingCliente({ ...editingCliente, correo: e.target.value })}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-telefono">Teléfono *</Label>
                     <Input
@@ -1097,54 +1182,173 @@ export const Clientes: React.FC = () => {
                       onChange={(e) => setEditingCliente({ ...editingCliente, telefono: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-celular">Celular</Label>
-                    <Input
-                      id="edit-celular"
-                      value={editingCliente.celular || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, celular: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-direccion">Dirección *</Label>
-                  <Input
-                    id="edit-direccion"
-                    value={editingCliente.direccion || ''}
-                    onChange={(e) => setEditingCliente({ ...editingCliente, direccion: e.target.value })}
-                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-ciudad">Ciudad *</Label>
-                    <Input
-                      id="edit-ciudad"
-                      value={editingCliente.ciudad || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, ciudad: e.target.value })}
-                      placeholder="Medellín"
-                    />
+                    <Label>Departamento *</Label>
+                    <Popover open={isEditDeptPopoverOpen} onOpenChange={setIsEditDeptPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isEditDeptPopoverOpen}
+                          className="w-full justify-between"
+                        >
+                          {selectedDepartment
+                            ? departments.find((dept) => dept.name === selectedDepartment)?.name
+                            : "Seleccionar Departamento"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar departamento..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró el departamento.</CommandEmpty>
+                            <CommandGroup>
+                              {departments.map((dept) => (
+                                <CommandItem
+                                  key={dept.id}
+                                  value={dept.name}
+                                  onSelect={() => {
+                                    setSelectedDepartment(dept.name);
+                                    setIsEditDeptPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedDepartment === dept.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {dept.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-departamento">Departamento *</Label>
-                    <Input
-                      id="edit-departamento"
-                      value={editingCliente.departamento || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, departamento: e.target.value })}
-                      placeholder="Antioquia"
-                    />
+                    <Label>Ciudad *</Label>
+                    <Popover open={isEditCityPopoverOpen} onOpenChange={setIsEditCityPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isEditCityPopoverOpen}
+                          className="w-full justify-between"
+                          disabled={!selectedDepartment}
+                        >
+                          {editingCliente.ciudad
+                            ? cities.find((city) => city.name === editingCliente.ciudad)?.name
+                            : "Seleccionar Ciudad"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar ciudad..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró la ciudad.</CommandEmpty>
+                            <CommandGroup>
+                              {cities.map((city) => (
+                                <CommandItem
+                                  key={city.id}
+                                  value={city.name}
+                                  onSelect={() => {
+                                    setEditingCliente({ ...editingCliente, ciudad: city.name });
+                                    setIsEditCityPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      editingCliente.ciudad === city.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {city.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-barrio">Barrio</Label>
+                  <Input
+                    id="edit-barrio"
+                    value={editingCliente.barrio || ''}
+                    onChange={(e) => setEditingCliente({ ...editingCliente, barrio: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-blue-600 font-semibold">Dirección Estructural *</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo Vía</Label>
+                      <Select
+                        value={editAddrParts.tipoVia}
+                        onValueChange={(val: string) => setEditAddrParts({ ...editAddrParts, tipoVia: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposVia.map(tipo => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">N° Principal</Label>
+                      <Input
+                        placeholder="67"
+                        value={editAddrParts.viaPrincipal}
+                        onChange={(e) => setEditAddrParts({ ...editAddrParts, viaPrincipal: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">N° Secundario</Label>
+                      <div className="flex items-center">
+                        <span className="mr-1 text-gray-500">#</span>
+                        <Input
+                          placeholder="102"
+                          value={editAddrParts.viaSecundaria}
+                          onChange={(e) => setEditAddrParts({ ...editAddrParts, viaSecundaria: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">N° Placa</Label>
+                      <div className="flex items-center">
+                        <span className="mr-1 text-gray-500">-</span>
+                        <Input
+                          placeholder="25"
+                          value={editAddrParts.placa}
+                          onChange={(e) => setEditAddrParts({ ...editAddrParts, placa: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded border text-sm italic text-gray-600">
+                    Vista previa: {editingCliente.direccion || 'Ingrese los campos de dirección'}
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="commercial" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-tipo">Tipo Cliente *</Label>
-                  <Select
-                    value={editingCliente.tipo || 'Minorista'}
-                    onValueChange={(value) => setEditingCliente({ ...editingCliente, tipo: value as any })}
-                  >
+                  <Label htmlFor="edit-tipo">Tipo Cliente (Visual)</Label>
+                  <Select defaultValue="Minorista">
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1155,27 +1359,11 @@ export const Clientes: React.FC = () => {
                   </Select>
                 </div>
 
-                {editingCliente.tipo === 'Mayorista' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-descuento">Descuento (%) *</Label>
-                    <Input
-                      id="edit-descuento"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={editingCliente.descuento || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, descuento: Number(e.target.value) })}
-                      placeholder="Ej: 15"
-                    />
-                    <p className="text-sm text-gray-500">Porcentaje de descuento para este cliente mayorista</p>
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <Label htmlFor="edit-estado">Estado *</Label>
                   <Select
-                    value={editingCliente.estado || 'Activo'}
-                    onValueChange={(value) => setEditingCliente({ ...editingCliente, estado: value as any })}
+                    value={editingCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
+                    onValueChange={(value: string) => setEditingCliente({ ...editingCliente, estadoUsuario: value === 'Activo' })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1183,18 +1371,8 @@ export const Clientes: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="Activo">Activo</SelectItem>
                       <SelectItem value="Inactivo">Inactivo</SelectItem>
-                      <SelectItem value="Suspendido">Suspendido</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="edit-recibePromociones"
-                    checked={editingCliente.recibePromociones || false}
-                    onCheckedChange={(checked) => setEditingCliente({ ...editingCliente, recibePromociones: checked })}
-                  />
-                  <Label htmlFor="edit-recibePromociones">Recibe promociones</Label>
                 </div>
               </TabsContent>
             </Tabs>
@@ -1204,7 +1382,8 @@ export const Clientes: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleUpdateCliente}>
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleUpdateCliente} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Actualizar Cliente
             </Button>
           </DialogFooter>
@@ -1217,8 +1396,8 @@ export const Clientes: React.FC = () => {
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteCliente}
         title="Eliminar Cliente"
-        description={`¿Estás seguro de que deseas eliminar al cliente "${clienteToDelete?.nombre} ${clienteToDelete?.apellido}"? Esta acción no se puede deshacer.`}
-        itemName={clienteToDelete ? `${clienteToDelete.nombre} ${clienteToDelete.apellido}` : ''}
+        description={`¿Estás seguro de que deseas eliminar al cliente "${clienteToDelete?.nombres} ${clienteToDelete?.apellidos}"? Esta acción no se puede deshacer.`}
+        itemName={clienteToDelete ? `${clienteToDelete.nombres} ${clienteToDelete.apellidos}` : ''}
         itemType="Cliente"
       />
     </div>

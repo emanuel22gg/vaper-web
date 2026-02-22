@@ -164,3 +164,74 @@ export interface ResetPasswordRequest {
   nuevaContraseña: string;
 }
 
+
+export interface Producto {
+  id: number;
+  nombreProducto: string;
+  precio: number;
+  stock: number;
+  categoriaId: number;
+  descripcion: string;
+  idImagen?: number;
+  estado: boolean;
+  categoria?: Categoria;
+  imagen?: string;
+}
+
+export interface ProductoDto {
+  id?: number;
+  nombreProducto: string;
+  precio: number;
+  stock: number;
+  categoriaId: number;
+  descripcion: string;
+  idImagen?: number;
+  estado: boolean;
+}
+
+export interface DetalleVentaPedidoDto {
+  id?: number;
+  ventaPedidoId?: number;
+  productoId: number;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface VentaPedidoDto {
+  id?: number;
+  usuarioId: number;
+  estadoId: number;
+  fechaCreacion?: string;
+  fechaEntrega?: string;
+  metodoPago: string;
+  direccionEntrega: string;
+  ciudadEntrega: string;
+  departamentoEntrega: string;
+  barrio?: string;
+  subtotal: number;
+  envio: number;
+  total: number;
+  detalleVentaPedidos?: DetalleVentaPedidoDto[]; // Original
+  DetalleVentaPedidos?: DetalleVentaPedidoDto[]; // PascalCase
+  detallePedidos?: DetalleVentaPedidoDto[];      // Database matching
+  DetallePedidos?: DetalleVentaPedidoDto[];      // Database matching Pascal
+}
+
+export interface DepartmentColombian {
+  id: number;
+  name: string;
+  description: string;
+  cityCount: number;
+}
+
+export interface CityColombian {
+  id: number;
+  name: string;
+  description: string;
+  surface: number;
+  population: number;
+  postalCode: string;
+  departmentId: number;
+  department: any;
+}

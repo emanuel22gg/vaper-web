@@ -11,30 +11,10 @@ import {
 } from '../ui/dialog';
 import { Separator } from '../ui/separator';
 import { Package, Calendar, User, DollarSign, Hash, Scale, Ruler, Tag, Building2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getImage } from '../../services/api';
 
-interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  activa: boolean;
-}
-
-interface Producto {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: Categoria;
-  precio: number;
-  stock: number;
-  estado: 'activo' | 'inactivo' | 'agotado' | 'descontinuado';
-  imagen?: string;
-  marca?: string;
-  modelo?: string;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  creadoPor: string;
-}
+import { Categoria, Producto } from '../../types';
 
 interface DetailProductoDialogProps {
   isOpen: boolean;
@@ -47,6 +27,21 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
   onClose,
   producto
 }) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (producto?.idImagen) {
+      getImage(producto.idImagen)
+        .then(data => setImageUrl(data.urlimagen))
+        .catch(err => {
+          console.error("Error al cargar imagen del producto", err);
+          setImageUrl(null);
+        });
+    } else {
+      setImageUrl(producto?.imagen || null);
+    }
+  }, [producto]);
+
   if (!producto) return null;
 
   const formatDate = (dateString: string) => {
@@ -59,19 +54,8 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
     });
   };
 
-  const getEstadoBadgeVariant = (estado: string) => {
-    switch (estado) {
-      case 'activo':
-        return 'default';
-      case 'inactivo':
-        return 'secondary';
-      case 'agotado':
-        return 'destructive';
-      case 'descontinuado':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
+  const getEstadoBadgeVariant = (estado: boolean) => {
+    return estado ? 'default' : 'secondary';
   };
 
   const getStockBadgeVariant = () => {
@@ -97,11 +81,11 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
           {/* Información principal */}
           <div className="space-y-2">
             <div className="flex items-start gap-3">
-              {producto.imagen ? (
+              {imageUrl ? (
                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   <img
-                    src={producto.imagen}
-                    alt={producto.nombre}
+                    src={imageUrl}
+                    alt={producto.nombreProducto}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -110,28 +94,31 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
                   <Package className="h-8 w-8 text-gray-400" />
                 </div>
               )}
-              
+
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{producto.nombre}</h3>
+                  <h3 className="text-xl font-bold">{producto.nombreProducto}</h3>
                   <Badge variant={getEstadoBadgeVariant(producto.estado)}>
-                    {producto.estado}
+                    {producto.estado ? "Activo" : "Inactivo"}
                   </Badge>
+                  <span className="text-xs text-muted-foreground ml-auto bg-gray-100 px-2 py-1 rounded">ID: {producto.id}</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Hash className="h-3 w-3" />
-                    {producto.codigo}
-                  </span>
-                  {producto.marca && (
-                    <span className="flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      {producto.marca} {producto.modelo}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{producto.descripcion}</p>
               </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Sección de Descripción Prominente */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Descripción del Producto
+            </h4>
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+              <p className="text-gray-700 leading-relaxed">
+                {producto.descripcion || "Sin descripción disponible."}
+              </p>
             </div>
           </div>
 
@@ -165,7 +152,7 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
                 Precio
               </h4>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Precio de venta</p>
+                
                 <p className="font-semibold">${producto.precio.toLocaleString()}</p>
               </div>
             </div>
@@ -180,8 +167,8 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
               Categoría
             </h4>
             <div>
-              <p className="font-medium text-sm">{producto.categoria.nombre}</p>
-              <p className="text-xs text-muted-foreground">{producto.categoria.descripcion}</p>
+              <p className="font-medium text-sm">{producto.categoria?.nombreCategoria || 'Sin categoría'}</p>
+              <p className="text-xs text-muted-foreground">{producto.categoria?.descripcion || ''}</p>
             </div>
           </div>
 

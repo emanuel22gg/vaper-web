@@ -21,35 +21,15 @@ import {
 import { ImageSelector } from '../shared/ImageSelector';
 import { toast } from "sonner";
 
-interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  activa: boolean;
-}
-
-interface Producto {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: Categoria;
-  precio: number;
-  stock: number;
-  estado: 'activo' | 'inactivo' | 'agotado' | 'descontinuado';
-  imagen?: string;
-  puffs?: number;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  creadoPor: string;
-}
+import { Categoria, Producto, ProductoDto } from '../../types';
 
 interface EditProductoDialogProps {
   isOpen: boolean;
   onClose: () => void;
   producto: Producto | null;
-  onProductoUpdated: (producto: Producto) => void;
+  onProductoUpdated: (producto: ProductoDto) => void;
   categorias: Categoria[];
+  productos: Producto[];
 }
 
 export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
@@ -57,18 +37,18 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
   onClose,
   producto,
   onProductoUpdated,
-  categorias
+  categorias,
+  productos
 }) => {
   const [formData, setFormData] = useState({
-    codigo: '',
-    nombre: '',
+    nombreProducto: '',
     descripcion: '',
     categoriaId: '',
     precio: '',
     stock: '',
-    estado: 'activo' as const,
+    estado: true,
     imagen: '',
-    puffs: ''
+    idImagen: undefined as number | undefined
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -80,19 +60,18 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
   useEffect(() => {
     if (producto && isOpen) {
       setFormData({
-        codigo: producto.codigo,
-        nombre: producto.nombre,
+        nombreProducto: producto.nombreProducto,
         descripcion: producto.descripcion,
-        categoriaId: producto.categoria.id.toString(),
+        categoriaId: (producto.categoriaId || producto.categoria?.id || 0).toString(),
         precio: producto.precio.toString(),
         stock: producto.stock.toString(),
         estado: producto.estado,
         imagen: producto.imagen || '',
-        puffs: producto.puffs?.toString() || ''
+        idImagen: producto.idImagen
       });
       setImagePreview(producto.imagen || '');
       setImageFile(null);
-      setSelectedImageId(undefined);
+      setSelectedImageId(producto.idImagen);
     }
   }, [producto, isOpen]);
 
@@ -110,16 +89,16 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       toast.error("Solo se permiten archivos PNG o JPG");
       return;
     }
-    
+
     // Validar tamaño máximo de 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error("La imagen no debe superar los 5MB");
       return;
     }
-    
+
     setImageFile(file);
     setSelectedImageId(undefined);
-    
+
     // Crear preview
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -141,7 +120,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
   };
 
   const validateForm = () => {
-    if (!formData.nombre.trim()) {
+    if (!formData.nombreProducto.trim()) {
       toast.error("El nombre del producto es obligatorio");
       return false;
     }
@@ -163,12 +142,22 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       toast.error("El stock no puede ser negativo");
       return false;
     }
+
+    // Validación de nombre único (excluyendo el actual)
+    const nombreDuplicado = productos.some(
+      p => p.id !== producto?.id && p.nombreProducto.toLowerCase().trim() === formData.nombreProducto.toLowerCase().trim()
+    );
+    if (nombreDuplicado) {
+      toast.error("Ya existe otro producto con este nombre");
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm() || !producto) {
       return;
     }
@@ -186,34 +175,21 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         return;
       }
 
-      // Determinar el estado basado en el stock
-      let estado = formData.estado;
-      if (formData.stock && parseInt(formData.stock) === 0) {
-        estado = 'agotado';
-      }
 
-      // Mantener valores originales si los campos están vacíos
-      const precioActualizado = formData.precio ? parseFloat(formData.precio) : producto.precio;
-      const stockActualizado = formData.stock ? parseInt(formData.stock) : producto.stock;
-
-      const productoActualizado: Producto = {
-        ...producto,
-        codigo: formData.codigo.trim(),
-        nombre: formData.nombre.trim(),
+      const data: ProductoDto = {
+        nombreProducto: formData.nombreProducto.trim(),
         descripcion: formData.descripcion.trim(),
-        categoria,
-        precio: precioActualizado,
-        stock: stockActualizado,
-        estado,
-        imagen: imagePreview || formData.imagen.trim() || undefined,
-        puffs: formData.puffs ? parseInt(formData.puffs) : undefined,
-        fechaActualizacion: new Date().toISOString(),
+        categoriaId: categoria.id,
+        precio: formData.precio ? parseFloat(formData.precio) : 0,
+        stock: formData.stock ? parseInt(formData.stock) : 0,
+        estado: formData.estado,
+        idImagen: selectedImageId
       };
 
-      onProductoUpdated(productoActualizado);
-      
+      await onProductoUpdated(data);
+
       toast.success("Producto actualizado exitosamente", {
-        description: `Los cambios en "${productoActualizado.nombre}" han sido guardados.`
+        description: `Los cambios en "${data.nombreProducto}" han sido guardados.`
       });
 
       onClose();
@@ -234,18 +210,18 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Editar Producto</DialogTitle>
           <DialogDescription>
-            Modifique los datos del producto "{producto.nombre}".
+            Modifique los datos del producto "{producto.nombreProducto}".
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nombre del Producto */}
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre del Producto *</Label>
+            <Label htmlFor="nombreProducto">Nombre del Producto *</Label>
             <Input
-              id="nombre"
-              value={formData.nombre}
-              onChange={(e) => handleInputChange('nombre', e.target.value)}
+              id="nombreProducto"
+              value={formData.nombreProducto}
+              onChange={(e) => handleInputChange('nombreProducto', e.target.value)}
               placeholder="Ej: Vape Desechable Cherry"
               required
             />
@@ -254,17 +230,17 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
           {/* Categoría */}
           <div className="space-y-2">
             <Label htmlFor="categoria">Categoría *</Label>
-            <Select 
-              value={formData.categoriaId} 
-              onValueChange={(value) => handleInputChange('categoriaId', value)}
+            <Select
+              value={formData.categoriaId}
+              onValueChange={(value: string) => handleInputChange('categoriaId', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccione una categoría" />
               </SelectTrigger>
               <SelectContent>
-                {categorias.filter(c => c.activa).map((categoria) => (
+                {categorias.filter(c => c.estado).map((categoria) => (
                   <SelectItem key={categoria.id} value={categoria.id.toString()}>
-                    {categoria.nombre}
+                    {categoria.nombreCategoria}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -298,19 +274,6 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
             </div>
           </div>
 
-          {/* Puffs (Opcional) */}
-          <div className="space-y-2">
-            <Label htmlFor="puffs">Puffs (Opcional)</Label>
-            <Input
-              id="puffs"
-              type="number"
-              min="0"
-              value={formData.puffs}
-              onChange={(e) => handleInputChange('puffs', e.target.value)}
-              placeholder="Ej: 2000"
-            />
-            <p className="text-xs text-muted-foreground">Solo para vapeadores</p>
-          </div>
 
           {/* Imagen del Producto */}
           <ImageSelector
@@ -338,7 +301,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-<Button type="submit" disabled={isLoading} className="bg-black hover:bg-gray-800 text-white border-none">
+            <Button type="submit" disabled={isLoading} className="bg-black hover:bg-gray-800 text-white border-none">
               {isLoading ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </DialogFooter>

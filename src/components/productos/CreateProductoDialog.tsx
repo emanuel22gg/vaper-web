@@ -21,35 +21,15 @@ import {
 import { toast } from "sonner";
 import { ImageSelector } from '../shared/ImageSelector';
 
-interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  activa: boolean;
-}
-
-interface Producto {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: Categoria;
-  precio: number;
-  stock: number;
-  estado: 'activo' | 'inactivo' | 'agotado' | 'descontinuado';
-  imagen?: string;
-  puffs?: number;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  creadoPor: string;
-}
+import { Categoria, Producto, ProductoDto } from '../../types';
 
 interface CreateProductoDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onProductoCreated: (producto: Producto) => void;
+  onProductoCreated: (producto: ProductoDto) => Promise<void>;
   categorias: Categoria[];
   nextProductId: number;
+  productos: Producto[];
 }
 
 export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
@@ -57,16 +37,17 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
   onClose,
   onProductoCreated,
   categorias,
-  nextProductId
+  nextProductId,
+  productos
 }) => {
   const [formData, setFormData] = useState({
-    nombre: '',
+    nombreProducto: '',
     descripcion: '',
     categoriaId: '',
+    precio: '',
     stock: '',
-    estado: 'activo' as const,
+    estado: true,
     imagen: '',
-    puffs: '',
     idImagen: undefined as number | undefined,
     imageFile: undefined as File | undefined,
     previewUrl: undefined as string | undefined
@@ -82,8 +63,12 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
   };
 
   const validateForm = () => {
-    if (!formData.nombre.trim()) {
+    if (!formData.nombreProducto.trim()) {
       toast.error("El nombre del producto es obligatorio");
+      return false;
+    }
+    if (formData.precio && parseFloat(formData.precio) < 0) {
+      toast.error("El precio debe ser positivo");
       return false;
     }
     if (!formData.descripcion.trim()) {
@@ -98,12 +83,22 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
       toast.error("El stock no puede ser negativo");
       return false;
     }
+
+    // Validación de nombre único
+    const nombreDuplicado = productos.some(
+      p => p.nombreProducto.toLowerCase().trim() === formData.nombreProducto.toLowerCase().trim()
+    );
+    if (nombreDuplicado) {
+      toast.error("Ya existe un producto con este nombre");
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -121,31 +116,21 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
         return;
       }
 
-      // Generar código automáticamente basado en categoría
-      const codigoCategoria = categoria.nombre.substring(0, 2).toUpperCase();
-      const codigoNumerico = String(nextProductId).padStart(3, '0');
-      const codigo = `${codigoCategoria}${codigoNumerico}`;
 
-      const nuevoProducto: Producto = {
-        id: nextProductId,
-        codigo: codigo,
-        nombre: formData.nombre.trim(),
+      const data: ProductoDto = {
+        nombreProducto: formData.nombreProducto.trim(),
         descripcion: formData.descripcion.trim(),
-        categoria,
-        precio: 0, // Precio no se ingresa en este formulario
+        precio: formData.precio ? parseFloat(formData.precio) : 0,
         stock: formData.stock ? parseInt(formData.stock) : 0,
+        categoriaId: parseInt(formData.categoriaId),
         estado: formData.estado,
-        imagen: formData.previewUrl || formData.imagen.trim() || undefined,
-        puffs: formData.puffs ? parseInt(formData.puffs) : undefined,
-        fechaCreacion: new Date().toISOString(),
-        fechaActualizacion: new Date().toISOString(),
-        creadoPor: 'Usuario Actual' // En una app real, vendría del contexto de auth
+        idImagen: formData.idImagen
       };
 
-      onProductoCreated(nuevoProducto);
-      
+      await onProductoCreated(data);
+
       toast.success("Producto creado exitosamente", {
-        description: `El producto "${nuevoProducto.nombre}" ha sido agregado al inventario.`
+        description: `El producto "${data.nombreProducto}" ha sido agregado al inventario.`
       });
 
       handleClose();
@@ -160,13 +145,13 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
 
   const handleClose = () => {
     setFormData({
-      nombre: '',
+      nombreProducto: '',
       descripcion: '',
       categoriaId: '',
+      precio: '',
       stock: '',
-      estado: 'activo',
+      estado: true,
       imagen: '',
-      puffs: '',
       idImagen: undefined,
       imageFile: undefined,
       previewUrl: undefined
@@ -186,11 +171,11 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre del Producto *</Label>
+            <Label htmlFor="nombreProducto">Nombre del Producto *</Label>
             <Input
-              id="nombre"
-              value={formData.nombre}
-              onChange={(e) => handleInputChange('nombre', e.target.value)}
+              id="nombreProducto"
+              value={formData.nombreProducto}
+              onChange={(e) => handleInputChange('nombreProducto', e.target.value)}
               placeholder="Ej: Vape Desechable Cherry"
               required
             />
@@ -198,17 +183,17 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="categoria">Categoría *</Label>
-            <Select 
-              value={formData.categoriaId} 
-              onValueChange={(value) => handleInputChange('categoriaId', value)}
+            <Select
+              value={formData.categoriaId}
+              onValueChange={(value: string) => handleInputChange('categoriaId', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccione una categoría" />
               </SelectTrigger>
               <SelectContent>
-                {categorias.filter(c => c.activa).map((categoria) => (
+                {categorias.filter(c => c.estado).map((categoria) => (
                   <SelectItem key={categoria.id} value={categoria.id.toString()}>
-                    {categoria.nombre}
+                    {categoria.nombreCategoria}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -216,6 +201,19 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="precio">Precio</Label>
+              <Input
+                id="precio"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.precio}
+                onChange={(e) => handleInputChange('precio', e.target.value)}
+                placeholder="25000"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="stock">Stock (Opcional)</Label>
               <Input
@@ -227,19 +225,6 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                 placeholder="0"
               />
               <p className="text-xs text-muted-foreground">Si no se ingresa, el stock será 0</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="puffs">Puffs (Opcional)</Label>
-              <Input
-                id="puffs"
-                type="number"
-                min="0"
-                value={formData.puffs}
-                onChange={(e) => handleInputChange('puffs', e.target.value)}
-                placeholder="Ej: 2000"
-              />
-              <p className="text-xs text-muted-foreground">Solo para vapeadores</p>
             </div>
           </div>
 
@@ -261,13 +246,13 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                   toast.error("Solo se permiten archivos con formato PNG o JPG");
                   return;
                 }
-                
+
                 // Validar tamaño (5MB)
                 if (file.size > 5 * 1024 * 1024) {
                   toast.error("La imagen no debe superar 5MB");
                   return;
                 }
-                
+
                 const reader = new FileReader();
                 reader.onloadend = () => {
                   setFormData({

@@ -12,40 +12,7 @@ import {
 import { AlertTriangle, Package, DollarSign } from 'lucide-react';
 import { toast } from "sonner";
 
-interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  activa: boolean;
-}
-
-interface Proveedor {
-  id: number;
-  nombre: string;
-  contacto: string;
-}
-
-interface Producto {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: Categoria;
-  proveedor: Proveedor;
-  precio: number;
-  precioCosto: number;
-  stock: number;
-  stockMinimo: number;
-  estado: 'activo' | 'inactivo' | 'agotado' | 'descontinuado';
-  imagen?: string;
-  peso?: number;
-  dimensiones?: string;
-  marca?: string;
-  modelo?: string;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  creadoPor: string;
-}
+import { Categoria, Producto } from '../../types';
 
 interface DeleteProductoDialogProps {
   isOpen: boolean;
@@ -72,9 +39,9 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       onProductoDeleted(producto.id);
-      
+
       toast.success("Producto eliminado exitosamente", {
-        description: `"${producto.nombre}" ha sido eliminado del inventario.`
+        description: `"${producto.nombreProducto}" ha sido eliminado del inventario.`
       });
 
       onClose();
@@ -89,22 +56,10 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
 
   if (!producto) return null;
 
-  const getEstadoBadgeVariant = (estado: string) => {
-    switch (estado) {
-      case 'activo':
-        return 'default';
-      case 'inactivo':
-        return 'secondary';
-      case 'agotado':
-        return 'destructive';
-      case 'descontinuado':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
+  const getEstadoBadgeVariant = (estado: boolean) => {
+    return estado ? 'default' : 'secondary';
   };
 
-  const valorInventario = producto.stock * producto.precioCosto;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -127,7 +82,7 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
                 <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   <img
                     src={producto.imagen}
-                    alt={producto.nombre}
+                    alt={producto.nombreProducto}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -136,14 +91,11 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
                   <Package className="h-6 w-6 text-gray-400" />
                 </div>
               )}
-              
+
               <div className="flex-1 space-y-1">
-                <h4 className="font-medium">{producto.nombre}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {producto.codigo} • {producto.marca} {producto.modelo}
-                </p>
+                <h4 className="font-medium">{producto.nombreProducto}</h4>
                 <Badge variant={getEstadoBadgeVariant(producto.estado)} className="text-xs">
-                  {producto.estado}
+                  {producto.estado ? "Activo" : "Inactivo"}
                 </Badge>
               </div>
             </div>
@@ -158,30 +110,18 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
                   <span className="text-sm font-medium">Stock disponible</span>
                 </div>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Este producto tiene {producto.stock} unidades en stock. Al eliminarlo, 
+                  Este producto tiene {producto.stock} unidades en stock. Al eliminarlo,
                   perderás el registro de este inventario.
                 </p>
               </div>
             )}
 
-            {valorInventario > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-red-800">
-                  <DollarSign className="h-4 w-4" />
-                  <span className="text-sm font-medium">Valor del inventario</span>
-                </div>
-                <p className="text-sm text-red-700 mt-1">
-                  El valor del inventario actual es de ${valorInventario.toLocaleString()}. 
-                  Esta información se perderá permanentemente.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Confirmación */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
             <p className="text-sm text-gray-700">
-              ¿Está seguro de que desea eliminar <strong>"{producto.nombre}"</strong>? 
+              ¿Está seguro de que desea eliminar <strong>"{producto.nombreProducto}"</strong>?
               Esta acción no se puede deshacer.
             </p>
           </div>
@@ -191,9 +131,9 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button 
-            type="button" 
-            variant="destructive" 
+          <Button
+            type="button"
+            variant="destructive"
             onClick={handleDelete}
             disabled={isLoading}
           >
