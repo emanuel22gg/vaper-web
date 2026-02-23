@@ -64,6 +64,7 @@ export const useUsers = () => {
                     numeroDocumento: u.numeroDocumento,
                     tipoDocumento: u.tipoDocumento,
                     telefono: u.telefono,
+                    ciudad: u.ciudad,
                     direccion: u.direccion,
                     barrio: u.barrio,
                     fechaNacimiento: u.fechaNacimiento,
@@ -96,16 +97,59 @@ export const useUsers = () => {
         permissions: availablePermissions,
         isLoading,
         updateUser: async (updatedUser: User) => {
-            console.log('Updating user:', updatedUser);
-            loadData();
+            try {
+                await apiService.updateUsuario(parseInt(updatedUser.id), {
+                    id: parseInt(updatedUser.id),
+                    nombres: updatedUser.firstName,
+                    apellidos: updatedUser.lastName,
+                    correo: updatedUser.email,
+                    numeroDocumento: updatedUser.numeroDocumento || '',
+                    tipoDocumento: updatedUser.tipoDocumento || 'C.C',
+                    telefono: updatedUser.telefono || '',
+                    ciudad: updatedUser.ciudad || 'N/A',
+                    direccion: updatedUser.direccion || '',
+                    barrio: updatedUser.barrio || '',
+                    fechaNacimiento: updatedUser.fechaNacimiento || new Date().toISOString(),
+                    estadoUsuario: updatedUser.isActive,
+                    rolId: parseInt(updatedUser.role.id)
+                });
+                await loadData();
+            } catch (error) {
+                console.error('Error al actualizar usuario:', error);
+                throw error;
+            }
         },
         deleteUser: async (userId: string) => {
-            console.log('Deleting user:', userId);
-            loadData();
+            try {
+                await apiService.deleteUsuario(parseInt(userId));
+                await loadData();
+            } catch (error) {
+                console.error('Error al eliminar usuario:', error);
+                throw error;
+            }
         },
         createUser: async (userData: Omit<User, 'id' | 'createdAt'>) => {
-            console.log('Creating user:', userData);
-            loadData();
+            try {
+                await apiService.createUsuario({
+                    nombres: userData.firstName,
+                    apellidos: userData.lastName,
+                    correo: userData.email,
+                    contraseña: userData.password || 'temp123',
+                    numeroDocumento: userData.numeroDocumento || '',
+                    tipoDocumento: userData.tipoDocumento || 'C.C',
+                    telefono: userData.telefono || '',
+                    ciudad: userData.ciudad || 'N/A',
+                    direccion: userData.direccion || '',
+                    barrio: userData.barrio || '',
+                    fechaNacimiento: userData.fechaNacimiento || new Date().toISOString(),
+                    estadoUsuario: userData.isActive,
+                    rolId: parseInt(userData.role.id)
+                });
+                await loadData();
+            } catch (error) {
+                console.error('Error al crear usuario:', error);
+                throw error;
+            }
         },
         createRole: async (roleData: Omit<Role, 'id'>) => {
             try {

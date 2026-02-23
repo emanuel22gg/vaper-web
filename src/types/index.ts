@@ -53,6 +53,7 @@ export interface User {
   numeroDocumento: string;
   tipoDocumento: string;
   telefono: string;
+  ciudad: string;
   direccion: string;
   barrio: string;
   fechaNacimiento: string;

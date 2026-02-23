@@ -63,11 +63,12 @@ export const GestionUsuarios: React.FC = () => {
   // Estado simplificado para crear usuario (solo documento, nombre, apellido, correo)
   const [newUser, setNewUser] = useState({
     documento: '',
-    tipoDocumento: 'C.C' as 'T.I' | 'C.C',
+    tipoDocumento: 'C.C' as string,
     firstName: '',
     lastName: '',
     email: '',
     telefono: '',
+    ciudad: '',
     direccion: '',
     barrio: '',
     fechaNacimiento: '',
@@ -77,15 +78,16 @@ export const GestionUsuarios: React.FC = () => {
 
   // Estado para editar usuario - AHORA INCLUYE DOCUMENTO EDITABLE
   const [editUserData, setEditUserData] = useState({
-    documento: '', // NUEVO: Ahora el documento es editable
+    documento: '',
     firstName: '',
     lastName: '',
     email: '',
     telefono: '',
+    ciudad: '',
     direccion: '',
     barrio: '',
     fechaNacimiento: '',
-    tipoDocumento: 'C.C' as 'T.I' | 'C.C',
+    tipoDocumento: 'C.C' as string,
     role: 'Cliente' as UserRole,
     isActive: true
   });
@@ -120,20 +122,22 @@ export const GestionUsuarios: React.FC = () => {
   const endIndex = startIndex + usersPerPage;
   const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     const roleObj = roles.find(r => r.name === newUser.role) || roles[2];
 
-    createUser({
-      username: newUser.documento, // Usar documento como username
+    await createUser({
+      username: newUser.documento,
       email: newUser.email,
-      password: 'temp123', // Contraseña temporal
+      password: 'temp123',
       firstName: newUser.firstName,
       lastName: newUser.lastName,
+      numeroDocumento: newUser.documento,
+      tipoDocumento: newUser.tipoDocumento,
       telefono: newUser.telefono,
+      ciudad: newUser.ciudad || 'N/A',
       direccion: newUser.direccion,
       barrio: newUser.barrio,
       fechaNacimiento: newUser.fechaNacimiento,
-      tipoDocumento: newUser.tipoDocumento,
       role: roleObj,
       isActive: newUser.isActive
     });
@@ -151,6 +155,7 @@ export const GestionUsuarios: React.FC = () => {
       lastName: '',
       email: '',
       telefono: '',
+      ciudad: '',
       direccion: '',
       barrio: '',
       fechaNacimiento: '',
@@ -164,11 +169,12 @@ export const GestionUsuarios: React.FC = () => {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setEditUserData({
-      documento: user.username || '', // Asegurar valor definido
+      documento: user.numeroDocumento || user.username || '',
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       email: user.email || '',
       telefono: user.telefono || '',
+      ciudad: user.ciudad || '',
       direccion: user.direccion || '',
       barrio: user.barrio || '',
       fechaNacimiento: user.fechaNacimiento || '',
@@ -179,26 +185,28 @@ export const GestionUsuarios: React.FC = () => {
     setIsEditUserDialogOpen(true);
   };
 
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (editingUser) {
       const roleObj = roles.find(r => r.name === editUserData.role) || editingUser.role;
 
-      const updatedUser = {
+      const updatedUser: User = {
         ...editingUser,
-        username: editUserData.documento, // NUEVO: Actualizar username con nuevo documento
+        username: editUserData.documento,
         firstName: editUserData.firstName,
         lastName: editUserData.lastName,
         email: editUserData.email,
+        numeroDocumento: editUserData.documento,
+        tipoDocumento: editUserData.tipoDocumento,
         telefono: editUserData.telefono,
+        ciudad: editUserData.ciudad || 'N/A',
         direccion: editUserData.direccion,
         barrio: editUserData.barrio,
         fechaNacimiento: editUserData.fechaNacimiento,
-        tipoDocumento: editUserData.tipoDocumento,
         role: roleObj,
         isActive: editUserData.isActive
       };
 
-      updateUser(updatedUser);
+      await updateUser(updatedUser);
       setEditingUser(null);
       setIsEditUserDialogOpen(false);
       resetEditUserForm();
@@ -213,11 +221,12 @@ export const GestionUsuarios: React.FC = () => {
 
   const resetEditUserForm = () => {
     setEditUserData({
-      documento: '', // NUEVO: Resetear documento
+      documento: '',
       firstName: '',
       lastName: '',
       email: '',
       telefono: '',
+      ciudad: '',
       direccion: '',
       barrio: '',
       fechaNacimiento: '',
@@ -246,8 +255,26 @@ export const GestionUsuarios: React.FC = () => {
     }
   };
 
-  const toggleUserStatus = (user: User) => {
-    updateUser({ ...user, isActive: !user.isActive });
+  const toggleUserStatus = async (user: User) => {
+    // Restricción: No se pueden desactivar administradores
+    if (user.role.name === 'Administrador') {
+      toast.error("Acción no permitida", {
+        description: "No se puede desactivar a un usuario con el rol de Administrador.",
+      });
+      return;
+    }
+
+    try {
+      await updateUser({ ...user, isActive: !user.isActive });
+      toast.success("Estado actualizado", {
+        description: `El usuario ${user.firstName} ${user.lastName} ahora está ${!user.isActive ? 'activo' : 'inactivo'}.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      toast.error("Error al actualizar estado", {
+        description: "No se pudo cambiar el estado del usuario. Intenta nuevamente.",
+      });
+    }
   };
 
   const handleViewUserDetail = (user: User) => {
@@ -377,6 +404,16 @@ export const GestionUsuarios: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="create-ciudad">Ciudad *</Label>
+                      <Input
+                        id="create-ciudad"
+                        value={newUser.ciudad}
+                        onChange={(e) => setNewUser({ ...newUser, ciudad: e.target.value })}
+                        placeholder="Ciudad"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="create-direccion">Dirección *</Label>
                       <Input
                         id="create-direccion"
@@ -419,7 +456,7 @@ export const GestionUsuarios: React.FC = () => {
                       <Switch
                         id="create-active"
                         checked={newUser.isActive}
-                        onCheckedChange={(checked) => setNewUser({ ...newUser, isActive: checked })}
+                        onCheckedChange={(checked: boolean) => setNewUser({ ...newUser, isActive: checked })}
                       />
                       <Label htmlFor="create-active">Usuario Activo</Label>
                     </div>
@@ -510,6 +547,8 @@ export const GestionUsuarios: React.FC = () => {
                           checked={user.isActive}
                           onCheckedChange={() => toggleUserStatus(user)}
                           size="sm"
+                          disabled={user.role.name === 'Administrador'}
+                          title={user.role.name === 'Administrador' ? 'No se puede desactivar un administrador' : ''}
                         />
                       </div>
                     </TableCell>
@@ -556,9 +595,7 @@ export const GestionUsuarios: React.FC = () => {
                   <PaginationPrevious
                     onClick={() => currentPage > 1 && handlePageChange(Math.max(1, currentPage - 1))}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  >
-                    Anterior
-                  </PaginationPrevious>
+                  />
                 </PaginationItem>
 
                 {Array.from({ length: displayPages }, (_, i) => i + 1).map((page) => {
@@ -575,7 +612,6 @@ export const GestionUsuarios: React.FC = () => {
                           ${isCurrentPage && hasContent ? '' : ''}
                           ${!hasContent ? 'bg-gray-100 border-gray-200' : ''}
                         `}
-                        disabled={!hasContent}
                       >
                         {page}
                       </PaginationLink>
@@ -587,9 +623,7 @@ export const GestionUsuarios: React.FC = () => {
                   <PaginationNext
                     onClick={() => currentPage < totalPages && handlePageChange(Math.min(totalPages, currentPage + 1))}
                     className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  >
-                    Siguiente
-                  </PaginationNext>
+                  />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
@@ -682,6 +716,16 @@ export const GestionUsuarios: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="edit-ciudad">Ciudad</Label>
+                  <Input
+                    id="edit-ciudad"
+                    value={editUserData.ciudad}
+                    onChange={(e) => setEditUserData({ ...editUserData, ciudad: e.target.value })}
+                    placeholder="Ciudad"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="edit-direccion">Dirección</Label>
                   <Input
                     id="edit-direccion"
@@ -733,9 +777,10 @@ export const GestionUsuarios: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={editUserData.isActive}
-                    onCheckedChange={(checked) => setEditUserData({ ...editUserData, isActive: checked })}
+                    onCheckedChange={(checked: boolean) => setEditUserData({ ...editUserData, isActive: checked })}
+                    disabled={editUserData.role === 'Administrador'}
                   />
-                  <Label>Usuario Activo</Label>
+                  <Label>Usuario Activo {editUserData.role === 'Administrador' && "(No modificable para Administradores)"}</Label>
                 </div>
 
                 <div className="text-xs text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
@@ -787,7 +832,7 @@ export const GestionUsuarios: React.FC = () => {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-500">Número de Documento</Label>
                     <div className="p-2 bg-gray-100 rounded text-sm text-gray-700 font-mono">
-                      {selectedUser.username}
+                      {selectedUser.numeroDocumento || selectedUser.username}
                     </div>
                   </div>
                 </div>
@@ -825,6 +870,13 @@ export const GestionUsuarios: React.FC = () => {
                   <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
                   <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
                     {selectedUser.telefono || 'No registrado'}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-500">Ciudad</Label>
+                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
+                    {selectedUser.ciudad || 'No registrada'}
                   </div>
                 </div>
 
