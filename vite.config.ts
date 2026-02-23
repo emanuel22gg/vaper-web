@@ -59,7 +59,7 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://vaperapi.somee.com',
+        target: 'http://www.vaperapi.somee.com',
         changeOrigin: true,
         secure: false,
       },

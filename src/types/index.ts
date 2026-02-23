@@ -236,3 +236,46 @@ export interface CityColombian {
   departmentId: number;
   department: any;
 }
+export interface Proveedor {
+  id: number;
+  codigo?: string;
+  tipoPersona: 'natural' | 'juridica';
+  nombres?: string;
+  apellidos?: string;
+  cedula?: string;
+  razonSocial?: string;
+  nit?: string;
+  celular?: string;
+  pais?: string;
+  productos?: string[];
+  fechaRegistro?: string;
+  ultimaCompra?: string;
+  totalCompras?: number;
+  banco?: string;
+  numeroCuenta?: string;
+  tipoCuenta?: string;
+  contactoAdicional?: {
+    nombre: string;
+    cargo: string;
+    telefono: string;
+    email: string;
+  };
+  observaciones?: string;
+
+  // Campos del Controlador C#
+  nombreCompletoORazonSocial?: string;
+  tipoDocumento?: string;
+  numeroDocumento?: string;
+  representanteLegal?: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  ciudad: string;
+  estado: boolean; // Cambiado a boolean para coincidir con el backend
+
+  // Campos adicionales del modelo C#
+  metodoPagoPreferido?: string;
+  latitud?: number;
+  longitud?: number;
+  informacionAdicional?: string;
+}

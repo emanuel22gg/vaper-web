@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian, Proveedor } from '../types';
 
 const API_URL = '/api';
 
@@ -233,4 +233,27 @@ export const getDepartments = async (): Promise<DepartmentColombian[]> => {
 export const getCitiesByDepartment = async (departmentId: number): Promise<CityColombian[]> => {
     const response = await geographyApi.get(`/Department/${departmentId}/cities`);
     return response.data;
+};
+
+// Proveedores Service
+export const getProveedores = async (): Promise<Proveedor[]> => {
+    const response = await api.get('/Proveedores');
+    return response.data;
+};
+
+export const createProveedor = async (proveedor: Partial<Proveedor>): Promise<Proveedor> => {
+    const response = await api.post('/Proveedores', proveedor);
+    return response.data;
+};
+
+export const updateProveedor = async (id: number, proveedor: Partial<Proveedor>): Promise<Proveedor> => {
+    const response = await api.put(`/Proveedores/${id}`, {
+        ...proveedor,
+        id
+    });
+    return response.data;
+};
+
+export const deleteProveedor = async (id: number): Promise<void> => {
+    await api.delete(`/Proveedores/${id}`);
 };

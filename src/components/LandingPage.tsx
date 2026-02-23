@@ -158,7 +158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isMainView = currentView === 'home';
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header
         onMenuToggle={toggleSideMenu}
         currentView={currentView}
@@ -169,23 +169,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         onAdminNavigate={handleAdminNavigation}
       />
 
-      <SideMenu
-        isOpen={isSideMenuOpen}
-        onClose={() => setIsSideMenuOpen(false)}
-        currentView={currentView}
-        onNavigate={handleNavigation}
-        user={user}
-        isAuthenticated={isAuthenticated}
-        canAccessAdmin={canAccessAdmin()}
-        onAdminNavigate={handleAdminNavigation}
-        activeAdminView={activeAdminView}
-      />
+      <div className="flex flex-1 overflow-hidden">
+        <SideMenu
+          isOpen={isSideMenuOpen}
+          onClose={() => setIsSideMenuOpen(false)}
+          currentView={currentView}
+          onNavigate={handleNavigation}
+          user={user}
+          isAuthenticated={isAuthenticated}
+          canAccessAdmin={canAccessAdmin()}
+          onAdminNavigate={handleAdminNavigation}
+          activeAdminView={activeAdminView}
+        />
 
-      <main className="flex-1">
-        {renderMainContent()}
-      </main>
-
-      {isMainView && <Footer />}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="max-w-screen-2xl mx-auto">
+            {renderMainContent()}
+          </div>
+          {isMainView && <Footer />}
+        </main>
+      </div>
     </div>
   );
 };

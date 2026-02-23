@@ -56,6 +56,8 @@ import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 import { UniversalDeleteDialog } from "./UniversalDeleteDialog";
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor } from "../services/api";
+import { Proveedor } from "../types";
 import {
   Plus,
   Search,
@@ -77,249 +79,12 @@ import {
   Building2,
 } from "lucide-react";
 
-// Interface actualizada para Proveedor (sin régimen, con nombres separados)
-interface Proveedor {
-  id: string;
-  codigo: string;
-  tipoPersona: "natural" | "juridica";
-  // Campos para persona natural (nombres separados)
-  nombres?: string;
-  apellidos?: string;
-  cedula?: string;
-  // Campos para persona jurídica
-  razonSocial?: string;
-  nit?: string;
-  representanteLegal?: string;
-  // Campos comunes
-  email: string;
-  telefono: string;
-  celular?: string;
-  direccion: string;
-  ciudad: string;
-  pais: string;
-  productos: string[];
-  estado: "Activo" | "Inactivo";
-  fechaRegistro: Date;
-  ultimaCompra?: Date;
-  totalCompras: number;
-  banco?: string;
-  numeroCuenta?: string;
-  tipoCuenta?: string;
-  contactoAdicional?: {
-    nombre: string;
-    cargo: string;
-    telefono: string;
-    email: string;
-  };
-  observaciones?: string;
-}
 
-// Datos simulados actualizados (sin régimen, con nombres separados)
-const mockProveedores: Proveedor[] = [
-  {
-    id: "1",
-    codigo: "PROV-001",
-    tipoPersona: "juridica",
-    razonSocial: "VapeMax Distribuciones SAS",
-    nit: "900123456-1",
-    representanteLegal: "Juan Pérez",
-    email: "juan@vapemax.com",
-    telefono: "+57 300 123 4567",
-    celular: "+57 300 123 4567",
-    direccion: "Calle 45 #23-15",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Desechables", "Líquidos"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-01-15"),
-    ultimaCompra: new Date("2024-03-10"),
-    totalCompras: 15200000,
-    banco: "Bancolombia",
-    numeroCuenta: "123456789",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "María López",
-      cargo: "Gerente Comercial",
-      telefono: "+57 310 987 6543",
-      email: "maria.lopez@vapemax.com",
-    },
-    observaciones:
-      "Proveedor confiable con excelente calidad de productos.",
-  },
-  {
-    id: "2",
-    codigo: "PROV-002",
-    tipoPersona: "natural",
-    nombres: "María González",
-    apellidos: "Rodríguez Castro",
-    cedula: "43123456",
-    email: "maria.gonzalez@gmail.com",
-    telefono: "+57 310 987 6543",
-    celular: "+57 320 555 7777",
-    direccion: "Carrera 70 #45-30",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Mods", "Accesorios", "Baterías"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-02-01"),
-    ultimaCompra: new Date("2024-03-08"),
-    totalCompras: 28500000,
-    banco: "Banco de Bogotá",
-    numeroCuenta: "987654321",
-    tipoCuenta: "Ahorros",
-    observaciones:
-      "Especialista en productos premium, entrega rápida.",
-  },
-  {
-    id: "3",
-    codigo: "PROV-003",
-    tipoPersona: "juridica",
-    razonSocial: "Premium Vapes Ltd",
-    nit: "700555999-3",
-    representanteLegal: "Carlos Ramírez",
-    email: "carlos@premiumvapes.com",
-    telefono: "+57 320 555 7890",
-    direccion: "Avenida El Poblado #12-34",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Pods", "Líquidos Premium"],
-    estado: "Inactivo",
-    fechaRegistro: new Date("2024-01-20"),
-    ultimaCompra: new Date("2023-12-15"),
-    totalCompras: 8900000,
-    observaciones: "Proveedor temporalmente inactivo.",
-  },
-  {
-    id: "4",
-    codigo: "PROV-004",
-    tipoPersona: "natural",
-    nombres: "Luis Alberto",
-    apellidos: "Martínez Suárez",
-    cedula: "52789123",
-    email: "luis.martinez@hotmail.com",
-    telefono: "+57 315 888 9999",
-    celular: "+57 315 888 9999",
-    direccion: "Carrera 85 #50-20",
-    ciudad: "Bogotá",
-    pais: "Colombia",
-    productos: ["Resistencias", "Atomizadores"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-02-15"),
-    ultimaCompra: new Date("2024-03-15"),
-    totalCompras: 12300000,
-    banco: "Davivienda",
-    numeroCuenta: "456789123",
-    tipoCuenta: "Ahorros",
-    observaciones: "Proveedor especializado en repuestos.",
-  },
-  {
-    id: "5",
-    codigo: "PROV-005",
-    tipoPersona: "juridica",
-    razonSocial: "TechVape Colombia Ltda",
-    nit: "800444777-5",
-    representanteLegal: "Ana Patricia Gómez",
-    email: "ana@techvape.co",
-    telefono: "+57 318 222 3333",
-    direccion: "Zona Industrial #45-67",
-    ciudad: "Cali",
-    pais: "Colombia",
-    productos: ["Dispositivos", "Accesorios"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-03-01"),
-    ultimaCompra: new Date("2024-03-20"),
-    totalCompras: 45600000,
-    banco: "BBVA",
-    numeroCuenta: "789123456",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "Roberto Silva",
-      cargo: "Coordinador de Ventas",
-      telefono: "+57 318 444 5555",
-      email: "roberto@techvape.co",
-    },
-    observaciones:
-      "Proveedor mayorista con excelente servicio.",
-  },
-  {
-    id: "6",
-    codigo: "PROV-006",
-    tipoPersona: "natural",
-    nombres: "Carmen Elena",
-    apellidos: "Torres Vásquez",
-    cedula: "65432198",
-    email: "carmen.torres@gmail.com",
-    telefono: "+57 312 777 8888",
-    direccion: "Avenida 30 #15-25",
-    ciudad: "Barranquilla",
-    pais: "Colombia",
-    productos: ["Líquidos Artesanales"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-01-25"),
-    ultimaCompra: new Date("2024-03-12"),
-    totalCompras: 8750000,
-    banco: "Colpatria",
-    numeroCuenta: "321654987",
-    tipoCuenta: "Ahorros",
-    observaciones: "Fabricante artesanal de líquidos premium.",
-  },
-  {
-    id: "7",
-    codigo: "PROV-007",
-    tipoPersona: "juridica",
-    razonSocial: "Global Smoke Solutions SAS",
-    nit: "900888999-2",
-    representanteLegal: "Andrés Felipe Castro",
-    email: "andres@globalsmoke.com",
-    telefono: "+57 314 111 2222",
-    direccion: "Centro Empresarial Torre B #28-40",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Importaciones", "Marcas Internacionales"],
-    estado: "Activo",
-    fechaRegistro: new Date("2023-12-10"),
-    ultimaCompra: new Date("2024-03-18"),
-    totalCompras: 125000000,
-    banco: "Banco Popular",
-    numeroCuenta: "147258369",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "Sandra Milena López",
-      cargo: "Gerente de Importaciones",
-      telefono: "+57 314 333 4444",
-      email: "sandra@globalsmoke.com",
-    },
-    observaciones:
-      "Importador autorizado de marcas internacionales.",
-  },
-  {
-    id: "8",
-    codigo: "PROV-008",
-    tipoPersona: "natural",
-    nombres: "Diego Armando",
-    apellidos: "Ruiz Moreno",
-    cedula: "98765432",
-    email: "diego.ruiz@outlook.com",
-    telefono: "+57 317 555 6666",
-    direccion: "Carrera 50 #80-15",
-    ciudad: "Bucaramanga",
-    pais: "Colombia",
-    productos: ["Mods Mecánicos", "Drippers"],
-    estado: "Inactivo",
-    fechaRegistro: new Date("2024-02-20"),
-    ultimaCompra: new Date("2024-02-28"),
-    totalCompras: 5420000,
-    banco: "Banco Agrario",
-    numeroCuenta: "258147369",
-    tipoCuenta: "Ahorros",
-    observaciones:
-      "Proveedor especializado en productos para vapeadores avanzados.",
-  },
-];
 
 export const Proveedores: React.FC = () => {
-  const [proveedores, setProveedores] =
-    useState<Proveedor[]>(mockProveedores);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTipo, setFilterTipo] = useState("all");
@@ -369,7 +134,7 @@ export const Proveedores: React.FC = () => {
     ciudad: "",
     pais: "Colombia",
     productos: [],
-    estado: "Activo",
+    estado: true,
   });
 
   // Filtrar proveedores con filtro adicional por tipo
@@ -384,7 +149,13 @@ export const Proveedores: React.FC = () => {
         searchText
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        proveedor.codigo
+        (proveedor.codigo || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (proveedor.nit || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (proveedor.cedula || "")
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         proveedor.email
@@ -393,7 +164,7 @@ export const Proveedores: React.FC = () => {
 
       const matchesStatus =
         filterStatus === "all" ||
-        proveedor.estado === filterStatus;
+        (proveedor.estado ? "Activo" : "Inactivo") === filterStatus;
       const matchesTipo =
         filterTipo === "all" ||
         proveedor.tipoPersona === filterTipo;
@@ -412,6 +183,26 @@ export const Proveedores: React.FC = () => {
     startIndex,
     endIndex,
   );
+
+  // Cargar proveedores al montar el componente
+  useEffect(() => {
+    fetchProveedores();
+  }, []);
+
+  const fetchProveedores = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getProveedores();
+      setProveedores(data);
+    } catch (error) {
+      console.error("Error al cargar proveedores:", error);
+      toast.error("Error", {
+        description: "No se pudieron cargar los proveedores.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Resetear página cuando cambien los filtros
   useEffect(() => {
@@ -468,67 +259,91 @@ export const Proveedores: React.FC = () => {
   };
 
   // Funciones CRUD
-  const handleCreateProveedor = () => {
-    const codigo = `PROV-${String(proveedores.length + 1).padStart(3, "0")}`;
-    const nuevoProveedor: Proveedor = {
-      ...(newProveedor as Proveedor),
-      id: String(proveedores.length + 1),
-      codigo,
-      fechaRegistro: new Date(),
-      totalCompras: 0,
-      tipoPersona: tipoProveedorSeleccionado,
-    };
-
-    setProveedores([...proveedores, nuevoProveedor]);
-    resetNewProveedorForm();
-    setIsCreateDialogOpen(false);
-    setIsConfirmDialogOpen(false);
-
-    const nombreProveedor =
-      tipoProveedorSeleccionado === "natural"
+  const handleCreateProveedor = async () => {
+    try {
+      const isNatural = tipoProveedorSeleccionado === "natural";
+      const nombreCompleto = isNatural
         ? `${newProveedor.nombres || ""} ${newProveedor.apellidos || ""}`.trim()
-        : newProveedor.razonSocial;
+        : newProveedor.razonSocial || "";
 
-    toast.success("Proveedor creado", {
-      description: `${nombreProveedor} ha sido registrado exitosamente.`,
-    });
-  };
+      // Construimos el DTO exacto que espera el controlador C#
+      const proveedorACrear: Partial<Proveedor> = {
+        ...newProveedor,
+        tipoPersona: tipoProveedorSeleccionado,
+        nombreCompletoORazonSocial: nombreCompleto,
+        tipoDocumento: isNatural ? "C.C" : "NIT",
+        numeroDocumento: isNatural ? newProveedor.cedula : newProveedor.nit,
+        estado: true, // Siempre activo por defecto al crear
+        // Aseguramos que los campos específicos estén mapeados
+        nombres: isNatural ? newProveedor.nombres : undefined,
+        apellidos: isNatural ? newProveedor.apellidos : undefined,
+        cedula: isNatural ? newProveedor.cedula : undefined,
+        razonSocial: !isNatural ? newProveedor.razonSocial : undefined,
+        nit: !isNatural ? newProveedor.nit : newProveedor.cedula, // Usamos cédula como NIT si es natural
+        representanteLegal: !isNatural ? newProveedor.representanteLegal : undefined
+      };
 
-  const handleUpdateProveedor = () => {
-    if (selectedProveedor) {
-      setProveedores(
-        proveedores.map((p) =>
-          p.id === selectedProveedor.id ? selectedProveedor : p,
-        ),
-      );
-      setIsEditDialogOpen(false);
-      setSelectedProveedor(null);
+      await createProveedor(proveedorACrear);
 
-      toast.success("Proveedor actualizado", {
-        description:
-          "La información del proveedor ha sido actualizada correctamente.",
+      await fetchProveedores();
+      resetNewProveedorForm();
+      setIsCreateDialogOpen(false);
+      setIsConfirmDialogOpen(false);
+
+      toast.success("Proveedor creado", {
+        description: `${nombreCompleto} ha sido registrado exitosamente.`,
+      });
+    } catch (error) {
+      console.error("Error al crear proveedor:", error);
+      toast.error("Error", {
+        description: "No se pudo crear el proveedor. Verifique que los datos sean correctos.",
       });
     }
   };
 
-  const handleDeleteProveedor = () => {
+  const handleUpdateProveedor = async () => {
+    if (selectedProveedor) {
+      try {
+        await updateProveedor(selectedProveedor.id, selectedProveedor);
+        await fetchProveedores();
+        setIsEditDialogOpen(false);
+        setSelectedProveedor(null);
+
+        toast.success("Proveedor actualizado", {
+          description:
+            "La información del proveedor ha sido actualizada correctamente.",
+        });
+      } catch (error) {
+        console.error("Error al actualizar proveedor:", error);
+        toast.error("Error", {
+          description: "No se pudo actualizar el proveedor.",
+        });
+      }
+    }
+  };
+
+  const handleDeleteProveedor = async () => {
     if (proveedorToDelete) {
-      const nombreProveedor =
-        proveedorToDelete.tipoPersona === "natural"
-          ? `${proveedorToDelete.nombres || ""} ${proveedorToDelete.apellidos || ""}`.trim()
-          : proveedorToDelete.razonSocial;
+      try {
+        const nombreProveedor =
+          proveedorToDelete.tipoPersona === "natural"
+            ? `${proveedorToDelete.nombres || ""} ${proveedorToDelete.apellidos || ""}`.trim()
+            : proveedorToDelete.razonSocial;
 
-      setProveedores(
-        proveedores.filter(
-          (p) => p.id !== proveedorToDelete.id,
-        ),
-      );
-      setIsDeleteDialogOpen(false);
-      setProveedorToDelete(null);
+        await deleteProveedor(proveedorToDelete.id);
+        await fetchProveedores();
+        setIsDeleteDialogOpen(false);
+        setProveedorToDelete(null);
 
-      toast.success("Proveedor eliminado", {
-        description: `${nombreProveedor} ha sido eliminado del sistema.`,
-      });
+        toast.success("Proveedor eliminado", {
+          description: `${nombreProveedor} ha sido eliminado del sistema.`,
+        });
+      } catch (error) {
+        console.error("Error al eliminar proveedor:", error);
+        toast.error("Error", {
+          description: "No se pudo eliminar el proveedor.",
+        });
+      }
     }
   };
 
@@ -537,25 +352,28 @@ export const Proveedores: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleChangeStatus = (
-    id: string,
-    newStatus: "Activo" | "Inactivo",
+  const handleChangeStatus = async (
+    id: number,
+    newStatus: boolean,
   ) => {
-    setProveedores(
-      proveedores.map((p) =>
-        p.id === id ? { ...p, estado: newStatus } : p,
-      ),
-    );
-
-    const proveedor = proveedores.find((p) => p.id === id);
-    const nombreProveedor =
-      proveedor?.tipoPersona === "natural"
-        ? `${proveedor.nombres || ""} ${proveedor.apellidos || ""}`.trim()
-        : proveedor?.razonSocial;
-
-    toast.success("Estado actualizado", {
-      description: `${nombreProveedor} ahora está ${newStatus.toLowerCase()}.`,
-    });
+    try {
+      const proveedor = proveedores.find((p) => p.id === id);
+      if (proveedor) {
+        await updateProveedor(id, {
+          ...proveedor,
+          estado: newStatus,
+        });
+        await fetchProveedores();
+        toast.success("Estado actualizado", {
+          description: `El proveedor ahora está ${newStatus ? "Activo" : "Inactivo"}.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error al cambiar estado:", error);
+      toast.error("Error", {
+        description: "No se pudo cambiar el estado del proveedor.",
+      });
+    }
   };
 
   // Función de reset actualizada (sin régimen, con nombres separados)
@@ -576,7 +394,7 @@ export const Proveedores: React.FC = () => {
       ciudad: "",
       pais: "Colombia",
       productos: [],
-      estado: "Activo",
+      estado: true,
     });
   };
 
@@ -590,16 +408,13 @@ export const Proveedores: React.FC = () => {
     setIsViewDialogOpen(true);
   };
 
-  const getStatusIcon = (estado: string) => {
-    switch (estado) {
-      case "Activo":
-        return (
-          <CheckCircle className="h-4 w-4 text-green-500" />
-        );
-      case "Inactivo":
-        return <XCircle className="h-4 w-4 text-gray-500" />;
-      default:
-        return <Clock className="h-4 w-4" />;
+  const getStatusIcon = (estado: boolean) => {
+    if (estado) {
+      return (
+        <CheckCircle className="h-4 w-4 text-green-500" />
+      );
+    } else {
+      return <XCircle className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -611,7 +426,9 @@ export const Proveedores: React.FC = () => {
     );
   };
 
-  const formatDate = (date: Date): string => {
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
     return date.toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "2-digit",
@@ -1043,7 +860,7 @@ export const Proveedores: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        {proveedor.estado === "Activo" ? (
+                        {proveedor.estado ? (
                           <Badge className="bg-black text-white hover:bg-black">
                             Activo
                           </Badge>
@@ -1053,11 +870,11 @@ export const Proveedores: React.FC = () => {
                           </Badge>
                         )}
                         <Switch
-                          checked={proveedor.estado === "Activo"}
-                          onCheckedChange={(checked) =>
+                          checked={proveedor.estado}
+                          onCheckedChange={(checked: boolean) =>
                             handleChangeStatus(
                               proveedor.id,
-                              checked ? "Activo" : "Inactivo"
+                              checked
                             )
                           }
                         />
@@ -1170,15 +987,15 @@ export const Proveedores: React.FC = () => {
                   <div className="ml-auto">
                     <Badge
                       variant={
-                        selectedProveedor.estado === "Activo"
+                        selectedProveedor.estado
                           ? "default"
                           : "secondary"
                       }
-                      className={`${selectedProveedor.estado === "Activo" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+                      className={`${selectedProveedor.estado ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                     >
                       {getStatusIcon(selectedProveedor.estado)}
                       <span className="ml-1">
-                        {selectedProveedor.estado}
+                        {selectedProveedor.estado ? "Activo" : "Inactivo"}
                       </span>
                     </Badge>
                   </div>
@@ -1328,7 +1145,7 @@ export const Proveedores: React.FC = () => {
                       Productos
                     </Label>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedProveedor.productos.map(
+                      {selectedProveedor.productos?.map(
                         (producto, index) => (
                           <Badge
                             key={index}
@@ -1347,7 +1164,7 @@ export const Proveedores: React.FC = () => {
                     </Label>
                     <p className="text-sm font-semibold text-green-700">
                       $
-                      {selectedProveedor.totalCompras.toLocaleString(
+                      {(selectedProveedor.totalCompras || 0).toLocaleString(
                         "es-CO",
                       )}
                     </p>
@@ -1766,13 +1583,11 @@ export const Proveedores: React.FC = () => {
                     Estado del Proveedor
                   </Label>
                   <Select
-                    value={selectedProveedor.estado}
-                    onValueChange={(
-                      value: "Activo" | "Inactivo",
-                    ) =>
+                    value={selectedProveedor.estado ? "true" : "false"}
+                    onValueChange={(value: string) =>
                       setSelectedProveedor({
                         ...selectedProveedor,
-                        estado: value,
+                        estado: value === "true",
                       })
                     }
                   >
@@ -1780,10 +1595,10 @@ export const Proveedores: React.FC = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Activo">
+                      <SelectItem value="true">
                         Activo
                       </SelectItem>
-                      <SelectItem value="Inactivo">
+                      <SelectItem value="false">
                         Inactivo
                       </SelectItem>
                     </SelectContent>
@@ -1835,7 +1650,7 @@ export const Proveedores: React.FC = () => {
                     </Label>
                     <Select
                       value={selectedProveedor.tipoCuenta || ""}
-                      onValueChange={(value) =>
+                      onValueChange={(value: string) =>
                         setSelectedProveedor({
                           ...selectedProveedor,
                           tipoCuenta: value,

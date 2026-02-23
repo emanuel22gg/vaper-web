@@ -31,7 +31,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-50">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mx-auto px-4">
         {/* Logo y menú */}
         <div className="flex items-center gap-4">
           <Button
