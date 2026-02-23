@@ -31,9 +31,7 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useAuth } from '../hooks/useAuth';
-import { useState } from 'react';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -60,8 +58,6 @@ export function SideMenu({
   activeAdminView
 }: SideMenuProps) {
   const { logout } = useAuth();
-  const [comprasOpen, setComprasOpen] = useState(false);
-  const [ventasOpen, setVentasOpen] = useState(false);
 
   const handleNavigation = (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => {
     onNavigate(view);
@@ -101,21 +97,24 @@ export function SideMenu({
 
   return (
     <aside
-      className={`bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col h-full z-40 ${isOpen ? 'w-56' : 'w-20'
-        }`}
+      style={{
+        width: isOpen ? '175px' : '35px',
+        minWidth: isOpen ? '175px' : '35px',
+        maxWidth: isOpen ? '175px' : '35px'
+      }}
+      className="bg-white border-r border-gray-200 transition-[width] duration-300 ease-in-out flex flex-col h-full z-40 flex-none overflow-hidden"
     >
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6">
-        {/* Usuario Info Simple */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-3 min-w-0 max-w-full">
         {isAuthenticated && user && (
-          <div className={`transition-all duration-300 ${isOpen ? 'bg-gray-50 rounded-lg p-3' : 'flex justify-center'}`}>
-            <div className={`flex items-center gap-3 ${!isOpen && 'justify-center'}`}>
-              <div className="w-10 h-10 min-w-[40px] bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+          <div className={`transition-all duration-300 ${isOpen ? 'bg-gray-50 rounded-lg p-1' : 'flex justify-center'}`}>
+            <div className={`flex items-center gap-1 ${!isOpen && 'justify-center'}`}>
+              <div className="w-6 h-6 min-w-[24px] bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
                 {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
               </div>
               {isOpen && (
                 <div className="overflow-hidden whitespace-nowrap">
-                  <div className="font-medium truncate">{user.firstName}</div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <div className="text-[9px] font-medium truncate leading-tight">{user.firstName}</div>
+                  <div className="text-[7px] text-gray-500 flex items-center gap-0.5 leading-tight">
                     <span>{getRoleIcon()}</span>
                     {user.role.name}
                   </div>
@@ -133,225 +132,235 @@ export function SideMenu({
               {hasPermission('Ver Dashboard') && (
                 <Button
                   variant={activeAdminView === 'dashboard' ? 'default' : 'ghost'}
-                  className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleAdminNavigation('dashboard')}
                   title="Dashboard"
                 >
-                  <BarChart3 className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span>Dashboard</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <BarChart3 className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate">Dashboard</span>}
+                  </div>
                 </Button>
               )}
 
               {hasPermission('Gestionar Usuarios') && (
                 <Button
                   variant={activeAdminView === 'usuarios' ? 'default' : 'ghost'}
-                  className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleAdminNavigation('usuarios')}
                   title="Usuarios"
                 >
-                  <Users className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span>Usuarios</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <Users className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate">Usuarios</span>}
+                  </div>
                 </Button>
               )}
 
               {hasPermission('Gestionar Roles') && (
                 <Button
                   variant={activeAdminView === 'roles' ? 'default' : 'ghost'}
-                  className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleAdminNavigation('roles')}
                   title="Roles y Permisos"
                 >
-                  <Shield className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span>Roles y Permisos</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <Shield className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate">Roles</span>}
+                  </div>
                 </Button>
               )}
 
               {isOpen ? (
                 <>
-                  <Separator className="my-2" />
-                  <Collapsible open={comprasOpen} onOpenChange={setComprasOpen}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between">
-                        <div className="flex items-center">
-                          <Package className="h-4 w-4 mr-3" />
-                          <span>Compras</span>
-                        </div>
-                        {comprasOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 ml-4 mt-1">
-                      {hasPermission('Gestionar Proveedores') && (
-                        <Button
-                          variant={activeAdminView === 'proveedores' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('proveedores')}
-                        >
-                          <Building className="h-3 w-3 mr-2" />
-                          Proveedores
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Categorías') && (
-                        <Button
-                          variant={activeAdminView === 'categorias' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('categorias')}
-                        >
-                          <Tag className="h-3 w-3 mr-2" />
-                          Categorías
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Productos') && (
-                        <Button
-                          variant={activeAdminView === 'productos' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('productos')}
-                        >
-                          <Package2 className="h-3 w-3 mr-2" />
-                          Productos
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Compras') && (
-                        <Button
-                          variant={activeAdminView === 'compras' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('compras')}
-                        >
-                          <ClipboardList className="h-3 w-3 mr-2" />
-                          Órdenes de Compra
-                        </Button>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
+                  <Separator className="my-1" />
+                  {/* Grupo Compras */}
+                  {hasPermission('Gestionar Proveedores') && (
+                    <Button
+                      variant={activeAdminView === 'proveedores' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('proveedores')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <Building className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Proveedores</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Categorías') && (
+                    <Button
+                      variant={activeAdminView === 'categorias' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('categorias')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <Tag className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Categorías</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Productos') && (
+                    <Button
+                      variant={activeAdminView === 'productos' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('productos')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <Package2 className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Productos</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Compras') && (
+                    <Button
+                      variant={activeAdminView === 'compras' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('compras')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <ClipboardList className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Compras</span>
+                      </div>
+                    </Button>
+                  )}
 
-                  <Collapsible open={ventasOpen} onOpenChange={setVentasOpen}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between mt-2">
-                        <div className="flex items-center">
-                          <ShoppingCart className="h-4 w-4 mr-3" />
-                          <span>Ventas</span>
-                        </div>
-                        {ventasOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 ml-4 mt-1">
-                      {hasPermission('Gestionar Clientes') && (
-                        <Button
-                          variant={activeAdminView === 'clientes' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('clientes')}
-                        >
-                          <UserCheck className="h-3 w-3 mr-2" />
-                          Clientes
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Cotizaciones') && (
-                        <Button
-                          variant={activeAdminView === 'cotizaciones' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('cotizaciones')}
-                        >
-                          <FileText className="h-3 w-3 mr-2" />
-                          Cotizaciones
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Pedidos') && (
-                        <Button
-                          variant={activeAdminView === 'pedidos' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('pedidos')}
-                        >
-                          <ShoppingBag className="h-3 w-3 mr-2" />
-                          Pedidos
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Ventas') && (
-                        <Button
-                          variant={activeAdminView === 'ventas' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('ventas')}
-                        >
-                          <DollarSign className="h-3 w-3 mr-2" />
-                          Ventas
-                        </Button>
-                      )}
-                      {hasPermission('Gestionar Devoluciones') && (
-                        <Button
-                          variant={activeAdminView === 'devoluciones' ? 'default' : 'ghost'}
-                          className="w-full justify-start text-xs"
-                          onClick={() => handleAdminNavigation('devoluciones')}
-                        >
-                          <RotateCcw className="h-3 w-3 mr-2" />
-                          Devoluciones
-                        </Button>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
+                  <Separator className="my-2" />
+                  {/* Grupo Ventas */}
+                  {hasPermission('Gestionar Clientes') && (
+                    <Button
+                      variant={activeAdminView === 'clientes' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('clientes')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <UserCheck className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Clientes</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Cotizaciones') && (
+                    <Button
+                      variant={activeAdminView === 'cotizaciones' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('cotizaciones')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <FileText className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Cotizaciones</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Pedidos') && (
+                    <Button
+                      variant={activeAdminView === 'pedidos' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('pedidos')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <ShoppingBag className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Pedidos</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Ventas') && (
+                    <Button
+                      variant={activeAdminView === 'ventas' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('ventas')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <DollarSign className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Ventas</span>
+                      </div>
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Devoluciones') && (
+                    <Button
+                      variant={activeAdminView === 'devoluciones' ? 'default' : 'ghost'}
+                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => handleAdminNavigation('devoluciones')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <RotateCcw className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Devoluciones</span>
+                      </div>
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="space-y-4 py-4 border-t border-gray-100 mt-2 flex flex-col items-center">
                   {/* Iconos de acceso directo cuando está contraído */}
-                  {hasPermission('Gestionar Roles') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('roles')} title="Roles y Permisos">
-                      <Shield className="h-6 w-6" />
-                    </Button>
-                  )}
                   {hasPermission('Gestionar Proveedores') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('proveedores')} title="Proveedores">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('proveedores')} title="Proveedores">
                       <Building className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Categorías') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('categorias')} title="Categorías">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('categorias')} title="Categorías">
                       <Tag className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Productos') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('productos')} title="Productos">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('productos')} title="Productos">
                       <Package2 className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Compras') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('compras')} title="Órdenes de Compra">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('compras')} title="Órdenes de Compra">
                       <ClipboardList className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Clientes') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('clientes')} title="Clientes">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('clientes')} title="Clientes">
                       <UserCheck className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Cotizaciones') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('cotizaciones')} title="Cotizaciones">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('cotizaciones')} title="Cotizaciones">
                       <FileText className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Pedidos') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('pedidos')} title="Pedidos">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('pedidos')} title="Pedidos">
                       <ShoppingBag className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Ventas') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('ventas')} title="Ventas">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('ventas')} title="Ventas">
                       <DollarSign className="h-6 w-6" />
                     </Button>
                   )}
                   {hasPermission('Gestionar Devoluciones') && (
-                    <Button variant="ghost" className="w-full justify-center px-0 h-10" onClick={() => handleAdminNavigation('devoluciones')} title="Devoluciones">
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('devoluciones')} title="Devoluciones">
                       <RotateCcw className="h-6 w-6" />
                     </Button>
                   )}
                 </div>
               )}
 
-              <Separator className="my-2" />
+              <Separator className="my-1" />
               <Button
                 variant="ghost"
-                className={`w-full ${isOpen ? 'justify-start text-blue-600' : 'justify-center px-0 text-blue-600'}`}
+                className={`w-full h-9 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start text-blue-600 text-xs' : 'justify-center px-0 text-blue-600'}`}
                 onClick={() => handleNavigation('home')}
                 title="Tienda"
               >
-                <Home className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                {isOpen && <span>Tienda</span>}
+                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <Home className={`${isOpen ? 'h-3.5 w-3.5 mr-2 flex-shrink-0' : 'h-6 w-6'}`} />
+                  {isOpen && <span className="truncate">Tienda</span>}
+                </div>
               </Button>
             </div>
           ) : (
@@ -359,57 +368,72 @@ export function SideMenu({
             <div className="space-y-1">
               <Button
                 variant={currentView === 'home' ? 'default' : 'ghost'}
-                className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                style={{ fontSize: '9px' }}
                 onClick={() => handleNavigation('home')}
                 title="Inicio"
               >
-                <Home className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                {isOpen && <span>Inicio</span>}
+                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <Home className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                  {isOpen && <span className="truncate">Inicio</span>}
+                </div>
               </Button>
 
               <Button
                 variant={currentView === 'shop' ? 'default' : 'ghost'}
-                className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                style={{ fontSize: '9px' }}
                 onClick={() => handleNavigation('shop')}
                 title="Tienda"
               >
-                <ShoppingCart className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                {isOpen && <span>Tienda</span>}
+                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <ShoppingCart className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                  {isOpen && <span className="truncate">Tienda</span>}
+                </div>
               </Button>
 
               {isAuthenticated && (
                 <Button
                   variant={currentView === 'profile' ? 'default' : 'ghost'}
-                  className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '9px' }}
                   onClick={() => handleNavigation('profile')}
                   title="Mi Perfil"
                 >
-                  <User className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span>Mi Perfil</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <User className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate">Mi Perfil</span>}
+                  </div>
                 </Button>
               )}
 
               {isAuthenticated && user?.role.name === 'Cliente' && (
                 <Button
                   variant={currentView === 'pedidos' ? 'default' : 'ghost'}
-                  className={`w-full ${isOpen ? 'justify-start' : 'justify-center px-0'}`}
+                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '9px' }}
                   onClick={() => handleNavigation('pedidos')}
                   title="Mis Pedidos"
                 >
-                  <Package className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span>Mis Pedidos</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <Package className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate">Mis Pedidos</span>}
+                  </div>
                 </Button>
               )}
 
               {isAuthenticated && canAccessAdmin && (
                 <Button
                   variant={currentView === 'admin' ? 'default' : 'secondary'}
-                  className={`w-full ${isOpen ? 'justify-start mt-4' : 'justify-center px-0 mt-4'}`}
+                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start mt-2' : 'justify-center mt-2'}`}
+                  style={{ fontSize: '9px' }}
                   onClick={() => handleNavigation('admin')}
                   title="Administración"
                 >
-                  <Settings className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-                  {isOpen && <span className="font-semibold">Administración</span>}
+                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                    <Settings className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    {isOpen && <span className="truncate font-semibold">Admin</span>}
+                  </div>
                 </Button>
               )}
             </div>
@@ -418,14 +442,14 @@ export function SideMenu({
 
         {/* Categories Shortcut (Solo cuando está abierto) */}
         {isOpen && !showAdminMenu && (
-          <div className="pt-4">
-            <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <div className="pt-2">
+            <h3 className="px-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
               Categorías
             </h3>
-            <div className="space-y-1">
-              <Button variant="ghost" className="w-full justify-start text-sm h-8" onClick={() => handleNavigation('shop')}>Desechables</Button>
-              <Button variant="ghost" className="w-full justify-start text-sm h-8" onClick={() => handleNavigation('shop')}>Recargables</Button>
-              <Button variant="ghost" className="w-full justify-start text-sm h-8" onClick={() => handleNavigation('shop')}>Líquidos</Button>
+            <div className="space-y-0.5">
+              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Desechables</Button>
+              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Recargables</Button>
+              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Líquidos</Button>
             </div>
           </div>
         )}
@@ -436,13 +460,15 @@ export function SideMenu({
         {isAuthenticated ? (
           <Button
             variant="ghost"
-            className={`w-full text-red-600 hover:text-red-700 hover:bg-red-50 ${isOpen ? 'justify-start' : 'justify-center px-0'
-              }`}
+            className={`w-full h-8 px-1 whitespace-normal overflow-hidden text-red-600 hover:text-red-700 hover:bg-red-50 ${isOpen ? 'justify-start' : 'justify-center'}`}
+            style={{ fontSize: '9px' }}
             onClick={handleLogout}
             title="Cerrar Sesión"
           >
-            <LogOut className={`${isOpen ? 'h-4 w-4 mr-3' : 'h-6 w-6'}`} />
-            {isOpen && <span>Cerrar Sesión</span>}
+            <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+              <LogOut className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+              {isOpen && <span className="truncate">Cerrar Sesión</span>}
+            </div>
           </Button>
         ) : (
           !isOpen && (

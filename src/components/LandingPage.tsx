@@ -158,28 +158,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isMainView = currentView === 'home';
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header
-        onMenuToggle={toggleSideMenu}
+    <div className="h-screen flex overflow-hidden bg-gray-50">
+      <SideMenu
+        isOpen={isSideMenuOpen}
+        onClose={() => setIsSideMenuOpen(false)}
         currentView={currentView}
         onNavigate={handleNavigation}
         user={user}
         isAuthenticated={isAuthenticated}
         canAccessAdmin={canAccessAdmin()}
         onAdminNavigate={handleAdminNavigation}
+        activeAdminView={activeAdminView}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <SideMenu
-          isOpen={isSideMenuOpen}
-          onClose={() => setIsSideMenuOpen(false)}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Header
+          onMenuToggle={toggleSideMenu}
           currentView={currentView}
           onNavigate={handleNavigation}
           user={user}
           isAuthenticated={isAuthenticated}
           canAccessAdmin={canAccessAdmin()}
           onAdminNavigate={handleAdminNavigation}
-          activeAdminView={activeAdminView}
         />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
