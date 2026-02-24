@@ -29,6 +29,20 @@ import {
   SelectValue,
 } from './ui/select';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from './ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from './ui/command';
+import { cn } from './ui/utils';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -45,6 +59,7 @@ import { TablePagination } from './ui/TablePagination';
 import { toast } from "sonner";
 import {
   Plus,
+  Minus,
   Search,
   Filter,
   Edit,
@@ -59,6 +74,9 @@ import {
   Clock,
   X,
   XCircle,
+  MoreHorizontal,
+  Check,
+  ChevronsUpDown,
   FileText,
   TrendingUp,
   Users,
@@ -90,7 +108,17 @@ interface Producto {
   id: number;
   nombre: string;
   precio: number;
+  stock: number;
   categoria: string;
+}
+
+interface Usuario {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  telefono: string;
+  numeroDocumento: string;
 }
 
 interface ItemVenta {
@@ -122,7 +150,7 @@ interface Venta {
   items: ItemVenta[];
   subtotal: number;
   descuento: number;
-  impuestos: number;
+  impuestos?: number;
   total: number;
   estado: 'aceptada' | 'anulada'; // Cambiado: aceptada y anulada
   metodoPago: string;
@@ -138,17 +166,6 @@ interface Venta {
 }
 
 // Datos simulados
-const productosDisponibles: Producto[] = [
-  { id: 1, nombre: 'Vape Desechable 2000 puffs', precio: 25000, categoria: 'Desechables' },
-  { id: 2, nombre: 'Pod System Premium', precio: 80000, categoria: 'Pods' },
-  { id: 3, nombre: 'Líquido Frutal 30ml', precio: 35000, categoria: 'Líquidos' },
-  { id: 4, nombre: 'Mod Premium 80W', precio: 150000, categoria: 'Mods' },
-  { id: 5, nombre: 'Coil Resistencia 0.5ohm', precio: 12000, categoria: 'Accesorios' },
-  { id: 6, nombre: 'Líquido Premium 60ml', precio: 55000, categoria: 'Líquidos' },
-  { id: 7, nombre: 'Batería Externa 2600mAh', precio: 45000, categoria: 'Accesorios' },
-  { id: 8, nombre: 'Vape Desechable 5000 puffs', precio: 40000, categoria: 'Desechables' }
-];
-
 // Datos simulados de pedidos
 const pedidosDisponibles = [
   { id: 1, numero: 'PED-001', cliente: 'Ana María López', items: ['Pod System Premium'] },
@@ -171,13 +188,13 @@ const ventasIniciales: Venta[] = [
     ],
     subtotal: 85000,
     descuento: 5000,
-    impuestos: 15200,
-    total: 95200,
+    impuestos: 0,
+    total: 80000,
     estado: 'aceptada',
     metodoPago: 'Tarjeta de crédito',
     tipoVenta: 'directa',
     pagos: [
-      { id: 1, fecha: '2024-01-15', monto: 95200, metodoPago: 'tarjeta', referencia: 'TXN-456789' }
+      { id: 1, fecha: '2024-01-15', monto: 80000, metodoPago: 'tarjeta', referencia: 'TXN-456789' }
     ],
     cotizacionId: 1,
     fechaCreacion: '2024-01-15T10:30:00',
@@ -197,15 +214,15 @@ const ventasIniciales: Venta[] = [
     ],
     subtotal: 80000,
     descuento: 0,
-    impuestos: 15200,
-    total: 95200,
+    impuestos: 0,
+    total: 80000,
     estado: 'aceptada',
     metodoPago: 'Efectivo + Transferencia',
     tipoVenta: 'pedido',
     pedidoId: 1,
     pagos: [
       { id: 2, fecha: '2024-01-16', monto: 50000, metodoPago: 'efectivo' },
-      { id: 3, fecha: '2024-01-18', monto: 45200, metodoPago: 'transferencia', referencia: 'TRANS-789123' }
+      { id: 3, fecha: '2024-01-18', monto: 30000, metodoPago: 'transferencia', referencia: 'TRANS-789123' }
     ],
     fechaCreacion: '2024-01-16T14:20:00',
     fechaActualizacion: '2024-01-18T09:15:00',
@@ -225,13 +242,13 @@ const ventasIniciales: Venta[] = [
     ],
     subtotal: 186000,
     descuento: 10000,
-    impuestos: 33440,
-    total: 209440,
+    impuestos: 0,
+    total: 176000,
     estado: 'aceptada',
     metodoPago: 'Transferencia',
     tipoVenta: 'directa',
     pagos: [
-      { id: 10, fecha: '2024-01-17', monto: 209440, metodoPago: 'transferencia', referencia: 'TRF-123456' }
+      { id: 10, fecha: '2024-01-17', monto: 176000, metodoPago: 'transferencia', referencia: 'TRF-123456' }
     ],
     fechaCreacion: '2024-01-17T16:45:00',
     fechaActualizacion: '2024-01-17T16:45:00',
@@ -550,8 +567,17 @@ const ventasIniciales: Venta[] = [
 ];
 
 export const Ventas: React.FC = () => {
-  const [ventas, setVentas] = useState<Venta[]>(ventasIniciales);
-  const [ventasFiltradas, setVentasFiltradas] = useState<Venta[]>(ventasIniciales);
+  // Inicialización de ventas desde LocalStorage o datos iniciales
+  const [ventas, setVentas] = useState<Venta[]>(() => {
+    const savedVentas = typeof window !== 'undefined' ? localStorage.getItem('vaper_web_ventas') : null;
+    return savedVentas ? JSON.parse(savedVentas) : ventasIniciales;
+  });
+
+  const [ventasFiltradas, setVentasFiltradas] = useState<Venta[]>([]);
+  const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
+  const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
+  const [isLoadingProductos, setIsLoadingProductos] = useState(false);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
@@ -559,6 +585,17 @@ export const Ventas: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [ventaToDelete, setVentaToDelete] = useState<Venta | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  // Estados para pedidos pendientes
+  const [pedidosPendientes, setPedidosPendientes] = useState<any[]>([]);
+  const [isLoadingPedidos, setIsLoadingPedidos] = useState(false);
+  const [selectedPedidoId, setSelectedPedidoId] = useState<string>('');
+
+  // Guardar ventas en LocalStorage cada vez que cambien
+  useEffect(() => {
+    localStorage.setItem('vaper_web_ventas', JSON.stringify(ventas));
+  }, [ventas]);
 
   // Estados de paginación mejorados
   const [currentPage, setCurrentPage] = useState(1);
@@ -579,6 +616,7 @@ export const Ventas: React.FC = () => {
   // Estados para agregar productos
   const [selectedProducto, setSelectedProducto] = useState('');
   const [cantidad, setCantidad] = useState(1);
+  const [openClientes, setOpenClientes] = useState(false);
 
   // Estados para pagos
   const [newPago, setNewPago] = useState({
@@ -595,6 +633,203 @@ export const Ventas: React.FC = () => {
   useEffect(() => {
     filtrarVentas();
   }, [ventas, searchTerm, filtroEstado]);
+
+  // Cargar productos desde la API
+  const fetchProductos = async () => {
+    setIsLoadingProductos(true);
+    try {
+      const response = await fetch('/api/Productoes');
+      if (!response.ok) throw new Error('Error al cargar productos');
+      const data = await response.json();
+
+      // Mapear los datos de la API al formato Producto
+      const productosMapeados: Producto[] = data.map((p: any) => ({
+        id: p.id,
+        nombre: p.nombreProducto,
+        precio: p.precio,
+        stock: p.stock || 0,
+        categoria: `Categoría ${p.categoriaId}`
+      }));
+
+      setProductosDisponibles(productosMapeados);
+    } catch (error) {
+      console.error('Error fetching productos:', error);
+      toast.error('No se pudieron cargar los productos de la API');
+    } finally {
+      setIsLoadingProductos(false);
+    }
+  };
+
+  // Cargar clientes desde la API
+  const fetchClientes = async () => {
+    setIsLoadingClientes(true);
+    try {
+      const response = await fetch('/api/Usuarios');
+      if (!response.ok) throw new Error('Error al cargar clientes');
+      const data = await response.json();
+
+      // Filtrar usuarios de prueba o sistema (IDs 1 y 2)
+      const clientesFiltrados = data.filter((u: Usuario) => u.id !== 1 && u.id !== 2);
+      setClientesDisponibles(clientesFiltrados);
+    } catch (error) {
+      console.error('Error fetching clientes:', error);
+      toast.error('No se pudieron cargar los clientes de la API');
+    } finally {
+      setIsLoadingClientes(false);
+    }
+  };
+
+  // Efecto para carga inicial de productos y clientes
+  useEffect(() => {
+    fetchProductos();
+    fetchClientes();
+  }, []);
+
+  // Cargar productos al abrir el diálogo de creación
+  useEffect(() => {
+    if (isCreateDialogOpen) {
+      setIsConfirmed(false);
+      fetchProductos();
+    }
+  }, [isCreateDialogOpen]);
+
+  // Cargar pedidos pendientes cuando cambia el cliente y el tipo de venta es pedido
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      if (!formData.clienteId || formData.tipoVenta !== 'pedido') {
+        setPedidosPendientes([]);
+        return;
+      }
+
+      setIsLoadingPedidos(true);
+      try {
+        const response = await fetch('/api/VentaPedidos');
+        if (!response.ok) throw new Error('Error al cargar pedidos');
+        const data = await response.json();
+
+        // Filtrar por el cliente seleccionado y estado pendiente (ID 1)
+        const pendientes = data.filter((p: any) =>
+          p.usuarioId === parseInt(formData.clienteId) && p.estadoId === 1
+        );
+        setPedidosPendientes(pendientes);
+      } catch (error) {
+        console.error('Error fetching pedidos:', error);
+        toast.error('No se pudieron cargar los pedidos pendientes');
+      } finally {
+        setIsLoadingPedidos(false);
+      }
+    };
+
+    fetchPedidos();
+  }, [formData.clienteId, formData.tipoVenta]);
+
+  // Manejar selección de pedido para auto-llenado
+  const handleSelectPedido = async (pedidoId: string) => {
+    setSelectedPedidoId(pedidoId);
+    if (!pedidoId) return;
+
+    const loadingToast = toast.loading(`Cargando detalles del pedido #${pedidoId}...`);
+
+    try {
+      const response = await fetch(`/api/VentaPedidos/${pedidoId}`);
+      if (!response.ok) throw new Error('Error al cargar detalles del pedido');
+      const pedido = await response.json();
+
+      // 0. Antes de cargar el nuevo pedido, devolvemos el stock de los items que ya estaban en el formulario
+      setProductosDisponibles(prevProd => {
+        let currentProds = [...prevProd];
+        formData.items.forEach(item => {
+          currentProds = currentProds.map(p =>
+            p.id === item.productoId ? { ...p, stock: p.stock + item.cantidad } : p
+          );
+        });
+        return currentProds;
+      });
+
+      // Mapear los items del pedido a items de venta (probamos varias nomenclaturas de la API)
+      const detallesRaw = pedido.detalleVentaPedidos ||
+        pedido.DetalleVentaPedidos ||
+        pedido.detallePedidos ||
+        pedido.DetallePedidos || [];
+
+      const itemsVenta: ItemVenta[] = [];
+      let stockError = false;
+
+      // Usamos una copia temporal de productos para validar stock secuencialmente
+      let tempProductos = [...productosDisponibles];
+      // Nota: Aquí productosDisponibles podría estar desactualizado respecto al setProductosDisponibles de arriba 
+      // pero como es asíncrono, mejor manejamos la lógica de descuento después.
+
+      detallesRaw.forEach((detalle: any, index: number) => {
+        const producto = tempProductos.find(p => p.id === detalle.productoId);
+        if (producto) {
+          if (producto.stock < detalle.cantidad) {
+            stockError = true;
+            toast.warning(`Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`);
+          }
+
+          itemsVenta.push({
+            id: index + 1,
+            productoId: detalle.productoId,
+            nombreProducto: producto.nombre,
+            cantidad: detalle.cantidad,
+            precioUnitario: detalle.precioUnitario,
+            subtotal: detalle.subtotal
+          });
+        }
+      });
+
+      // Descontar stock del pedido cargado en el SERVIDOR DE FORMA MASIVA
+      const syncLoadingToast = toast.loading('Sincronizando inventario con el pedido...');
+      try {
+        for (const item of itemsVenta) {
+          const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+          if (getRes.ok) {
+            const pOriginal = await getRes.json();
+            // Validamos stock actual en servidor por si acaso
+            const stockReal = pOriginal.stock;
+            const cantidadADescontar = Math.min(stockReal, item.cantidad);
+
+            await fetch(`/api/Productoes/${item.productoId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...pOriginal, stock: stockReal - cantidadADescontar })
+            });
+          }
+        }
+        toast.success('Inventario sincronizado con el pedido', { id: syncLoadingToast });
+      } catch (e) {
+        console.error('Error sincronizando masivamente:', e);
+        toast.error('Error en sincronización masiva', { id: syncLoadingToast });
+      }
+
+      // Descontar stock localmente
+      setProductosDisponibles(prevProd => {
+        let updatedProds = [...prevProd];
+        itemsVenta.forEach(item => {
+          updatedProds = updatedProds.map(p =>
+            p.id === item.productoId ? { ...p, stock: p.stock - item.cantidad } : p
+          );
+        });
+        return updatedProds;
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        items: itemsVenta,
+        metodoPago: pedido.metodoPago || prev.metodoPago
+      }));
+
+      if (itemsVenta.length > 0) {
+        toast.success(`Pedido #${pedidoId} cargado. Inventario sincronizado.`, { id: loadingToast });
+      } else {
+        toast.warning(`El pedido #${pedidoId} no tiene productos válidos`, { id: loadingToast });
+      }
+    } catch (error) {
+      console.error('Error fetching pedido details:', error);
+      toast.error('No se pudieron cargar los datos del pedido', { id: loadingToast });
+    }
+  };
 
   // Resetear paginación cuando cambien los filtros
   useEffect(() => {
@@ -634,7 +869,7 @@ export const Ventas: React.FC = () => {
         }));
       }
     }
-  }, [formData.tipoVenta, formData.pedidoId]);
+  }, [formData.tipoVenta, formData.pedidoId, productosDisponibles]);
 
   // Funciones de filtrado
   const filtrarVentas = () => {
@@ -658,103 +893,282 @@ export const Ventas: React.FC = () => {
   };
 
   // Funciones CRUD - MODIFICADO: solo crear venta, sin editar
-  const handleCreateVenta = () => {
+  const handleCreateVenta = async () => {
     if (!formData.nombreCliente || formData.items.length === 0) {
       toast.error('Por favor completa todos los campos obligatorios');
       return;
     }
 
-    const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
-    const subtotalConDescuento = subtotal - formData.descuento;
-    const impuestos = Math.round(subtotalConDescuento * 0.19);
+    const loadingToast = toast.loading('Guardando venta...');
 
-    const nuevaVenta: Venta = {
-      id: Math.max(...ventas.map(v => v.id)) + 1,
-      numeroVenta: `VNT-${String(ventas.length + 1).padStart(3, '0')}`,
-      fecha: formData.fecha,
-      clienteId: parseInt(formData.clienteId) || 0,
-      nombreCliente: formData.nombreCliente,
-      telefonoCliente: '', // Campo eliminado, valor por defecto
-      emailCliente: '', // Campo eliminado, valor por defecto
-      items: formData.items,
-      subtotal: subtotal,
-      descuento: formData.descuento,
-      impuestos: impuestos,
-      total: subtotalConDescuento + impuestos,
-      estado: 'aceptada', // Todas las ventas nuevas son aceptadas
-      metodoPago: formData.metodoPago,
-      tipoVenta: formData.tipoVenta,
-      pedidoId: formData.tipoVenta === 'pedido' && formData.pedidoId ? parseInt(formData.pedidoId) : undefined,
-      notas: '', // Campo eliminado, valor por defecto
-      pagos: [
-        {
-          id: 1,
-          fecha: formData.fecha,
-          monto: subtotalConDescuento + impuestos,
-          metodoPago: formData.metodoPago === 'Efectivo' ? 'efectivo' :
-            formData.metodoPago === 'Tarjeta' ? 'tarjeta' :
-              formData.metodoPago === 'Transferencia' ? 'transferencia' : 'otro'
-        }
-      ],
-      fechaCreacion: new Date().toISOString(),
-      fechaActualizacion: new Date().toISOString(),
-      creadoPor: 'Usuario Actual'
-    };
+    try {
+      setIsConfirmed(true);
+      // 1. El stock ya se descontó inmediatamente al "Agregar", así que aquí solo guardamos el registro de venta.
+      // (En una app real, aquí se enviaría el POST de la venta al backend)
 
-    setVentas([...ventas, nuevaVenta]);
-    setIsCreateDialogOpen(false);
-    resetForm();
-    toast.success('Venta creada exitosamente');
-  };
+      const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
+      const montoDescuento = (subtotal * formData.descuento) / 100;
+      const total = subtotal - montoDescuento;
 
-  const handleDeleteVenta = () => {
-    if (ventaToDelete) {
-      const ventaAnulada = {
-        ...ventaToDelete,
-        estado: 'anulada' as const,
-        motivoAnulacion: motivoAnulacion || 'Venta anulada por el sistema',
-        fechaActualizacion: new Date().toISOString()
+      const nuevaVenta: Venta = {
+        id: Math.max(...ventas.map(v => v.id)) + 1,
+        numeroVenta: `VNT-${String(ventas.length + 1).padStart(3, '0')}`,
+        fecha: formData.fecha,
+        clienteId: parseInt(formData.clienteId) || 0,
+        nombreCliente: formData.nombreCliente,
+        telefonoCliente: '', // Campo eliminado, valor por defecto
+        emailCliente: '', // Campo eliminado, valor por defecto
+        items: formData.items,
+        subtotal: subtotal,
+        descuento: montoDescuento,
+        impuestos: 0,
+        total: total,
+        estado: 'aceptada',
+        metodoPago: formData.metodoPago,
+        tipoVenta: formData.tipoVenta,
+        pedidoId: formData.tipoVenta === 'pedido' && formData.pedidoId ? parseInt(formData.pedidoId) : undefined,
+        notas: '',
+        pagos: [
+          {
+            id: 1,
+            fecha: formData.fecha,
+            monto: total,
+            metodoPago: formData.metodoPago === 'Efectivo' ? 'efectivo' :
+              formData.metodoPago === 'Tarjeta' ? 'tarjeta' :
+                formData.metodoPago === 'Transferencia' ? 'transferencia' : 'otro'
+          }
+        ],
+        fechaCreacion: new Date().toISOString(),
+        fechaActualizacion: new Date().toISOString(),
+        creadoPor: 'Usuario Actual'
       };
 
-      setVentas(ventas.map(v => v.id === ventaToDelete.id ? ventaAnulada : v));
-      setIsDeleteDialogOpen(false);
-      setVentaToDelete(null);
-      setMotivoAnulacion('');
-      toast.success('Venta anulada exitosamente');
+      setVentas([...ventas, nuevaVenta]);
+      setIsCreateDialogOpen(false);
+      resetForm();
+      toast.success('Venta creada e inventario actualizado con éxito', { id: loadingToast });
+    } catch (error) {
+      console.error('Error al crear venta:', error);
+      toast.error('Hubo un error al procesar la venta. El inventario podría estar desincronizado.', { id: loadingToast });
+    }
+  };
+
+  const handleDeleteVenta = async () => {
+    if (ventaToDelete) {
+      const loadingToast = toast.loading(`Anulando venta y restaurando inventario...`);
+
+      try {
+        // 1. Restaurar stock de cada item en el servidor
+        for (const item of ventaToDelete.items) {
+          const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+          if (getRes.ok) {
+            const pOriginal = await getRes.json();
+            await fetch(`/api/Productoes/${item.productoId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock + item.cantidad })
+            });
+          }
+        }
+
+        // 2. Refrescar productos disponibles localmente
+        fetchProductos();
+
+        // 3. Marcar como anulada en el estado local
+        const ventaAnulada = {
+          ...ventaToDelete,
+          estado: 'anulada' as const,
+          motivoAnulacion: motivoAnulacion || 'Venta anulada por el sistema',
+          fechaActualizacion: new Date().toISOString()
+        };
+
+        setVentas(ventas.map(v => v.id === ventaToDelete.id ? ventaAnulada : v));
+        setIsDeleteDialogOpen(false);
+        setVentaToDelete(null);
+        setMotivoAnulacion('');
+        toast.success('Venta anulada e inventario restaurado exitosamente', { id: loadingToast });
+      } catch (error) {
+        console.error('Error al anular venta:', error);
+        toast.error('Hubo un error al restaurar el inventario.', { id: loadingToast });
+      }
     }
   };
 
   // Función para agregar producto
-  const agregarProducto = () => {
+  const agregarProducto = async () => {
     if (!selectedProducto) return;
 
     const producto = productosDisponibles.find(p => p.id === parseInt(selectedProducto));
     if (!producto) return;
 
-    const nuevoItem: ItemVenta = {
-      id: Math.max(...(formData.items.map(i => i.id) || [0])) + 1,
-      productoId: producto.id,
-      nombreProducto: producto.nombre,
-      cantidad: cantidad,
-      precioUnitario: producto.precio,
-      subtotal: producto.precio * cantidad
-    };
+    // Verificar si el producto ya existe en la lista
+    const itemExistente = formData.items.find(item => item.productoId === producto.id);
+    if (itemExistente) {
+      toast.error('El producto ya fue agregado');
+      return;
+    }
 
-    setFormData({
-      ...formData,
-      items: [...formData.items, nuevoItem]
-    });
+    // 1. Validar stock localmente
+    if (cantidad > producto.stock) {
+      toast.error(`Stock insuficiente. Solo quedan ${producto.stock} unidades de ${producto.nombre}`);
+      return;
+    }
 
-    setSelectedProducto('');
-    setCantidad(1);
+    const loadingToast = toast.loading(`Actualizando stock de ${producto.nombre}...`);
+
+    try {
+      // 2. Sincronizar con el servidor
+      const getRes = await fetch(`/api/Productoes/${producto.id}`);
+      if (!getRes.ok) throw new Error('No se pudo verificar el stock en el servidor');
+      const pOriginal = await getRes.json();
+
+      if (pOriginal.stock < cantidad) {
+        toast.error('El stock en el servidor ha cambiado y no es suficiente.', { id: loadingToast });
+        fetchProductos();
+        return;
+      }
+
+      const putRes = await fetch(`/api/Productoes/${producto.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - cantidad })
+      });
+
+      if (!putRes.ok) throw new Error('Error al actualizar servidor');
+
+      // 3. Actualizar estado local
+      const maxId = formData.items.length > 0 ? Math.max(...formData.items.map(i => i.id)) : 0;
+      const nuevoItem: ItemVenta = {
+        id: maxId + 1,
+        productoId: producto.id,
+        nombreProducto: producto.nombre,
+        cantidad: cantidad,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio * cantidad
+      };
+
+      setProductosDisponibles(prev => prev.map(p =>
+        p.id === producto.id ? { ...p, stock: p.stock - cantidad } : p
+      ));
+
+      setFormData({
+        ...formData,
+        items: [...formData.items, nuevoItem]
+      });
+
+      setSelectedProducto('');
+      setCantidad(1);
+      toast.success(`${producto.nombre} agregado e inventario actualizado`, { id: loadingToast });
+    } catch (error) {
+      console.error('Error al agregar producto:', error);
+      toast.error('No se pudo actualizar el inventario', { id: loadingToast });
+    }
+  };
+  // Función para eliminar producto
+  const eliminarProducto = async (itemId: number) => {
+    const item = formData.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const loadingToast = toast.loading(`Restaurando stock de ${item.nombreProducto}...`);
+
+    try {
+      const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+      if (!getRes.ok) throw new Error('No se pudo obtener el producto del servidor');
+      const pOriginal = await getRes.json();
+
+      const putRes = await fetch(`/api/Productoes/${item.productoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock + item.cantidad })
+      });
+
+      if (!putRes.ok) throw new Error('Error al restaurar stock en el servidor');
+
+      // Actualizar localmente
+      setProductosDisponibles(prev => prev.map(p =>
+        p.id === item.productoId ? { ...p, stock: p.stock + item.cantidad } : p
+      ));
+
+      setFormData({
+        ...formData,
+        items: formData.items.filter(i => i.id !== itemId)
+      });
+      toast.success('Stock restaurado exitosamente', { id: loadingToast });
+    } catch (error) {
+      console.error('Error eliminando producto:', error);
+      toast.error('Error al sincronizar con el servidor', { id: loadingToast });
+    }
   };
 
-  // Función para eliminar producto
-  const eliminarProducto = (itemId: number) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter(item => item.id !== itemId)
-    });
+  // Función para restaurar stock globalmente (usada al cancelar o cerrar diálogo sin guardar)
+  const handleRestoreStock = async () => {
+    if (formData.items.length === 0) return;
+
+    const loadingToast = toast.loading('Restaurando inventario...');
+    try {
+      for (const item of formData.items) {
+        const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+        if (getRes.ok) {
+          const pOriginal = await getRes.json();
+          await fetch(`/api/Productoes/${item.productoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock + item.cantidad })
+          });
+        }
+      }
+      toast.success('Inventario restaurado correctamente', { id: loadingToast });
+    } catch (error) {
+      console.error('Error restaurando stock:', error);
+      toast.error('Error al restaurar inventario', { id: loadingToast });
+    }
+  };
+
+  const cambiarCantidad = async (itemId: number, delta: number) => {
+    const item = formData.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const nuevaCantidad = item.cantidad + delta;
+    if (nuevaCantidad < 1) return;
+
+    const loadingToast = toast.loading('Actualizando inventario...');
+    try {
+      const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+      if (!getRes.ok) throw new Error('No se pudo verificar stock');
+      const pOriginal = await getRes.json();
+
+      // Si queremos aumentar, verificamos stock
+      if (delta > 0 && pOriginal.stock < delta) {
+        toast.error('No hay stock suficiente para aumentar la cantidad', { id: loadingToast });
+        return;
+      }
+
+      const putRes = await fetch(`/api/Productoes/${item.productoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - delta })
+      });
+
+      if (!putRes.ok) throw new Error('Error al actualizar servidor');
+
+      // Actualizar localmente
+      setProductosDisponibles(prev => prev.map(p =>
+        p.id === item.productoId ? { ...p, stock: p.stock - delta } : p
+      ));
+
+      setFormData({
+        ...formData,
+        items: formData.items.map(i => i.id === itemId ? {
+          ...i,
+          cantidad: nuevaCantidad,
+          subtotal: nuevaCantidad * i.precioUnitario
+        } : i)
+      });
+      toast.success('Cantidad actualizada', { id: loadingToast });
+    } catch (error) {
+      console.error('Error cambiando cantidad:', error);
+      toast.error('Error al sincronizar con el servidor', { id: loadingToast });
+    }
   };
 
   // Funciones auxiliares - MODIFICADO: sin vendedor, con tipoVenta y descuento
@@ -875,20 +1289,12 @@ export const Ventas: React.FC = () => {
           </table>
 
           <div class="totals">
-            <div class="total-row">
-              <span class="label">Subtotal:</span>
-              <span>$${venta.subtotal.toLocaleString()}</span>
-            </div>
             ${venta.descuento > 0 ? `
             <div class="total-row">
               <span class="label">Descuento:</span>
               <span>-$${venta.descuento.toLocaleString()}</span>
             </div>
             ` : ''}
-            <div class="total-row">
-              <span class="label">Impuestos (19%):</span>
-              <span>$${venta.impuestos.toLocaleString()}</span>
-            </div>
             <div class="total-row final-total">
               <span class="label">TOTAL:</span>
               <span>$${venta.total.toLocaleString()}</span>
@@ -1008,7 +1414,7 @@ export const Ventas: React.FC = () => {
               Administra y controla todas las ventas del sistema
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-yellow-400 hover:bg-yellow-500 text-black border-none w-full lg:w-auto">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-black hover:bg-gray-800 text-white border-none w-full lg:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nueva Venta
           </Button>
@@ -1071,8 +1477,8 @@ export const Ventas: React.FC = () => {
                   <TableCell>
                     <Badge
                       className={`${venta.estado === "aceptada"
-                          ? "bg-green-500 hover:bg-green-600 text-white"
-                          : "bg-red-500 hover:bg-red-600 text-white"
+                        ? "bg-green-500 hover:bg-green-600 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
                         }`}
                     >
                       {venta.estado === "aceptada" ? "Aceptada" : "Anulada"}
@@ -1130,7 +1536,12 @@ export const Ventas: React.FC = () => {
       </div>
 
       {/* Modal de crear nueva venta */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open: boolean) => {
+        if (!open && formData.items.length > 0 && !isConfirmed) {
+          handleRestoreStock();
+        }
+        setIsCreateDialogOpen(open);
+      }}>
         <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-[700px] lg:max-w-[800px] h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b shrink-0">
             <DialogTitle className="text-lg sm:text-xl">Nueva Venta</DialogTitle>
@@ -1161,7 +1572,7 @@ export const Ventas: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="directa">Venta Directa</SelectItem>
-
+                      <SelectItem value="pedido">Venta por Pedido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1169,21 +1580,112 @@ export const Ventas: React.FC = () => {
 
               {/* Cliente */}
               <div className="space-y-2">
-                <Label htmlFor="nombreCliente" className="text-sm">Cliente</Label>
-                <Input
-                  id="nombreCliente"
-                  value={formData.nombreCliente}
-                  onChange={(e) => setFormData({ ...formData, nombreCliente: e.target.value })}
-                  placeholder="Nombre del cliente"
-                  className="w-full"
-                />
+                <Label htmlFor="clienteId" className="text-sm">Cliente</Label>
+                <Popover open={openClientes} onOpenChange={setOpenClientes}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openClientes}
+                      className="w-full justify-between font-normal bg-background border-input"
+                    >
+                      {formData.clienteId
+                        ? clientesDisponibles.find(
+                          (cliente) => cliente.id.toString() === formData.clienteId
+                        )
+                          ? `${clientesDisponibles.find((c) => c.id.toString() === formData.clienteId)?.nombres} ${clientesDisponibles.find((c) => c.id.toString() === formData.clienteId)?.apellidos}`
+                          : "Seleccionar cliente"
+                        : "Seleccionar cliente"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Buscar por nombre o documento..."
+                        className="h-9"
+                      />
+                      <CommandList>
+                        {isLoadingClientes ? (
+                          <div className="flex items-center justify-center p-4">
+                            <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
+                            <span className="text-sm">Cargando clientes...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <CommandEmpty>No se encontraron clientes.</CommandEmpty>
+                            <CommandGroup>
+                              {clientesDisponibles.map((cliente) => (
+                                <CommandItem
+                                  key={cliente.id}
+                                  value={`${cliente.nombres} ${cliente.apellidos} ${cliente.numeroDocumento}`}
+                                  onSelect={() => {
+                                    setFormData({
+                                      ...formData,
+                                      clienteId: cliente.id.toString(),
+                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
+                                    });
+                                    setSelectedPedidoId(''); // Resetear pedido al cambiar cliente
+                                    setOpenClientes(false);
+                                  }}
+                                  className="flex flex-col items-start py-2 px-3"
+                                >
+                                  <div className="flex items-center w-full justify-between">
+                                    <span className="font-medium">{cliente.nombres} {cliente.apellidos}</span>
+                                    {formData.clienteId === cliente.id.toString() && (
+                                      <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    Doc: {cliente.numeroDocumento} | Tel: {cliente.telefono}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
+
+              {/* Selector de Pedido Pendiente (Solo para Tipo Pedido) */}
+              {formData.tipoVenta === 'pedido' && formData.clienteId && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <Label htmlFor="pedidoId" className="text-sm font-medium text-primary">Pedido Pendiente</Label>
+                  {isLoadingPedidos ? (
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground p-2 border rounded-md bg-muted/20">
+                      <Clock className="h-4 w-4 animate-spin" />
+                      <span>Buscando pedidos pendientes...</span>
+                    </div>
+                  ) : pedidosPendientes.length > 0 ? (
+                    <Select value={selectedPedidoId} onValueChange={handleSelectPedido}>
+                      <SelectTrigger className="w-full border-primary/50 bg-primary/5">
+                        <SelectValue placeholder="Selecciona un pedido para cargar items" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pedidosPendientes.map((pedido) => (
+                          <SelectItem key={pedido.id} value={pedido.id.toString()}>
+                            Pedido #{pedido.id} - Total: ${pedido.total.toLocaleString()} - {formatDate(pedido.fechaCreacion)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center space-x-2 text-sm text-amber-600 p-2 border border-amber-200 rounded-md bg-amber-50">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Este cliente no tiene pedidos pendientes.</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Método de Pago y Descuento */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="metodoPago" className="text-sm">Método de Pago</Label>
-                  <Select value={formData.metodoPago} onValueChange={(value) => setFormData({ ...formData, metodoPago: value })}>
+                  <Select value={formData.metodoPago} onValueChange={(value: string) => setFormData({ ...formData, metodoPago: value })}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar método" />
                     </SelectTrigger>
@@ -1194,16 +1696,24 @@ export const Ventas: React.FC = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="descuento" className="text-sm">Descuento</Label>
-                  <Input
-                    id="descuento"
-                    type="number"
-                    min="0"
-                    value={formData.descuento}
-                    onChange={(e) => setFormData({ ...formData, descuento: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="w-full"
-                  />
+                  <Label htmlFor="descuento" className="text-sm">Descuento (%)</Label>
+                  <div className="relative">
+                    <Input
+                      id="descuento"
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.descuento === 0 ? '' : formData.descuento.toString()}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
+                          setFormData({ ...formData, descuento: val === '' ? 0 : parseFloat(val) });
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-full pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
                 </div>
               </div>
 
@@ -1220,11 +1730,27 @@ export const Ventas: React.FC = () => {
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {productosDisponibles.map(producto => (
-                          <SelectItem key={producto.id} value={producto.id.toString()}>
-                            {producto.nombre} - ${producto.precio.toLocaleString()}
-                          </SelectItem>
-                        ))}
+                        {isLoadingProductos ? (
+                          <div className="flex items-center justify-center p-4">
+                            <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
+                            <span className="text-sm">Cargando productos...</span>
+                          </div>
+                        ) : productosDisponibles.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-muted-foreground">
+                            No hay productos disponibles
+                          </div>
+                        ) : (
+                          productosDisponibles.map(producto => (
+                            <SelectItem key={producto.id} value={producto.id.toString()} disabled={producto.stock <= 0}>
+                              <div className="flex justify-between w-full items-center">
+                                <span>{producto.nombre} - ${producto.precio.toLocaleString()}</span>
+                                <Badge variant={producto.stock > 5 ? "secondary" : "destructive"} className="ml-2">
+                                  {producto.stock} disp.
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1264,12 +1790,33 @@ export const Ventas: React.FC = () => {
                       <div key={item.id} className="flex items-start sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-muted/30 rounded-lg border">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm sm:text-base truncate">{item.nombreProducto}</p>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-1">
-                            <span className="whitespace-nowrap">Cantidad: {item.cantidad}</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span className="whitespace-nowrap">Precio: ${item.precioUnitario.toLocaleString()}</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span className="whitespace-nowrap font-medium">Subtotal: ${item.subtotal.toLocaleString()}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1.5">
+                            <div className="flex items-center border rounded-md bg-background h-7">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => cambiarCantidad(item.id, -1)}
+                                className="h-6 w-6 rounded-r-none border-r hover:bg-muted"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="px-2.5 text-xs font-semibold min-w-[2rem] text-center">
+                                {item.cantidad}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => cambiarCantidad(item.id, 1)}
+                                className="h-6 w-6 rounded-l-none border-l hover:bg-muted"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                              <span className="whitespace-nowrap">Precio: ${item.precioUnitario.toLocaleString()}</span>
+                              <span>•</span>
+                              <span className="whitespace-nowrap font-medium text-foreground">Subtotal: ${item.subtotal.toLocaleString()}</span>
+                            </div>
                           </div>
                         </div>
                         <Button
@@ -1288,24 +1835,15 @@ export const Ventas: React.FC = () => {
 
                   {/* Resumen de Totales */}
                   <div className="space-y-2 bg-muted/20 p-3 sm:p-4 rounded-lg">
-                    <div className="flex justify-between text-sm sm:text-base">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-medium">${formData.items.reduce((sum, item) => sum + item.subtotal, 0).toLocaleString()}</span>
-                    </div>
                     {formData.descuento > 0 && (
                       <div className="flex justify-between text-sm sm:text-base text-red-600">
-                        <span>Descuento:</span>
-                        <span className="font-medium">-${formData.descuento.toLocaleString()}</span>
+                        <span>Descuento ({formData.descuento}%):</span>
+                        <span className="font-medium">-${((formData.items.reduce((sum, item) => sum + item.subtotal, 0) * formData.descuento) / 100).toLocaleString()}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm sm:text-base">
-                      <span className="text-muted-foreground">Impuestos (19%):</span>
-                      <span className="font-medium">${Math.round((formData.items.reduce((sum, item) => sum + item.subtotal, 0) - formData.descuento) * 0.19).toLocaleString()}</span>
-                    </div>
-                    <Separator />
                     <div className="flex justify-between text-base sm:text-lg pt-1">
                       <span className="font-semibold">Total:</span>
-                      <span className="font-bold text-primary">${((formData.items.reduce((sum, item) => sum + item.subtotal, 0) - formData.descuento) + Math.round((formData.items.reduce((sum, item) => sum + item.subtotal, 0) - formData.descuento) * 0.19)).toLocaleString()}</span>
+                      <span className="font-bold text-primary">${(formData.items.reduce((sum, item) => sum + item.subtotal, 0) - (formData.items.reduce((sum, item) => sum + item.subtotal, 0) * formData.descuento / 100)).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -1323,17 +1861,17 @@ export const Ventas: React.FC = () => {
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t shrink-0 bg-background">
-            <Button
-              variant="outline"
-              onClick={() => setIsCreateDialogOpen(false)}
-              className="w-full sm:w-auto"
-            >
+            <Button variant="outline" onClick={() => {
+              handleRestoreStock();
+              setIsCreateDialogOpen(false);
+              resetForm();
+            }}>
               Cancelar
             </Button>
             <Button
               onClick={handleCreateVenta}
               disabled={!formData.nombreCliente || formData.items.length === 0}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black border-none w-full sm:w-auto"
+              className="bg-black hover:bg-gray-800 text-white border-none w-full sm:w-auto"
             >
               Crear Venta
             </Button>
@@ -1360,14 +1898,11 @@ export const Ventas: React.FC = () => {
                     <div><strong>Número:</strong> {selectedVenta.numeroVenta}</div>
                     <div><strong>Fecha:</strong> {formatDate(selectedVenta.fecha)}</div>
                     <div><strong>Cliente:</strong> {selectedVenta.nombreCliente}</div>
-                    <div><strong>Teléfono:</strong> {selectedVenta.telefonoCliente}</div>
-                    <div><strong>Email:</strong> {selectedVenta.emailCliente}</div>
                   </div>
                   <div className="space-y-2">
                     <div><strong>Tipo:</strong> {selectedVenta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}</div>
                     <div><strong>Estado:</strong> {getEstadoBadge(selectedVenta.estado)}</div>
                     <div><strong>Método de Pago:</strong> {selectedVenta.metodoPago}</div>
-                    <div><strong>Creado por:</strong> {selectedVenta.creadoPor}</div>
                     {selectedVenta.motivoAnulacion && (
                       <div><strong>Motivo Anulación:</strong> {selectedVenta.motivoAnulacion}</div>
                     )}
@@ -1410,22 +1945,13 @@ export const Ventas: React.FC = () => {
                   <div>
                     <h4>Resumen Financiero</h4>
                     <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>${selectedVenta.subtotal.toLocaleString()}</span>
-                      </div>
                       {selectedVenta.descuento > 0 && (
                         <div className="flex justify-between">
                           <span>Descuento:</span>
                           <span>-${selectedVenta.descuento.toLocaleString()}</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
-                        <span>Impuestos (19%):</span>
-                        <span>${selectedVenta.impuestos.toLocaleString()}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between">
+                      <div className="flex justify-between font-bold text-lg pt-2 border-t">
                         <span>Total:</span>
                         <span>${selectedVenta.total.toLocaleString()}</span>
                       </div>
@@ -1463,12 +1989,6 @@ export const Ventas: React.FC = () => {
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
               Cerrar
             </Button>
-            {selectedVenta && (
-              <Button onClick={() => downloadVentaPDF(selectedVenta)}>
-                <Download className="h-4 w-4 mr-2" />
-                Descargar PDF
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
