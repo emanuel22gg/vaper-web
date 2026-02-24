@@ -31,7 +31,10 @@ export const useUsers = () => {
             setAvailablePermissions(mappedPermissions);
 
             const mappedRoles: Role[] = apiRoles.map(r => {
-                const isAdmin = r.nombreRol === 'Administrador' || r.nombreRol === 'Admin';
+                const isAdmin =
+                    r.nombreRol === 'Administrador' ||
+                    r.nombreRol === 'Admin' ||
+                    r.nombreRol === 'Super Administrador';
                 return {
                     id: r.id.toString(),
                     name: r.nombreRol,
@@ -226,7 +229,7 @@ export const useUsers = () => {
         },
         deleteRole: async (roleId: string) => {
             try {
-                // 1. Verificar si hay usuarios asignados (esto ya lo hacía, pero lo mantenemos)
+                // 1. Verificar si hay usuarios asignados
                 const usersWithRole = users.filter(u => u.role.id === roleId);
                 if (usersWithRole.length > 0) {
                     throw new Error('No se puede eliminar un rol que está siendo usado por usuarios');
@@ -255,35 +258,53 @@ export const useUsers = () => {
             const role = availableRoles.find(r => r.id === roleId);
             if (!role) return;
 
-            // Si se intenta desactivar, verificar si hay usuarios asignados
-            if (role.isActive) {
-                const usersWithRole = users.filter(u => u.role.id === roleId);
-                if (usersWithRole.length > 0) {
-                    throw new Error(`No se puede desactivar el rol "${role.name}" porque tiene ${usersWithRole.length} usuarios asignados.`);
-                }
-            }
+            const newStatus = !role.isActive;
 
-            // Optimistic Update
+            // Optimistic Update for role
             setAvailableRoles(prev => prev.map(r =>
-                r.id === roleId ? { ...r, isActive: !r.isActive } : r
+                r.id === roleId ? { ...r, isActive: newStatus } : r
+            ));
+
+            // Optimistic Update for users (UI consistency)
+            setUsers(prev => prev.map(u =>
+                u.role.id === roleId ? { ...u, isActive: newStatus } : u
             ));
 
             try {
-                await apiService.updateRol(parseInt(roleId), {
+                // 1. Actualizar el rol en la base de datos
+                const roleUpdatePromise = apiService.updateRol(parseInt(roleId), {
                     id: parseInt(roleId),
                     nombreRol: role.name,
                     descripcion: role.description,
-                    estadoRol: !role.isActive
+                    estadoRol: newStatus
                 });
+
+                // 2. Sincronizar todos los usuarios que tienen este rol
+                // Obtenemos los DTOs originales para no perder datos sensibles o estructurales
+                const allApiUsers = await apiService.getUsuarios();
+                const usersToUpdate = allApiUsers.filter(u => u.rolId === parseInt(roleId));
+
+                const userUpdatePromises = usersToUpdate.map(u =>
+                    apiService.updateUsuario(u.id, {
+                        ...u,
+                        estadoUsuario: newStatus
+                    })
+                );
+
+                // Ejecutamos todas las actualizaciones en paralelo
+                await Promise.all([roleUpdatePromise, ...userUpdatePromises]);
+
                 // Reload in background without showing loading spinner
                 await loadData(false);
                 await refreshSession();
             } catch (error) {
                 // Revert on error
                 setAvailableRoles(prev => prev.map(r =>
-                    r.id === roleId ? { ...r, isActive: !r.isActive } : r
+                    r.id === roleId ? { ...r, isActive: role.isActive } : r
                 ));
-                console.error('Error al cambiar estado del rol:', error);
+                // Recargar datos reales en caso de error para asegurar consistencia
+                await loadData(false);
+                console.error('Error al cambiar estado del rol y sincronizar usuarios:', error);
                 throw error;
             }
         }

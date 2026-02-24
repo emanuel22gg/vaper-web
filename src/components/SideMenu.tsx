@@ -78,15 +78,20 @@ export function SideMenu({
   const getRoleIcon = () => {
     if (!user) return null;
     switch (user.role.name) {
+      case 'Super Administrador': return '👑';
       case 'Administrador':
-      case 'Admin': return '👑';
+      case 'Admin': return '🛡️';
       case 'Empleado': return '💼';
       default: return '👤';
     }
   };
 
   const hasPermission = (permissionName: string) => {
-    if (user?.role?.name === 'Administrador' || user?.role?.name === 'Admin') return true;
+    if (
+      user?.role?.name === 'Super Administrador' ||
+      user?.role?.name === 'Administrador' ||
+      user?.role?.name === 'Admin'
+    ) return true;
     if (!user?.role?.permissions) return false;
     return user.role.permissions.some((p: any) => p.name === permissionName);
   };

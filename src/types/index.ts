@@ -41,7 +41,7 @@ export interface Role {
   isActive: boolean;
 }
 
-export type UserRole = 'Administrador' | 'Empleado' | 'Cliente';
+export type UserRole = 'Super Administrador' | 'Administrador' | 'Empleado' | 'Cliente';
 
 export interface User {
   id: string;

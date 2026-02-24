@@ -35,6 +35,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     if (shouldRedirectToAdmin && isAuthenticated && user) {
       const isAdminOrEmployee =
+        user.role.name === 'Super Administrador' ||
         user.role.name === 'Administrador' ||
         user.role.name === 'Admin' ||
         user.role.name === 'Empleado' ||
@@ -96,7 +97,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const canAccessAdmin = () => {
     if (!isAuthenticated || !user) return false;
-    return user.role.name === 'Administrador' ||
+    return user.role.name === 'Super Administrador' ||
+      user.role.name === 'Administrador' ||
       user.role.name === 'Admin' ||
       user.role.name === 'Empleado' ||
       user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');

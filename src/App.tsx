@@ -17,6 +17,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       const isAdminOrEmployee =
+        user.role.name === "Super Administrador" ||
         user.role.name === "Administrador" ||
         user.role.name === "Admin" ||
         user.role.name === "Empleado" ||

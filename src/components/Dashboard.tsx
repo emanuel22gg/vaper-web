@@ -958,8 +958,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getRoleIcon = () => {
     switch (user.role.name) {
-      case "Administrador":
+      case "Super Administrador":
         return <Crown className="h-5 w-5 text-yellow-400" />;
+      case "Administrador":
+        return <Shield className="h-5 w-5 text-amber-400" />;
       case "Empleado":
         return <Briefcase className="h-5 w-5 text-blue-400" />;
       default:
@@ -971,8 +973,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getRoleColor = () => {
     switch (user.role.name) {
+      case "Super Administrador":
+        return "bg-yellow-600";
       case "Administrador":
-        return "bg-yellow-500";
+        return "bg-amber-500";
       case "Empleado":
         return "bg-blue-500";
       default:
@@ -981,7 +985,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const hasPermission = (permissionName: string) => {
-    if (user.role.name === "Administrador" || user.role.name === "Admin") return true;
+    if (
+      user.role.name === "Super Administrador" ||
+      user.role.name === "Administrador" ||
+      user.role.name === "Admin"
+    ) return true;
     return user.role.permissions.some(
       (p) => p.name === permissionName,
     );
