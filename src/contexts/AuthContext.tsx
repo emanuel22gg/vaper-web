@@ -50,7 +50,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // 4. Mapear permisos del rol - Obtener detalles de todos los permisos primero para mayor seguridad
         const apiPermisos = await apiService.getPermisos();
-        const isAdmin = foundRolApi.nombreRol === 'Administrador' || foundRolApi.nombreRol === 'Admin';
+        const isAdmin =
+          foundRolApi.nombreRol === 'Administrador' ||
+          foundRolApi.nombreRol === 'Admin' ||
+          foundRolApi.nombreRol === 'Super Administrador';
 
         const rolePermissions: Permission[] = isAdmin
           ? apiPermisos.map(p => ({
@@ -165,7 +168,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const foundRolApi = apiRoles.find(r => r.id === currentUserApi.rolId);
         if (!foundRolApi) return;
 
-        const isAdmin = foundRolApi.nombreRol === 'Administrador' || foundRolApi.nombreRol === 'Admin';
+        const isAdmin =
+          foundRolApi.nombreRol === 'Administrador' ||
+          foundRolApi.nombreRol === 'Admin' ||
+          foundRolApi.nombreRol === 'Super Administrador';
         const rolePermissions: Permission[] = isAdmin
           ? apiPermisos.map(p => ({
             id: p.id.toString(),

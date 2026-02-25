@@ -94,16 +94,20 @@ export const GestionRoles: React.FC = () => {
   const currentRoles = filteredRoles.slice(startIndex, endIndex);
 
   // Función para cambiar el estado del rol
-  const handleToggleRoleStatus = async (roleId: string, roleName: string, currentStatus: boolean) => {
+  const handleToggleRoleStatus = async (role: Role) => {
+    const isActivating = !role.isActive;
+
+    // Mostramos el mensaje inmediatamente (UX optimista)
+    toast.success(isActivating ? "Rol Activado" : "Rol Desactivado", {
+      description: `El rol "${role.name}" ha sido ${isActivating ? 'activado' : 'desactivado'}.`,
+      duration: 3000,
+    });
+
     try {
-      await toggleRoleStatus(roleId);
-      toast.success("Estado actualizado", {
-        description: `El rol "${roleName}" ha sido ${!currentStatus ? 'activado' : 'desactivado'}.`,
-        duration: 3000,
-      });
+      await toggleRoleStatus(role.id);
     } catch (error: any) {
-      toast.error("Error al actualizar estado", {
-        description: error.message || "No se pudo actualizar el estado del rol.",
+      toast.error("Error", {
+        description: error.message || "No se pudo cambiar el estado.",
         duration: 3000,
       });
     }
@@ -265,7 +269,9 @@ export const GestionRoles: React.FC = () => {
 
   const getRoleIcon = (roleName: string) => {
     switch (roleName) {
-      case 'Administrador': return <Crown className="h-4 w-4 text-yellow-500" />;
+      case 'Super Administrador': return <Crown className="h-4 w-4 text-yellow-500" />;
+      case 'Administrador': return <Shield className="h-4 w-4 text-amber-500" />;
+      case 'Admin': return <Shield className="h-4 w-4 text-amber-500" />;
       case 'Empleado': return <Briefcase className="h-4 w-4 text-blue-500" />;
       default: return <UserCircle className="h-4 w-4 text-green-500" />;
     }
@@ -481,19 +487,15 @@ export const GestionRoles: React.FC = () => {
                         )}
                         <Switch
                           checked={role.isActive}
-                          onCheckedChange={() => handleToggleRoleStatus(role.id, role.name, role.isActive)}
+                          onCheckedChange={() => handleToggleRoleStatus(role)}
                           disabled={
-                            isLoading || 
-                            role.name === 'Administrador' || 
-                            role.name === 'Admin' || 
-                            (role.isActive && getUserCountByRole(role.name) > 0)
+                            isLoading ||
+                            role.name === 'Super Administrador'
                           }
                           title={
-                            role.name === 'Administrador' || role.name === 'Admin' 
-                              ? "No se puede desactivar un rol administrativo" 
-                              : (role.isActive && getUserCountByRole(role.name) > 0)
-                                ? `El rol "${role.name}" tiene ${getUserCountByRole(role.name)} usuarios asignados. Reasigna los usuarios antes de desactivarlo.`
-                                : ""
+                            role.name === 'Super Administrador'
+                              ? "No se puede desactivar el rol de Super Administrador"
+                              : ""
                           }
                         />
                       </div>
@@ -512,8 +514,8 @@ export const GestionRoles: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditRole(role)}
-                          title={role.name === 'Administrador' || role.name === 'Admin' ? 'No se puede editar el rol de Administrador' : 'Editar rol'}
-                          disabled={role.name === 'Administrador' || role.name === 'Admin'}
+                          title={role.name === 'Super Administrador' ? 'No se puede editar el rol de Super Administrador' : 'Editar rol'}
+                          disabled={role.name === 'Super Administrador'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -521,8 +523,8 @@ export const GestionRoles: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteRole(role)}
-                          title={role.name === 'Administrador' || role.name === 'Admin' ? 'No se puede eliminar un administrador' : 'Eliminar rol'}
-                          disabled={role.name === 'Administrador' || role.name === 'Admin'}
+                          title={role.name === 'Super Administrador' ? 'No se puede eliminar el rol de Super Administrador' : 'Eliminar rol'}
+                          disabled={role.name === 'Super Administrador'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -24,6 +24,7 @@ import {
 import { ScrollArea } from './ui/scroll-area';
 import {
   Users,
+  Shield,
 
   Eye,
   Edit,
@@ -94,7 +95,8 @@ export const GestionUsuarios: React.FC = () => {
 
   const getRoleIcon = (roleName: string) => {
     switch (roleName) {
-      case 'Administrador': return <Crown className="h-4 w-4 text-yellow-500" />;
+      case 'Super Administrador': return <Crown className="h-4 w-4 text-yellow-500" />;
+      case 'Administrador': return <Shield className="h-4 w-4 text-amber-500" />;
       case 'Empleado': return <Briefcase className="h-4 w-4 text-blue-500" />;
       default: return <UserCircle className="h-4 w-4 text-green-500" />;
     }
@@ -256,10 +258,10 @@ export const GestionUsuarios: React.FC = () => {
   };
 
   const toggleUserStatus = async (user: User) => {
-    // Restricción: No se pueden desactivar administradores
-    if (user.role.name === 'Administrador') {
+    // Restricción: No se pueden desactivar super administradores
+    if (user.role.name === 'Super Administrador') {
       toast.error("Acción no permitida", {
-        description: "No se puede desactivar a un usuario con el rol de Administrador.",
+        description: "No se puede desactivar a un usuario con el rol de Super Administrador.",
       });
       return;
     }
@@ -547,8 +549,8 @@ export const GestionUsuarios: React.FC = () => {
                           checked={user.isActive}
                           onCheckedChange={() => toggleUserStatus(user)}
                           size="sm"
-                          disabled={user.role.name === 'Administrador'}
-                          title={user.role.name === 'Administrador' ? 'No se puede desactivar un administrador' : ''}
+                          disabled={user.role.name === 'Super Administrador'}
+                          title={user.role.name === 'Super Administrador' ? 'No se puede desactivar un super administrador' : ''}
                         />
                       </div>
                     </TableCell>
@@ -574,8 +576,8 @@ export const GestionUsuarios: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteUser(user)}
-                          title={user.role.name === 'Administrador' ? 'No se puede eliminar un administrador' : 'Eliminar usuario'}
-                          disabled={user.role.name === 'Administrador'}
+                          title={user.role.name === 'Super Administrador' ? 'No se puede eliminar un super administrador' : 'Eliminar usuario'}
+                          disabled={user.role.name === 'Super Administrador'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -593,6 +595,7 @@ export const GestionUsuarios: React.FC = () => {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
+                    size="default"
                     onClick={() => currentPage > 1 && handlePageChange(Math.max(1, currentPage - 1))}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
@@ -605,6 +608,7 @@ export const GestionUsuarios: React.FC = () => {
                   return (
                     <PaginationItem key={page}>
                       <PaginationLink
+                        size="icon"
                         onClick={() => hasContent && handlePageChange(page)}
                         isActive={isCurrentPage}
                         className={`
@@ -621,6 +625,7 @@ export const GestionUsuarios: React.FC = () => {
 
                 <PaginationItem>
                   <PaginationNext
+                    size="default"
                     onClick={() => currentPage < totalPages && handlePageChange(Math.min(totalPages, currentPage + 1))}
                     className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
@@ -778,9 +783,9 @@ export const GestionUsuarios: React.FC = () => {
                   <Switch
                     checked={editUserData.isActive}
                     onCheckedChange={(checked: boolean) => setEditUserData({ ...editUserData, isActive: checked })}
-                    disabled={editUserData.role === 'Administrador'}
+                    disabled={editUserData.role === 'Super Administrador'}
                   />
-                  <Label>Usuario Activo {editUserData.role === 'Administrador' && "(No modificable para Administradores)"}</Label>
+                  <Label>Usuario Activo {editUserData.role === 'Super Administrador' && "(No modificable para Super Administradores)"}</Label>
                 </div>
 
                 <div className="text-xs text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
