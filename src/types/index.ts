@@ -130,6 +130,8 @@ export interface UsuarioDto {
   fechaNacimiento: string;
   estadoUsuario: boolean;
   rolId: number;
+  tipo?: 'Minorista' | 'Mayorista';
+  username?: string;
 }
 
 export interface RolDto {

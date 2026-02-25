@@ -112,7 +112,8 @@ export const Clientes: React.FC = () => {
     numeroDocumento: '',
     fechaNacimiento: new Date().toISOString().split('T')[0],
     rolId: 3, // Rol de Cliente
-    estadoUsuario: true
+    estadoUsuario: true,
+    tipo: 'Minorista'
   });
 
   useEffect(() => {
@@ -313,11 +314,17 @@ export const Clientes: React.FC = () => {
       const dataToSave = {
         ...newCliente,
         rolId: 3, // Forzamos rol de cliente
-        estadoUsuario: true
+        estadoUsuario: true,
+        username: newCliente.numeroDocumento, // Seteamos el usuario como el número de documento
+        contraseña: newCliente.numeroDocumento // Seteamos la contraseña como el número de documento
       } as UsuarioDto;
 
+      console.log("CREANDO CLIENTE (Payload):", JSON.stringify(dataToSave, null, 2));
       await createUsuario(dataToSave);
-      toast.success('Cliente creado exitosamente');
+      toast.success('Cliente creado correctamente. El usuario y la contraseña para iniciar sesión es su número de documento.', {
+        duration: 6000,
+        icon: '👤'
+      });
       fetchData();
       resetNewClienteForm();
       setIsCreateDialogOpen(false);
@@ -358,8 +365,13 @@ export const Clientes: React.FC = () => {
 
       try {
         setLoading(true);
-        await updateUsuario(editingCliente.id, editingCliente);
-        toast.success('Cliente actualizado exitosamente');
+        const dataToUpdate = {
+          ...editingCliente,
+          username: editingCliente.numeroDocumento,
+          contraseña: editingCliente.contraseña || editingCliente.numeroDocumento
+        };
+        await updateUsuario(editingCliente.id, dataToUpdate as UsuarioDto);
+        toast.success('Cliente actualizado correctamente. Recuerda que sus credenciales están ligadas a su número de documento.');
         fetchData();
         setIsEditDialogOpen(false);
         setEditingCliente(null);
@@ -408,7 +420,8 @@ export const Clientes: React.FC = () => {
       numeroDocumento: '',
       fechaNacimiento: new Date().toISOString().split('T')[0],
       rolId: 3,
-      estadoUsuario: true
+      estadoUsuario: true,
+      tipo: 'Minorista'
     });
     setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
     setSelectedDepartment('');
@@ -731,8 +744,11 @@ export const Clientes: React.FC = () => {
 
                   <TabsContent value="commercial" className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo Cliente (Visual)</Label>
-                      <Select defaultValue="Minorista">
+                      <Label htmlFor="tipo">Tipo Cliente *</Label>
+                      <Select
+                        value={newCliente.tipo || 'Minorista'}
+                        onValueChange={(val: 'Minorista' | 'Mayorista') => setNewCliente({ ...newCliente, tipo: val })}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar tipo" />
                         </SelectTrigger>
@@ -743,14 +759,6 @@ export const Clientes: React.FC = () => {
                       </Select>
                     </div>
 
-                    <div className="flex items-center space-x-2 pt-2">
-                      <Switch
-                        id="estadoUsuario"
-                        checked={newCliente.estadoUsuario || false}
-                        onCheckedChange={(checked: boolean) => setNewCliente({ ...newCliente, estadoUsuario: checked })}
-                      />
-                      <Label htmlFor="estadoUsuario">Usuario Activo</Label>
-                    </div>
                   </TabsContent>
                 </Tabs>
 
@@ -803,6 +811,7 @@ export const Clientes: React.FC = () => {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Tipo Documento</TableHead>
                   <TableHead>Número Documento</TableHead>
+                  <TableHead>Tipo Cliente</TableHead>
                   <TableHead>Contacto</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -819,6 +828,11 @@ export const Clientes: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{cliente.numeroDocumento}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getTypeColor(cliente.tipo || 'Minorista')}>
+                        {cliente.tipo || 'Minorista'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{cliente.correo}</div>
@@ -913,8 +927,8 @@ export const Clientes: React.FC = () => {
                     <h3 className="text-lg font-semibold">Identificación</h3>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(selectedCliente.estadoUsuario)}
-                      <Badge className="bg-blue-500 text-white">
-                        Minorista
+                      <Badge className={getTypeColor(selectedCliente.tipo || 'Minorista')}>
+                        {selectedCliente.tipo || 'Minorista'}
                       </Badge>
                     </div>
                   </div>
@@ -1027,10 +1041,10 @@ export const Clientes: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Tipo de Cliente (Visual)</Label>
+                      <Label className="text-sm font-medium text-gray-500">Tipo de Cliente</Label>
                       <div className="mt-1">
-                        <Badge className="bg-green-600 text-white text-sm px-3 py-1">
-                          Minorista
+                        <Badge className={`${getTypeColor(selectedCliente.tipo || 'Minorista')} text-sm px-3 py-1`}>
+                          {selectedCliente.tipo || 'Minorista'}
                         </Badge>
                       </div>
                     </div>
@@ -1053,8 +1067,8 @@ export const Clientes: React.FC = () => {
                         {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
                       </span>
                     </div>
-                    <Badge className="bg-blue-500 text-white">
-                      Minorista
+                    <Badge className={getTypeColor(selectedCliente.tipo || 'Minorista')}>
+                      {selectedCliente.tipo || 'Minorista'}
                     </Badge>
                   </div>
                 </div>
@@ -1347,8 +1361,11 @@ export const Clientes: React.FC = () => {
 
               <TabsContent value="commercial" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-tipo">Tipo Cliente (Visual)</Label>
-                  <Select defaultValue="Minorista">
+                  <Label htmlFor="edit-tipo">Tipo Cliente *</Label>
+                  <Select
+                    value={editingCliente.tipo || 'Minorista'}
+                    onValueChange={(val: 'Minorista' | 'Mayorista') => setEditingCliente({ ...editingCliente, tipo: val })}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1359,21 +1376,6 @@ export const Clientes: React.FC = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="edit-estado">Estado *</Label>
-                  <Select
-                    value={editingCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
-                    onValueChange={(value: string) => setEditingCliente({ ...editingCliente, estadoUsuario: value === 'Activo' })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Activo">Activo</SelectItem>
-                      <SelectItem value="Inactivo">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </TabsContent>
             </Tabs>
           )}
