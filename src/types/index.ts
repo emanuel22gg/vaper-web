@@ -279,3 +279,27 @@ export interface Proveedor {
   longitud?: number;
   informacionAdicional?: string;
 }
+
+export interface DetalleCompraDto {
+  id?: number;
+  compraId?: number;
+  productoId: number;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  // Navegación opcional (si se requiere mostrar nombres en UI)
+  producto?: any;
+}
+
+export interface CompraDto {
+  id?: number;
+  numeroCompra?: string;
+  fechaCompra: string;
+  proveedorId: number;
+  subtotal: number;
+  total: number;
+  estado: number;
+  observaciones?: string;
+  fechaCreacion?: string;
+  detalleCompras?: DetalleCompraDto[];
+}

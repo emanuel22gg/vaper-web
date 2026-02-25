@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian, Proveedor } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian, Proveedor, CompraDto } from '../types';
 
 const API_URL = '/api';
 
@@ -256,4 +256,32 @@ export const updateProveedor = async (id: number, proveedor: Partial<Proveedor>)
 
 export const deleteProveedor = async (id: number): Promise<void> => {
     await api.delete(`/Proveedores/${id}`);
+};
+
+// Compras Service
+export const getCompras = async (): Promise<CompraDto[]> => {
+    const response = await api.get('/Compras');
+    return response.data;
+};
+
+export const getCompraById = async (id: number): Promise<CompraDto> => {
+    const response = await api.get(`/Compras/${id}`);
+    return response.data;
+};
+
+export const createCompra = async (compra: CompraDto): Promise<CompraDto> => {
+    const response = await api.post('/Compras', compra);
+    return response.data;
+};
+
+export const updateCompra = async (id: number, compra: CompraDto): Promise<CompraDto> => {
+    const response = await api.put(`/Compras/${id}`, {
+        ...compra,
+        id
+    });
+    return response.data;
+};
+
+export const deleteCompra = async (id: number): Promise<void> => {
+    await api.delete(`/Compras/${id}`);
 };

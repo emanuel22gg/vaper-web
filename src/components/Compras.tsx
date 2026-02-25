@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -57,7 +57,8 @@ import {
   PaginationPrevious,
 } from "./ui/pagination";
 import { toast } from "sonner";
-import { productosInventario } from "../data/productos";
+import { getCompras, createCompra, updateCompra, getProductos, getProveedores } from "../services/api";
+import { CompraDto, DetalleCompraDto, Producto, Proveedor } from "../types";
 import {
   Plus,
   Search,
@@ -76,207 +77,13 @@ import {
   Download,
 } from "lucide-react";
 
-interface ProductoOrden {
-  id: string;
-  nombre: string;
-  cantidad: number;
-  precioCompra: number;
-  precioVenta: number;
-  codigo: string;
-}
 
-interface OrdenCompra {
-  id: string;
-  numeroOrden: string;
-  proveedor: string;
-  fechaOrden: Date;
-  fechaEntrega: Date;
-  estado: "Activo" | "Anulado";
-  productos: ProductoOrden[];
-  total: number;
-  razonAnulacion?: string;
-}
-
-const mockOrdenes: OrdenCompra[] = [
-  {
-    id: "1",
-    numeroOrden: "OC-2024-001",
-    proveedor: "VapeMax Distribuciones",
-    fechaOrden: new Date("2024-03-01"),
-    fechaEntrega: new Date("2024-03-05"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "1",
-        nombre: "Vape Desechable 2000 puffs",
-        cantidad: 50,
-        precioCompra: 25000,
-        precioVenta: 30000,
-        codigo: "VD-001",
-      },
-      {
-        id: "2",
-        nombre: "Líquido Frutal 30ml",
-        cantidad: 30,
-        precioCompra: 35000,
-        precioVenta: 40000,
-        codigo: "LQ-001",
-      },
-    ],
-    total: 2300000, // 50*25000 + 30*35000
-  },
-  {
-    id: "2",
-    numeroOrden: "OC-2024-002",
-    proveedor: "Smoke Solutions SAS",
-    fechaOrden: new Date("2024-03-10"),
-    fechaEntrega: new Date("2024-03-15"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "5",
-        nombre: "Mod Premium 80W",
-        cantidad: 10,
-        precioCompra: 150000,
-        precioVenta: 180000,
-        codigo: "MOD-001",
-      },
-      {
-        id: "10",
-        nombre: "Batería 18650",
-        cantidad: 20,
-        precioCompra: 45000,
-        precioVenta: 50000,
-        codigo: "ACC-003",
-      },
-    ],
-    total: 2400000, // 10*150000 + 20*45000
-  },
-  {
-    id: "3",
-    numeroOrden: "OC-2024-003",
-    proveedor: "Premium Vapes Ltd",
-    fechaOrden: new Date("2024-03-15"),
-    fechaEntrega: new Date("2024-03-20"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "3",
-        nombre: "Pod System Premium",
-        cantidad: 25,
-        precioCompra: 80000,
-        precioVenta: 90000,
-        codigo: "POD-001",
-      },
-      {
-        id: "2",
-        nombre: "Líquido Premium 60ml",
-        cantidad: 40,
-        precioCompra: 55000,
-        precioVenta: 60000,
-        codigo: "LQ-001",
-      },
-    ],
-    total: 4200000, // 25*80000 + 40*55000
-  },
-  {
-    id: "4",
-    numeroOrden: "OC-2024-004",
-    proveedor: "VapeMax Distribuciones",
-    fechaOrden: new Date("2024-03-20"),
-    fechaEntrega: new Date("2024-03-25"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "7",
-        nombre: "Vape Desechable Crystal Pro 6000",
-        cantidad: 30,
-        precioCompra: 38000,
-        precioVenta: 45000,
-        codigo: "VD-002",
-      },
-    ],
-    total: 1140000, // 30*38000
-  },
-  {
-    id: "5",
-    numeroOrden: "OC-2024-005",
-    proveedor: "Import Vapes Colombia",
-    fechaOrden: new Date("2024-03-22"),
-    fechaEntrega: new Date("2024-03-28"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "6",
-        nombre: "Tanque Sub-Ohm",
-        cantidad: 15,
-        precioCompra: 80000,
-        precioVenta: 90000,
-        codigo: "ACC-002",
-      },
-      {
-        id: "9",
-        nombre: "Cartuchos Rellenables (Pack x3)",
-        cantidad: 25,
-        precioCompra: 28000,
-        precioVenta: 30000,
-        codigo: "POD-002",
-      },
-    ],
-    total: 1900000, // 15*80000 + 25*28000
-  },
-  {
-    id: "6",
-    numeroOrden: "OC-2024-006",
-    proveedor: "Distribuidora Nacional",
-    fechaOrden: new Date("2024-03-25"),
-    fechaEntrega: new Date("2024-03-30"),
-    estado: "Anulado",
-    productos: [
-      {
-        id: "8",
-        nombre: "Líquido Menthol Ice 30ml",
-        cantidad: 50,
-        precioCompra: 42000,
-        precioVenta: 50000,
-        codigo: "LQ-002",
-      },
-    ],
-    total: 2100000, // 50*42000
-    razonAnulacion: "Falta de pago",
-  },
-  {
-    id: "7",
-    numeroOrden: "OC-2024-007",
-    proveedor: "Premium Vapes Ltd",
-    fechaOrden: new Date("2024-03-28"),
-    fechaEntrega: new Date("2024-04-02"),
-    estado: "Activo",
-    productos: [
-      {
-        id: "4",
-        nombre: "Resistencias Pod (Pack x5)",
-        cantidad: 40,
-        precioCompra: 35000,
-        precioVenta: 40000,
-        codigo: "ACC-001",
-      },
-      {
-        id: "10",
-        nombre: "Cargador USB-C Universal",
-        cantidad: 100,
-        precioCompra: 15000,
-        precioVenta: 18000,
-        codigo: "ACC-003",
-      },
-    ],
-    total: 2900000, // 40*35000 + 100*15000
-  },
-];
 
 export const Compras: React.FC = () => {
-  const [ordenes, setOrdenes] =
-    useState<OrdenCompra[]>(mockOrdenes);
+  const [ordenes, setOrdenes] = useState<CompraDto[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] =
@@ -284,11 +91,11 @@ export const Compras: React.FC = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] =
     useState(false);
   const [selectedOrden, setSelectedOrden] =
-    useState<OrdenCompra | null>(null);
-  
+    useState<CompraDto | null>(null);
+
   // Estados para el diálogo de anular compra
   const [isAnularDialogOpen, setIsAnularDialogOpen] = useState(false);
-  const [ordenToAnular, setOrdenToAnular] = useState<OrdenCompra | null>(null);
+  const [ordenToAnular, setOrdenToAnular] = useState<CompraDto | null>(null);
   const [razonAnulacion, setRazonAnulacion] = useState("");
 
   // Estados para paginación
@@ -297,10 +104,10 @@ export const Compras: React.FC = () => {
 
   // Estados para crear nueva orden
   const [newOrden, setNewOrden] = useState({
-    proveedor: "",
+    proveedorId: 0,
     productos: [
       {
-        id: "",
+        id: 0,
         nombre: "",
         cantidad: 0,
         precioCompra: 0,
@@ -310,6 +117,29 @@ export const Compras: React.FC = () => {
     ],
   });
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [comprasData, productosData, proveedoresData] = await Promise.all([
+        getCompras(),
+        getProductos(),
+        getProveedores()
+      ]);
+      setOrdenes(comprasData);
+      setProductos(productosData);
+      setProveedores(proveedoresData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Error al cargar los datos de la API");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Estado para búsqueda de productos en la orden
   const [productoSearchTerm, setProductoSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -317,14 +147,16 @@ export const Compras: React.FC = () => {
 
   const filteredOrdenes = ordenes.filter((orden) => {
     const matchesSearch =
-      orden.numeroOrden
+      (orden.numeroCompra || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      orden.proveedor
+      (proveedores.find(p => p.id === orden.proveedorId)?.nombreCompletoORazonSocial || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
     const matchesStatus =
-      filterStatus === "all" || orden.estado === filterStatus;
+      filterStatus === "all" ||
+      (filterStatus === "Activo" && orden.estado === 1) ||
+      (filterStatus === "Anulado" && orden.estado === 0);
     return matchesSearch && matchesStatus;
   });
 
@@ -344,81 +176,83 @@ export const Compras: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus]);
 
-  const getStatusColor = (estado: string) => {
+  const getStatusColor = (estado: number) => {
     switch (estado) {
-      case "Activo":
+      case 1:
         return "bg-green-500";
-      case "Anulado":
+      case 0:
         return "bg-red-500";
       default:
         return "bg-gray-500";
     }
   };
 
-  const getStatusIcon = (estado: string) => {
+  const getStatusIcon = (estado: number) => {
     switch (estado) {
-      case "Activo":
+      case 1:
         return <CheckCircle className="h-4 w-4" />;
-      case "Anulado":
+      case 0:
         return <XCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
   };
 
-  const handleViewOrden = (orden: OrdenCompra) => {
+  const handleViewOrden = (orden: CompraDto) => {
     setSelectedOrden(orden);
     setIsViewDialogOpen(true);
   };
 
-  const openAnularDialog = (orden: OrdenCompra) => {
+  const openAnularDialog = (orden: CompraDto) => {
     setOrdenToAnular(orden);
     setRazonAnulacion(""); // Limpiar el campo cuando se abre el diálogo
     setIsAnularDialogOpen(true);
   };
 
-  const handleAnularOrden = () => {
+  const handleAnularOrden = async () => {
     if (ordenToAnular && razonAnulacion.trim()) {
-      setOrdenes((prev) =>
-        prev.map((o) =>
-          o.id === ordenToAnular.id
-            ? { ...o, estado: "Anulado" as const, razonAnulacion }
-            : o,
-        ),
-      );
-      setIsAnularDialogOpen(false);
-      setOrdenToAnular(null);
-      setRazonAnulacion("");
-      toast.success("Orden de compra anulada exitosamente");
+      try {
+        await updateCompra(ordenToAnular.id!, {
+          ...ordenToAnular,
+          estado: 0,
+          observaciones: `${ordenToAnular.observaciones || ""}\nAnulada: ${razonAnulacion}`.trim()
+        });
+        toast.success("Orden de compra anulada exitosamente");
+        fetchData();
+        setIsAnularDialogOpen(false);
+        setOrdenToAnular(null);
+        setRazonAnulacion("");
+      } catch (error) {
+        console.error("Error anular compra:", error);
+        toast.error("Error al anular la compra en la API");
+      }
     } else if (!razonAnulacion.trim()) {
       toast.error("Por favor ingresa una razón de anulación");
     }
   };
 
-  const exportToPDF = async (orden: OrdenCompra) => {
+  const exportToPDF = async (orden: CompraDto) => {
     try {
-      // Importar jsPDF dinámicamente
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF();
+      const proveedor = proveedores.find(p => p.id === orden.proveedorId);
 
-      // Configurar el documento
       doc.setFontSize(20);
       doc.text("ORDEN DE COMPRA", 105, 20, { align: "center" });
 
-      // Información básica de la orden
       doc.setFontSize(14);
       doc.text("Información de la Orden", 20, 40);
 
       doc.setFontSize(10);
-      doc.text(`Número de Orden: ${orden.numeroOrden}`, 20, 50);
-      doc.text(`Proveedor: ${orden.proveedor}`, 20, 60);
+      doc.text(`Número de Orden: ${orden.numeroCompra || "N/A"}`, 20, 50);
+      doc.text(`Proveedor: ${proveedor?.nombreCompletoORazonSocial || "N/A"}`, 20, 60);
       doc.text(
-        `Fecha de Entrega: ${orden.fechaEntrega.toLocaleDateString("es-ES")}`,
+        `Fecha: ${new Date(orden.fechaCompra || "").toLocaleDateString("es-ES")}`,
         20,
         70,
       );
       doc.text(
-        `Estado: ${orden.estado === "Anulado" ? "Anulada" : orden.estado}`,
+        `Estado: ${orden.estado === 0 ? "Anulada" : "Activa"}`,
         20,
         80,
       );
@@ -443,7 +277,7 @@ export const Compras: React.FC = () => {
 
       // Datos de productos
       let yPosition = 135;
-      orden.productos.forEach((producto, index) => {
+      orden.detalleCompras?.forEach((detalle, index) => {
         if (yPosition > 250) {
           // Nueva página si es necesario
           doc.addPage();
@@ -458,23 +292,27 @@ export const Compras: React.FC = () => {
           yPosition += 10;
         }
 
-        doc.text(producto.codigo, 20, yPosition);
+        const productoInfo = productos.find(p => p.id === detalle.productoId);
+        const nombreProducto = productoInfo?.nombreProducto || "Producto";
+        const codigoProducto = String(detalle.productoId);
+
+        doc.text(codigoProducto, 20, yPosition);
 
         // Truncar nombre si es muy largo
         const nombreTruncado =
-          producto.nombre.length > 25
-            ? producto.nombre.substring(0, 25) + "..."
-            : producto.nombre;
+          nombreProducto.length > 25
+            ? nombreProducto.substring(0, 25) + "..."
+            : nombreProducto;
         doc.text(nombreTruncado, 45, yPosition);
 
-        doc.text(producto.cantidad.toString(), 120, yPosition);
+        doc.text(detalle.cantidad.toString(), 120, yPosition);
         doc.text(
-          `$${producto.precioCompra.toLocaleString()}`,
+          `$${detalle.precioUnitario.toLocaleString()}`,
           140,
           yPosition,
         );
         doc.text(
-          `$${(producto.cantidad * producto.precioCompra).toLocaleString()}`,
+          `$${detalle.subtotal.toLocaleString()}`,
           170,
           yPosition,
         );
@@ -514,7 +352,7 @@ export const Compras: React.FC = () => {
       );
 
       // Descargar el PDF
-      doc.save(`Orden_Compra_${orden.numeroOrden}.pdf`);
+      doc.save(`Orden_Compra_${orden.numeroCompra}.pdf`);
 
       toast.success("PDF exportado exitosamente");
     } catch (error) {
@@ -523,13 +361,13 @@ export const Compras: React.FC = () => {
     }
   };
 
-  const handleCreateOrden = () => {
+  const handleCreateOrden = async () => {
     const productosValidos = newOrden.productos.filter(
       (p) => p.id && p.cantidad > 0 && p.precioCompra > 0,
     );
 
     if (
-      !newOrden.proveedor ||
+      !newOrden.proveedorId ||
       productosValidos.length === 0
     ) {
       toast.error(
@@ -543,33 +381,46 @@ export const Compras: React.FC = () => {
       0,
     );
 
-    const nuevaOrden: OrdenCompra = {
-      id: (ordenes.length + 1).toString(),
-      numeroOrden: `OC-2024-${String(ordenes.length + 1).padStart(3, "0")}`,
-      proveedor: newOrden.proveedor,
-      fechaOrden: new Date(),
-      fechaEntrega: new Date(),
-      estado: "Activo",
-      productos: productosValidos,
-      total,
-    };
+    const subtotal = total; // Si la API requiere subtotal separado
 
-    setOrdenes((prev) => [...prev, nuevaOrden]);
-    setNewOrden({
-      proveedor: "",
-      productos: [
-        {
-          id: "",
-          nombre: "",
-          cantidad: 0,
-          precioCompra: 0,
-          precioVenta: 0,
-          codigo: "",
-        },
-      ],
-    });
-    setIsCreateDialogOpen(false);
-    toast.success("Orden de compra creada exitosamente");
+    try {
+      const nuevaCompra: CompraDto = {
+        numeroCompra: `COM-${Date.now()}`, // Generar número único requerido por el backend
+        fechaCompra: new Date().toISOString(),
+        proveedorId: newOrden.proveedorId,
+        subtotal: subtotal,
+        total: total,
+        estado: 1, // Activo por defecto
+        observaciones: "Creado desde la Web",
+        detalleCompras: productosValidos.map(p => ({
+          productoId: p.id as number,
+          cantidad: p.cantidad,
+          precioUnitario: p.precioCompra,
+          subtotal: p.cantidad * p.precioCompra
+        }))
+      };
+
+      await createCompra(nuevaCompra);
+      toast.success("Orden de compra creada exitosamente");
+      fetchData(); // Recargar datos de la API
+      setNewOrden({
+        proveedorId: 0,
+        productos: [
+          {
+            id: 0,
+            nombre: "",
+            cantidad: 0,
+            precioCompra: 0,
+            precioVenta: 0,
+            codigo: "",
+          },
+        ],
+      });
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error("Error al crear compra:", error);
+      toast.error("Error al crear la compra en la API");
+    }
   };
 
   const addProducto = () => {
@@ -578,7 +429,7 @@ export const Compras: React.FC = () => {
       productos: [
         ...prev.productos,
         {
-          id: "",
+          id: 0,
           nombre: "",
           cantidad: 0,
           precioCompra: 0,
@@ -591,9 +442,9 @@ export const Compras: React.FC = () => {
 
   const handleProductoSelect = (
     index: number,
-    productoId: string,
+    productoId: number,
   ) => {
-    const producto = productosInventario.find(
+    const producto = productos.find(
       (p) => p.id === productoId,
     );
     if (producto) {
@@ -602,13 +453,13 @@ export const Compras: React.FC = () => {
         productos: prev.productos.map((p, i) =>
           i === index
             ? {
-                id: producto.id,
-                nombre: producto.nombre,
-                cantidad: p.cantidad || 1,
-                precioCompra: producto.precio,
-                precioVenta: producto.precio * 1.2, // Precio de venta 20% más que el de compra
-                codigo: producto.codigo,
-              }
+              id: producto.id,
+              nombre: producto.nombreProducto,
+              cantidad: p.cantidad || 1,
+              precioCompra: producto.precio,
+              precioVenta: producto.precio * 1.2, // Precio de venta 20% más que el de compra
+              codigo: String(producto.id), // O usar un campo codigo si existe en Producto
+            }
             : p,
         ),
       }));
@@ -620,18 +471,18 @@ export const Compras: React.FC = () => {
   const handleSearchChange = (index: number, value: string) => {
     setProductoSearchTerm(value);
     setShowSearchDropdown(index);
-    
+
     if (value.trim()) {
-      const filtered = productosInventario.filter((prod) => {
+      const filtered = productos.filter((prod) => {
         const searchLower = value.toLowerCase();
         return (
-          prod.nombre.toLowerCase().includes(searchLower) ||
-          prod.codigo.toLowerCase().includes(searchLower)
+          prod.nombreProducto.toLowerCase().includes(searchLower) ||
+          String(prod.id).toLowerCase().includes(searchLower)
         );
       });
       setSearchResults(filtered);
     } else {
-      setSearchResults(productosInventario);
+      setSearchResults(productos);
     }
   };
 
@@ -685,7 +536,7 @@ export const Compras: React.FC = () => {
               <DialogTrigger asChild>
                 <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700">
                   <Plus className="h-4 w-4 mr-2" />
-                    Nueva Compra
+                  Nueva Compra
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
@@ -706,11 +557,11 @@ export const Compras: React.FC = () => {
                         Proveedor
                       </Label>
                       <Select
-                        value={newOrden.proveedor}
-                        onValueChange={(value) =>
+                        value={String(newOrden.proveedorId)}
+                        onValueChange={(value: string) =>
                           setNewOrden({
                             ...newOrden,
-                            proveedor: value,
+                            proveedorId: Number(value),
                           })
                         }
                       >
@@ -718,15 +569,11 @@ export const Compras: React.FC = () => {
                           <SelectValue placeholder="Seleccionar proveedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="VapeMax Distribuciones">
-                            VapeMax Distribuciones
-                          </SelectItem>
-                          <SelectItem value="Smoke Solutions SAS">
-                            Smoke Solutions SAS
-                          </SelectItem>
-                          <SelectItem value="Premium Vapes Ltd">
-                            Premium Vapes Ltd
-                          </SelectItem>
+                          {proveedores.map(p => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.nombreCompletoORazonSocial}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -766,7 +613,7 @@ export const Compras: React.FC = () => {
                                     onChange={(e) => handleSearchChange(index, e.target.value)}
                                     onFocus={() => {
                                       setShowSearchDropdown(index);
-                                      setSearchResults(productosInventario);
+                                      setSearchResults(productos);
                                     }}
                                     className="pl-8 h-9"
                                   />
@@ -914,10 +761,10 @@ export const Compras: React.FC = () => {
                   <Button
                     onClick={handleCreateOrden}
                     disabled={
-                      !newOrden.proveedor ||
+                      !newOrden.proveedorId ||
                       newOrden.productos.every((p) => !p.id)
                     }
-                    
+
                   >
                     Crear Orden
                   </Button>
@@ -994,10 +841,10 @@ export const Compras: React.FC = () => {
                   paginatedOrdenes.map((orden) => (
                     <TableRow key={orden.id}>
                       <TableCell>
-                        {orden.proveedor}
+                        {proveedores.find(p => p.id === orden.proveedorId)?.nombreCompletoORazonSocial || "Cargando..."}
                       </TableCell>
                       <TableCell>
-                        {orden.fechaEntrega.toLocaleDateString()}
+                        {new Date(orden.fechaCompra || "").toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold">
@@ -1008,14 +855,14 @@ export const Compras: React.FC = () => {
                         <Badge
                           variant="outline"
                           className={
-                            orden.estado === "Activo"
+                            orden.estado === 1
                               ? "bg-black text-white border-black"
-                              : orden.estado === "Anulado"
+                              : orden.estado === 0
                                 ? "bg-red-500 text-white border-red-500"
                                 : "bg-gray-500 text-white border-gray-500"
                           }
                         >
-                          {orden.estado === "Anulado" ? "Anulada" : orden.estado}
+                          {orden.estado === 0 ? "Anulada" : "Activa"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -1038,7 +885,7 @@ export const Compras: React.FC = () => {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          {orden.estado !== "Anulado" && (
+                          {orden.estado !== 0 && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -1063,6 +910,7 @@ export const Compras: React.FC = () => {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
+                    size="default"
                     onClick={() =>
                       setCurrentPage((prev) =>
                         Math.max(prev - 1, 1),
@@ -1082,6 +930,7 @@ export const Compras: React.FC = () => {
                 ).map((page) => (
                   <PaginationItem key={page}>
                     <PaginationLink
+                      size="default"
                       onClick={() => setCurrentPage(page)}
                       isActive={currentPage === page}
                       className="cursor-pointer"
@@ -1093,6 +942,7 @@ export const Compras: React.FC = () => {
 
                 <PaginationItem>
                   <PaginationNext
+                    size="default"
                     onClick={() =>
                       setCurrentPage((prev) =>
                         Math.min(prev + 1, totalPages),
@@ -1132,7 +982,7 @@ export const Compras: React.FC = () => {
                     Número de Orden
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {selectedOrden.numeroOrden}
+                    {selectedOrden.numeroCompra || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -1140,15 +990,15 @@ export const Compras: React.FC = () => {
                     Proveedor
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {selectedOrden.proveedor}
+                    {proveedores.find(p => p.id === selectedOrden.proveedorId)?.nombreCompletoORazonSocial || "N/A"}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">
-                    Fecha de Entrega
+                    Fecha de Compra
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {selectedOrden.fechaEntrega.toLocaleDateString()}
+                    {new Date(selectedOrden.fechaCompra).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
@@ -1156,27 +1006,27 @@ export const Compras: React.FC = () => {
                     Estado
                   </Label>
                   <Badge
-                    className={`${getStatusColor(selectedOrden.estado)} mt-1`}
+                    className={`${getStatusColor(selectedOrden.estado)} mt-1 text-white`}
                   >
                     {getStatusIcon(selectedOrden.estado)}
                     <span className="ml-1">
-                      {selectedOrden.estado === "Anulado"
+                      {selectedOrden.estado === 0
                         ? "Anulada"
-                        : selectedOrden.estado}
+                        : "Activa"}
                     </span>
                   </Badge>
                 </div>
               </div>
 
-              {selectedOrden.estado === "Anulado" && selectedOrden.razonAnulacion && (
+              {selectedOrden.estado === 0 && selectedOrden.observaciones && (
                 <>
                   <Separator />
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <Label className="text-sm font-medium text-red-800">
-                      Razón de Anulación
+                      Observaciones / Razón de Anulación
                     </Label>
                     <p className="text-sm text-red-700 mt-2">
-                      {selectedOrden.razonAnulacion}
+                      {selectedOrden.observaciones}
                     </p>
                   </div>
                 </>
@@ -1189,29 +1039,27 @@ export const Compras: React.FC = () => {
                   Productos
                 </Label>
                 <div className="space-y-2">
-                  {selectedOrden.productos.map((producto) => (
+                  {selectedOrden.detalleCompras?.map((detalle, idx) => (
                     <div
-                      key={producto.id}
+                      key={detalle.id || idx}
                       className="flex justify-between items-center p-3 border rounded-lg"
                     >
                       <div>
                         <p className="font-medium">
-                          {producto.nombre}
+                          {productos.find(p => p.id === detalle.productoId)?.nombreProducto || "Producto"}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {producto.codigo}
+                          ID: {detalle.productoId}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-medium">
-                          {producto.cantidad} × $
-                          {producto.precioCompra.toLocaleString()}
+                          {detalle.cantidad} × $
+                          {detalle.precioUnitario.toLocaleString()}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           $
-                          {(
-                            producto.cantidad * producto.precioCompra
-                          ).toLocaleString()}
+                          {detalle.subtotal.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -1260,27 +1108,27 @@ export const Compras: React.FC = () => {
               </div>
             </div>
           </AlertDialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <AlertDialogDescription className="text-base">
               ¿Estás seguro de que deseas anular esta orden de compra? El estado cambiará a "Anulado".
             </AlertDialogDescription>
-            
+
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4 text-orange-600" />
                 <span className="text-sm text-orange-800">
-                  <strong>Orden:</strong> {ordenToAnular?.numeroOrden}
+                  <strong>Orden:</strong> {ordenToAnular?.numeroCompra || "N/A"}
                 </span>
               </div>
               {ordenToAnular && (
                 <div className="mt-2 ml-6 text-sm text-orange-700">
-                  <div>Proveedor: {ordenToAnular.proveedor}</div>
+                  <div>Proveedor: {proveedores.find(p => p.id === ordenToAnular.proveedorId)?.nombreCompletoORazonSocial || "N/A"}</div>
                   <div>Total: ${ordenToAnular.total.toLocaleString()}</div>
                 </div>
               )}
             </div>
-            
+
             <div className="mt-4">
               <Label className="text-sm font-medium">Razón de Anulación</Label>
               <Textarea
@@ -1305,6 +1153,6 @@ export const Compras: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };
