@@ -574,7 +574,7 @@ export const Proveedores: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="cedula">Cédula *</Label>
+                        <Label htmlFor="cedula">Documento de identidad *</Label>
                         <Input
                           id="cedula"
                           value={newProveedor.cedula || ""}
@@ -700,36 +700,38 @@ export const Proveedores: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="direccion">
-                        Dirección *
-                      </Label>
-                      <Input
-                        id="direccion"
-                        value={newProveedor.direccion || ""}
-                        onChange={(e) =>
-                          setNewProveedor({
-                            ...newProveedor,
-                            direccion: e.target.value,
-                          })
-                        }
-                        placeholder="Calle 45 #23-15"
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="direccion">
+                          Dirección *
+                        </Label>
+                        <Input
+                          id="direccion"
+                          value={newProveedor.direccion || ""}
+                          onChange={(e) =>
+                            setNewProveedor({
+                              ...newProveedor,
+                              direccion: e.target.value,
+                            })
+                          }
+                          placeholder="Calle 45 #23-15"
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="ciudad">Ciudad *</Label>
-                      <Input
-                        id="ciudad"
-                        value={newProveedor.ciudad || ""}
-                        onChange={(e) =>
-                          setNewProveedor({
-                            ...newProveedor,
-                            ciudad: e.target.value,
-                          })
-                        }
-                        placeholder="Medellín"
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="ciudad">Ciudad *</Label>
+                        <Input
+                          id="ciudad"
+                          value={newProveedor.ciudad || ""}
+                          onChange={(e) =>
+                            setNewProveedor({
+                              ...newProveedor,
+                              ciudad: e.target.value,
+                            })
+                          }
+                          placeholder="Medellín"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -1024,11 +1026,11 @@ export const Proveedores: React.FC = () => {
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-600">
-                        Cédula
+                        Documento de identidad
                       </Label>
                       <p className="text-sm">
                         {selectedProveedor.cedula ||
-                          "No especificada"}
+                          "No especificado"}
                       </p>
                     </div>
                   </div>
@@ -1399,7 +1401,7 @@ export const Proveedores: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-cedula">
-                      Cédula *
+                      Documento de identidad *
                     </Label>
                     <Input
                       id="edit-cedula"
@@ -1525,23 +1527,23 @@ export const Proveedores: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="edit-direccion">
-                    Dirección *
-                  </Label>
-                  <Input
-                    id="edit-direccion"
-                    value={selectedProveedor.direccion}
-                    onChange={(e) =>
-                      setSelectedProveedor({
-                        ...selectedProveedor,
-                        direccion: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-direccion">
+                      Dirección *
+                    </Label>
+                    <Input
+                      id="edit-direccion"
+                      value={selectedProveedor.direccion}
+                      onChange={(e) =>
+                        setSelectedProveedor({
+                          ...selectedProveedor,
+                          direccion: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="edit-ciudad">
                       Ciudad *
@@ -1557,19 +1559,20 @@ export const Proveedores: React.FC = () => {
                       }
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-pais">País *</Label>
-                    <Input
-                      id="edit-pais"
-                      value={selectedProveedor.pais}
-                      onChange={(e) =>
-                        setSelectedProveedor({
-                          ...selectedProveedor,
-                          pais: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-pais">País *</Label>
+                  <Input
+                    id="edit-pais"
+                    value={selectedProveedor.pais}
+                    onChange={(e) =>
+                      setSelectedProveedor({
+                        ...selectedProveedor,
+                        pais: e.target.value,
+                      })
+                    }
+                  />
                 </div>
               </div>
 
