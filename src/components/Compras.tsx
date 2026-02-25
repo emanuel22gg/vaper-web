@@ -156,7 +156,7 @@ export const Compras: React.FC = () => {
     const matchesStatus =
       filterStatus === "all" ||
       (filterStatus === "Activo" && orden.estado === 1) ||
-      (filterStatus === "Anulado" && orden.estado === 0);
+      (filterStatus === "Anulado" && orden.estado === 3);
     return matchesSearch && matchesStatus;
   });
 
@@ -180,7 +180,7 @@ export const Compras: React.FC = () => {
     switch (estado) {
       case 1:
         return "bg-green-500";
-      case 0:
+      case 3:
         return "bg-red-500";
       default:
         return "bg-gray-500";
@@ -191,7 +191,7 @@ export const Compras: React.FC = () => {
     switch (estado) {
       case 1:
         return <CheckCircle className="h-4 w-4" />;
-      case 0:
+      case 3:
         return <XCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -214,7 +214,7 @@ export const Compras: React.FC = () => {
       try {
         await updateCompra(ordenToAnular.id!, {
           ...ordenToAnular,
-          estado: 0,
+          estado: 3,
           observaciones: `${ordenToAnular.observaciones || ""}\nAnulada: ${razonAnulacion}`.trim()
         });
         toast.success("Orden de compra anulada exitosamente");
@@ -252,7 +252,7 @@ export const Compras: React.FC = () => {
         70,
       );
       doc.text(
-        `Estado: ${orden.estado === 0 ? "Anulada" : "Activa"}`,
+        `Estado: ${orden.estado === 3 ? "Anulada" : "Activa"}`,
         20,
         80,
       );
@@ -470,9 +470,9 @@ export const Compras: React.FC = () => {
 
   const handleSearchChange = (index: number, value: string) => {
     setProductoSearchTerm(value);
-    setShowSearchDropdown(index);
 
     if (value.trim()) {
+      setShowSearchDropdown(index);
       const filtered = productos.filter((prod) => {
         const searchLower = value.toLowerCase();
         return (
@@ -482,7 +482,8 @@ export const Compras: React.FC = () => {
       });
       setSearchResults(filtered);
     } else {
-      setSearchResults(productos);
+      setShowSearchDropdown(null);
+      setSearchResults([]);
     }
   };
 
@@ -569,7 +570,7 @@ export const Compras: React.FC = () => {
                           <SelectValue placeholder="Seleccionar proveedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          {proveedores.map(p => (
+                          {proveedores.filter(p => p.estado).map(p => (
                             <SelectItem key={p.id} value={String(p.id)}>
                               {p.nombreCompletoORazonSocial}
                             </SelectItem>
@@ -612,8 +613,9 @@ export const Compras: React.FC = () => {
                                     value={showSearchDropdown === index ? productoSearchTerm : producto.nombre || ""}
                                     onChange={(e) => handleSearchChange(index, e.target.value)}
                                     onFocus={() => {
-                                      setShowSearchDropdown(index);
-                                      setSearchResults(productos);
+                                      if (productoSearchTerm.trim()) {
+                                        setShowSearchDropdown(index);
+                                      }
                                     }}
                                     className="pl-8 h-9"
                                   />
@@ -628,10 +630,10 @@ export const Compras: React.FC = () => {
                                       >
                                         <div className="flex flex-col">
                                           <span className="font-medium text-sm">
-                                            {prod.nombre}
+                                            {prod.nombreProducto}
                                           </span>
                                           <span className="text-xs text-muted-foreground">
-                                            {prod.codigo} - Stock: {prod.stock} - ${prod.precio.toLocaleString()}
+                                            ID: {prod.id} - Stock: {prod.stock}
                                           </span>
                                         </div>
                                       </div>
@@ -857,12 +859,12 @@ export const Compras: React.FC = () => {
                           className={
                             orden.estado === 1
                               ? "bg-black text-white border-black"
-                              : orden.estado === 0
+                              : orden.estado === 3
                                 ? "bg-red-500 text-white border-red-500"
                                 : "bg-gray-500 text-white border-gray-500"
                           }
                         >
-                          {orden.estado === 0 ? "Anulada" : "Activa"}
+                          {orden.estado === 3 ? "Anulada" : "Activa"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -885,7 +887,7 @@ export const Compras: React.FC = () => {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          {orden.estado !== 0 && (
+                          {orden.estado !== 3 && (
                             <Button
                               variant="outline"
                               size="sm"
