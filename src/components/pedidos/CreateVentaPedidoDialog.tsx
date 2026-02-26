@@ -41,10 +41,11 @@ import {
     CheckCircle2,
     ChevronRight,
     ChevronLeft,
-    MapPin
+    MapPin,
+    Calendar
 } from "lucide-react";
-import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment } from "../../services/api";
-import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian } from "../../types";
+import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, updateProducto, createDetalleVentaPedido } from "../../services/api";
+import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, ProductoDto, DetalleVentaPedidoDto } from "../../types";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -93,6 +94,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
     const [departamentoEntrega, setDepartamentoEntrega] = useState("");
     const [barrio, setBarrio] = useState("");
     const [costoEnvio, setCostoEnvio] = useState(0);
+    const [observaciones, setObservaciones] = useState("");
     const [guardando, setGuardando] = useState(false);
 
     // Estados para Geografía (API Colombia)
@@ -110,6 +112,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
         placa: ''
     });
 
+    const [vigenciaDevolucion, setVigenciaDevolucion] = useState<number>(1);
     const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
     useEffect(() => {
@@ -172,6 +175,8 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
         setSelectedDepartment("");
         setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
         setCostoEnvio(0);
+        setVigenciaDevolucion(1);
+        setObservaciones("");
         setActiveTab("cliente");
     };
 
@@ -276,28 +281,82 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
 
             const nuevoPedido: VentaPedidoDto = {
                 usuarioId: clienteEncontrado.id,
-                estadoId: 1, // Pendiente
+                estadoId: 2, // 2 = Pendiente (ID 1 es entregado)
                 metodoPago: metodoPago,
                 direccionEntrega: direccionEntrega,
                 ciudadEntrega: ciudadEntrega,
                 departamentoEntrega: departamentoEntrega,
                 barrio: barrio,
+                observaciones: observaciones,
                 subtotal: calcularSubtotal(),
                 envio: Number(costoEnvio),
                 total: calcularTotal(),
-                // Enviamos bajo todos los nombres posibles para asegurar captura por el backend
-                detalleVentaPedidos: mappedDetails,
-                DetalleVentaPedidos: mappedDetails,
-                detallePedidos: mappedDetails,
-                DetallePedidos: mappedDetails
+                vigenciaDevolucion: vigenciaDevolucion
+                // Ya no enviamos detalles anidados por si el API no los soporta automáticamente
             };
 
-            console.log("GUARDANDO PEDIDO (Payload):", JSON.stringify(nuevoPedido, null, 2));
-            const response = await createVentaPedido(nuevoPedido);
-            console.log("RESPUESTA SERVIDOR:", response);
-            toast.success("Pedido creado exitosamente");
-            onSuccess();
+            console.log("GUARDANDO PEDIDO (Cabecera):", JSON.stringify(nuevoPedido, null, 2));
+            const response: any = await createVentaPedido(nuevoPedido);
+
+            // EL API puede devolver 'id' o 'Id'. Manejamos ambos casos.
+            const createdOrderId = response.id || response.Id || response.ID || (response.data && (response.data.id || response.data.Id));
+
+            console.log("PEDIDO CREADO RESPUESTA COMPLETA:", response);
+            console.log("ID EXTRAÍDO:", createdOrderId);
+
+            if (!createdOrderId) {
+                console.error("No se pudo obtener el ID del pedido de la respuesta:", response);
+                throw new Error("El servidor no devolvió el ID del pedido");
+            }
+
+            // CREACIÓN MANUAL DE DETALLES Y DESCUENTO DE INVENTARIO
+            for (const item of carrito) {
+                const prod = item.producto;
+
+                // 1. Crear el detalle asociado al pedido
+                const nuevoDetalle: DetalleVentaPedidoDto = {
+                    ventaPedidoId: createdOrderId,
+                    productoId: prod.id,
+                    cantidad: item.cantidad,
+                    precioUnitario: prod.precio,
+                    subtotal: prod.precio * item.cantidad
+                };
+
+                try {
+                    await createDetalleVentaPedido(nuevoDetalle);
+                } catch (detError) {
+                    console.error(`Error al crear detalle para producto ${prod.id}:`, detError);
+                }
+
+                // 2. Actualizar el stock del producto
+                const nuevoStock = Math.max(0, prod.stock - item.cantidad);
+                const prodDto: ProductoDto = {
+                    id: prod.id,
+                    nombreProducto: prod.nombreProducto,
+                    precio: prod.precio,
+                    stock: nuevoStock,
+                    categoriaId: prod.categoriaId,
+                    descripcion: prod.descripcion,
+                    idImagen: prod.idImagen,
+                    estado: prod.estado
+                };
+
+                try {
+                    await updateProducto(prod.id, prodDto);
+                } catch (stockError) {
+                    console.error(`Error al descontar stock del producto ${prod.id}:`, stockError);
+                }
+            }
+
+            toast.success("Pedido creado, detalles registrados y stock actualizado");
+
+            // FIX CRASH: Primero cerramos el diálogo para que Radix maneje el desmontaje antes del re-render del padre
             onOpenChange(false);
+
+            // Pequeño delay opcional para asegurar que la animación de cierre inicie
+            setTimeout(() => {
+                onSuccess();
+            }, 100);
         } catch (error) {
             console.error("Error creating order:", error);
             toast.error("Error al guardar el pedido");
@@ -312,7 +371,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[800px] w-[95vw] h-[90vh] flex flex-col p-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-2">
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
                         <Receipt className="h-5 w-5 text-blue-600" />
@@ -642,6 +701,18 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                             </div>
                                         </div>
 
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
+                                                Notas / Observaciones
+                                            </Label>
+                                            <Input
+                                                placeholder="Ej: Dejar en portería, cliente mayorista, etc."
+                                                value={observaciones}
+                                                onChange={(e) => setObservaciones(e.target.value)}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+
                                         <div className="grid grid-cols-2 gap-4 pt-2">
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
@@ -665,6 +736,23 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                 </Label>
                                                 <Input type="number" value={costoEnvio} onChange={(e) => setCostoEnvio(Number(e.target.value))} className="h-8 text-xs font-bold" />
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-1 pt-2">
+                                            <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
+                                                <Calendar className="h-3 w-3 text-blue-600" /> Vigencia de Devolución
+                                            </Label>
+                                            <Select value={vigenciaDevolucion.toString()} onValueChange={(v: string) => setVigenciaDevolucion(parseInt(v))}>
+                                                <SelectTrigger className="h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="1" className="text-xs">1 Mes</SelectItem>
+                                                    <SelectItem value="2" className="text-xs">2 Meses</SelectItem>
+                                                    <SelectItem value="3" className="text-xs">3 Meses</SelectItem>
+                                                    <SelectItem value="4" className="text-xs">4 Meses</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
 
                                         <div className="mt-6 p-4 bg-gray-100 rounded-xl border border-gray-200">

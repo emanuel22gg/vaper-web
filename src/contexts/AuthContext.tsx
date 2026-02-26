@@ -32,9 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Obtener todos los usuarios de la API
       const apiUsers = await apiService.getUsuarios();
 
-      // 2. Buscar el usuario que coincida con correo/username y contraseña
+      // 2. Buscar el usuario que coincida con correo/documento/username y contraseña
       const foundUserApi = apiUsers.find(u =>
-        (u.correo === usernameOrEmail || (u as any).username === usernameOrEmail) &&
+        (u.correo === usernameOrEmail || u.numeroDocumento === usernameOrEmail || (u as any).username === usernameOrEmail) &&
         u.contraseña === password &&
         u.estadoUsuario
       );
@@ -84,13 +84,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const loggedUser: User = {
           id: foundUserApi.id.toString(),
-          username: foundUserApi.correo.split('@')[0], // Fallback if no username
+          username: (foundUserApi as any).username || foundUserApi.numeroDocumento || foundUserApi.correo.split('@')[0],
           email: foundUserApi.correo,
           firstName: foundUserApi.nombres,
           lastName: foundUserApi.apellidos,
+          numeroDocumento: foundUserApi.numeroDocumento,
+          tipoDocumento: foundUserApi.tipoDocumento,
+          telefono: foundUserApi.telefono,
+          ciudad: foundUserApi.ciudad,
+          direccion: foundUserApi.direccion,
+          barrio: foundUserApi.barrio,
+          fechaNacimiento: foundUserApi.fechaNacimiento,
+          tipoCliente: foundUserApi.tipoCliente,
           role: role,
           isActive: foundUserApi.estadoUsuario,
-          createdAt: new Date(foundUserApi.fechaNacimiento), // Or any other date field
+          createdAt: new Date(foundUserApi.fechaNacimiento),
           lastLogin: new Date()
         };
 

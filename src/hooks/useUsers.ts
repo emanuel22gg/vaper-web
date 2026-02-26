@@ -72,6 +72,7 @@ export const useUsers = () => {
                     direccion: u.direccion,
                     barrio: u.barrio,
                     fechaNacimiento: u.fechaNacimiento,
+                    tipoCliente: u.tipoCliente,
                     role: userRole,
                     isActive: u.estadoUsuario,
                     createdAt: new Date(u.fechaNacimiento)

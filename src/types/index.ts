@@ -14,7 +14,7 @@ export interface Cliente {
   fechaNacimiento?: Date;
   tipoDocumento: 'CC' | 'CE' | 'NIT' | 'PP';
   numeroDocumento: string;
-  tipo: 'Minorista' | 'Mayorista';
+  tipoCliente?: 'Minorista' | 'Mayorista' | null;
   descuento?: number; // Descuento en porcentaje para clientes Mayoristas
   estado: 'Activo' | 'Inactivo';
   fechaRegistro: Date;
@@ -57,6 +57,7 @@ export interface User {
   direccion: string;
   barrio: string;
   fechaNacimiento: string;
+  tipoCliente?: 'Minorista' | 'Mayorista' | null;
   role: Role;
   isActive: boolean;
   createdAt: Date;
@@ -130,7 +131,7 @@ export interface UsuarioDto {
   fechaNacimiento: string;
   estadoUsuario: boolean;
   rolId: number;
-  tipo?: 'Minorista' | 'Mayorista';
+  tipoCliente?: 'Minorista' | 'Mayorista' | null;
   username?: string;
 }
 
@@ -212,13 +213,29 @@ export interface VentaPedidoDto {
   ciudadEntrega: string;
   departamentoEntrega: string;
   barrio?: string;
+  observaciones?: string;
   subtotal: number;
   envio: number;
   total: number;
-  detalleVentaPedidos?: DetalleVentaPedidoDto[]; // Original
-  DetalleVentaPedidos?: DetalleVentaPedidoDto[]; // PascalCase
-  detallePedidos?: DetalleVentaPedidoDto[];      // Database matching
-  DetallePedidos?: DetalleVentaPedidoDto[];      // Database matching Pascal
+  vigenciaDevolucion?: number; // Meses de vigencia (1-4)
+  detalleVenta_Pedido?: DetalleVentaPedidoDto[]; // Conexión con la tabla detalleVenta_Pedido
+}
+
+export interface DevolucionDto {
+  id?: number;
+  ventaPedidoId: number;
+  fechaDevolucion: string;
+  motivo?: string;
+  estadoId: number; // 5 = Aceptada, 3/4 = Anulada/Cancelada
+  montoTotal: number;
+}
+
+export interface DetalleDevolucionDto {
+  id?: number;
+  devolucionId: number;
+  productoId: number;
+  cantidad: number;
+  motivo?: string; // Por qué se devuelve el producto (defectuoso)
 }
 
 export interface DepartmentColombian {

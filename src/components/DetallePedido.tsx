@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { VentaPedidoDto, UsuarioDto, Producto } from '../types/index';
-import { getUsuarios, getProductos, getVentaPedidoById } from '../services/api';
+import { getUsuarios, getProductos, getVentaPedidoById, getEstados, getDetalleVentaPedidos } from '../services/api';
 import {
   ArrowLeft,
   MapPin,
@@ -21,10 +21,19 @@ import {
   Download,
   CalendarCheck,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  XCircle
 } from 'lucide-react';
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
 
 interface DetallePedidoProps {
   pedido: VentaPedidoDto;
@@ -35,33 +44,40 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
   const [pedido, setPedido] = useState<VentaPedidoDto>(pedidoProp);
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [statusMap, setStatusMap] = useState<Record<number, string>>({});
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Intentar obtener el pedido completo si el que viene por prop no tiene detalles
-        const [usuariosData, productosData, fullPedido] = await Promise.all([
+        const [usuariosData, productosData, fullPedido, estadosData, allDetalles] = await Promise.all([
           getUsuarios(),
           getProductos(),
-          getVentaPedidoById(pedidoProp.id!)
+          getVentaPedidoById(pedidoProp.id!),
+          getEstados(),
+          getDetalleVentaPedidos()
         ]);
+
+        const map: Record<number, string> = {};
+        estadosData.forEach((e: any) => {
+          map[e.id] = e.nombreEstado.toLowerCase();
+        });
+        setStatusMap(map);
 
         setUsuarios(usuariosData);
         setProductos(productosData);
+
         if (fullPedido) {
           const finalPedido = Array.isArray(fullPedido) ? fullPedido[0] : fullPedido;
-          console.group("DEBUG PEDIDO");
-          console.log("Keys found:", Object.keys(finalPedido));
-          console.groupEnd();
-
-          // Toast de diagnóstico temporal
-          if (process.env.NODE_ENV === 'development') {
-            const keys = Object.keys(finalPedido).join(', ');
-            toast.info("Campos recibidos: " + keys, { duration: 10000 });
+          // Filtrado robusto de detalles para asegurar que aparezcan siempre
+          const orderDetalles = allDetalles.filter((d: any) =>
+            Number(d.ventaPedidoId) === Number(pedidoProp.id)
+          );
+          if (orderDetalles.length > 0) {
+            finalPedido.detalleVenta_Pedido = orderDetalles;
           }
-
           setPedido(finalPedido);
         }
       } catch (error) {
@@ -78,35 +94,33 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
   const getProducto = (id: number) => productos.find(p => p.id === id);
   const cliente = getUsuario(pedido.usuarioId);
 
-  const getStatusName = (id: number) => {
-    switch (id) {
-      case 1: return "pendiente";
-      case 2: return "entregado";
-      case 3: return "cancelado";
-      default: return "desconocido";
-    }
+  const getStatusDisplayName = (id: number) => {
+    const status = statusMap[id];
+    if (!status) return "cargando...";
+    return status;
   };
 
-  const statusName = getStatusName(pedido.estadoId);
+  const statusName = getStatusDisplayName(pedido.estadoId);
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'entregado': return { color: 'bg-emerald-600', icon: <CalendarCheck className="h-4 w-4" />, bg: 'bg-emerald-50', text: 'text-emerald-700' };
-      case 'pendiente': return { color: 'bg-amber-500', icon: <Clock className="h-4 w-4" />, bg: 'bg-amber-50', text: 'text-amber-700' };
-      case 'cancelado': return { color: 'bg-rose-600', icon: <Truck className="h-4 w-4" />, bg: 'bg-rose-50', text: 'text-rose-700' };
-      default: return { color: 'bg-slate-500', icon: <Clock className="h-4 w-4" />, bg: 'bg-slate-50', text: 'text-slate-700' };
-    }
+    const s = status.toLowerCase();
+    if (s.includes('completa') || s.includes('entrega')) return { color: 'bg-emerald-600', iconName: 'calendar-check', bg: 'bg-emerald-100', text: 'text-emerald-800 border-emerald-200' };
+    if (s.includes('pendien')) return { color: 'bg-amber-500', iconName: 'clock', bg: 'bg-amber-100', text: 'text-amber-800 border-amber-200' };
+    if (s.includes('anula') || s.includes('cancel')) return { color: 'bg-rose-600', iconName: 'x-circle', bg: 'bg-rose-100', text: 'text-rose-800 border-rose-200' };
+    return { color: 'bg-slate-500', iconName: 'clock', bg: 'bg-slate-100', text: 'text-slate-800 border-slate-200' };
   };
 
   const statusConfig = getStatusConfig(statusName);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
+  const renderStatusIcon = (name: string) => {
+    switch (name) {
+      case 'calendar-check': return <CalendarCheck key="icon-check" className="h-4 w-4" />;
+      case 'clock': return <Clock key="icon-clock" className="h-4 w-4" />;
+      case 'x-circle': return <XCircle key="icon-x" className="h-4 w-4" />;
+      default: return <Clock key="icon-default" className="h-4 w-4" />;
+    }
   };
+
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -160,17 +174,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
 
     // Buscar detalles de forma ultra-resiliente para el PDF
     const getDetallesPDF = (obj: any) => {
-      if (!obj) return [];
-      const names = ['detalleVentaPedidos', 'DetalleVentaPedidos', 'detalleVentaPedido', 'detallePedidos', 'DetallePedidos', 'detalleVentas', 'detalles', 'DetalleVentas', 'items'];
-      for (const name of names) {
-        if (Array.isArray(obj[name]) && obj[name].length > 0) return obj[name];
-      }
-      if (obj.data) {
-        for (const name of names) {
-          if (Array.isArray(obj.data[name]) && obj.data[name].length > 0) return obj.data[name];
-        }
-      }
-      return obj.detalleVentaPedidos || obj.DetalleVentaPedidos || [];
+      return obj.detalleVenta_Pedido || [];
     };
 
     const detallesPDF = getDetallesPDF(pedido);
@@ -213,24 +217,35 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
               <Badge variant="outline" className="font-mono text-xs">#{pedido.id}</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5">
+              <span key="created-at" className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                <span className="font-semibold">Creado:</span> {pedido.fechaCreacion ? new Date(pedido.fechaCreacion).toLocaleString() : '---'}
+                <span className="font-semibold">Creado:</span>
+                <span key="date-created">{pedido.fechaCreacion ? new Date(pedido.fechaCreacion).toLocaleString() : '---'}</span>
               </span>
-              {pedido.fechaEntrega && (
-                <span className="flex items-center gap-1.5 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">
-                  <CalendarCheck className="h-3.5 w-3.5" />
-                  Entregado: {new Date(pedido.fechaEntrega).toLocaleString()}
-                </span>
-              )}
+              <span key="delivery-container" className="flex items-center">
+                {(pedido.estadoId === 1 || pedido.fechaEntrega) ? (
+                  <span key="delivered-at" className="flex items-center gap-1.5 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                    <span key="date-delivered">
+                      {pedido.fechaEntrega ? `Entregado: ${new Date(pedido.fechaEntrega).toLocaleString()}` : 'Entregado (Registro pendiente)'}
+                    </span>
+                  </span>
+                ) : null}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge className={`${statusConfig.bg} ${statusConfig.text} border-transparent px-4 py-1.5 rounded-lg flex items-center gap-2 capitalize font-bold text-xs`}>
-            {statusConfig.icon}
-            {statusName}
+          <Badge
+            key={`status-badge-${pedido.id}-${pedido.estadoId}`}
+            variant="outline"
+            className={`${statusConfig.bg} ${statusConfig.text} px-4 py-1.5 rounded-lg flex items-center gap-2 capitalize font-bold text-xs shadow-sm shadow-black/5`}
+          >
+            <span key="badge-content" className="flex items-center gap-2">
+              {renderStatusIcon(statusConfig.iconName)}
+              <span key="status-text">{statusName}</span>
+            </span>
           </Badge>
           <Button onClick={handleExportPDF} variant="outline" size="sm" className="gap-2 font-bold h-9">
             <Download className="h-4 w-4" />
@@ -294,6 +309,13 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                     </div>
                   </div>
                 </div>
+
+                {pedido.observaciones && (
+                  <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
+                    <p className="text-sm text-amber-900 font-medium leading-relaxed italic">"{pedido.observaciones}"</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-xl border-gray-100 italic text-gray-400">
@@ -329,81 +351,36 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                         Cargando productos...
                       </td>
                     </tr>
-                  ) : (() => {
-                    // Buscar detalles de forma ultra-resiliente
-                    const getDetalles = (obj: any) => {
-                      if (!obj) return [];
-                      // Lista de posibles nombres de campo para los items
-                      const names = [
-                        'detalleVentaPedidos',
-                        'DetalleVentaPedidos',
-                        'detalleVentaPedido',
-                        'detallePedidos',
-                        'DetallePedidos',
-                        'detalleVentas',
-                        'detalles',
-                        'items',
-                        'DetalleVentas'
-                      ];
-
-                      // Primero buscar en el objeto raíz, luego en .data
-                      for (const name of names) {
-                        if (Array.isArray(obj[name]) && obj[name].length > 0) return obj[name];
-                      }
-                      if (obj.data) {
-                        for (const name of names) {
-                          if (Array.isArray(obj.data[name]) && obj.data[name].length > 0) return obj.data[name];
-                        }
-                      }
-
-                      // Si no se encontró nada con contenido, devolver el primero que exista aunque esté vacío
-                      return obj.detalleVentaPedidos || obj.DetalleVentaPedidos || obj.detalles || [];
-                    };
-
-                    const detalles = getDetalles(pedido);
-
-                    if (detalles && detalles.length > 0) {
-                      return detalles.map((detalle: any, idx: number) => {
-                        const prod = getProducto(detalle.productoId);
-                        return (
-                          <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-4">
-                              <p className="text-sm font-bold text-gray-900">{prod ? prod.nombreProducto : `Producto ID: ${detalle.productoId}`}</p>
-                              <p className="text-[10px] text-gray-400 font-medium tracking-tight">Ref: {detalle.productoId}</p>
-                            </td>
-                            <td className="px-6 py-4 text-right text-sm text-gray-600">
-                              {formatCurrency(detalle.precioUnitario || detalle.precio)}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="inline-flex bg-gray-100 px-3 py-1 rounded-full font-bold text-gray-700 text-xs">
-                                {detalle.cantidad}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="text-sm font-bold text-gray-900">{formatCurrency(detalle.subtotal || ((detalle.precioUnitario || 0) * (detalle.cantidad || 0)))}</span>
-                            </td>
-                          </tr>
-                        );
-                      });
-                    } else {
+                  ) : (pedido.detalleVenta_Pedido || []).length > 0 ? (
+                    (pedido.detalleVenta_Pedido || []).map((detalle: any, idx: number) => {
+                      const prod = getProducto(detalle.productoId);
                       return (
-                        <tr>
-                          <td colSpan={4} className="px-6 py-12 text-center text-gray-500 font-medium text-sm">
-                            <div className="flex flex-col items-center gap-2">
-                              <p>Este pedido no tiene artículos registrados.</p>
-                              <p className="text-[10px] text-gray-400 font-normal">Campos en pedido: {Object.keys(pedido).join(', ')}</p>
-                              {process.env.NODE_ENV === 'development' && (
-                                <details className="text-[8px] text-gray-300 mt-2 text-left max-w-xs overflow-auto">
-                                  <summary>Ver JSON Crudo</summary>
-                                  <pre>{JSON.stringify(pedido, null, 2)}</pre>
-                                </details>
-                              )}
-                            </div>
+                        <tr key={`item-${detalle.productoId}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-gray-900">{prod ? prod.nombreProducto : `Producto ID: ${detalle.productoId}`}</p>
+                            <p className="text-[10px] text-gray-400 font-medium tracking-tight">Ref: {detalle.productoId}</p>
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm text-gray-600">
+                            {formatCurrency(detalle.precioUnitario || detalle.precio)}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex bg-gray-100 px-3 py-1 rounded-full font-bold text-gray-700 text-xs">
+                              {detalle.cantidad}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-sm font-bold text-gray-900">{formatCurrency(detalle.subtotal || ((detalle.precioUnitario || 0) * (detalle.cantidad || 0)))}</span>
                           </td>
                         </tr>
                       );
-                    }
-                  })()}
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 font-medium text-sm">
+                        No hay artículos registrados.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -24,8 +24,8 @@ import {
   CommandItem,
   CommandList
 } from "./ui/command";
-import { UsuarioDto, DepartmentColombian, CityColombian } from '../types';
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getDepartments, getCitiesByDepartment } from '../services/api';
+import { UsuarioDto, DepartmentColombian, CityColombian, VentaPedidoDto, DevolucionDto } from '../types';
+import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getDepartments, getCitiesByDepartment, getVentaPedidos, getDevoluciones } from '../services/api';
 import { UniversalDeleteDialog } from './UniversalDeleteDialog';
 import {
   Plus,
@@ -37,6 +37,8 @@ import {
   Mail,
   MapPin,
   User,
+  ShoppingBag,
+  RefreshCw,
   CheckCircle,
   XCircle,
   Ban,
@@ -100,6 +102,10 @@ export const Clientes: React.FC = () => {
   // Tipos de Vía Estándar
   const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
+  const [pedidosCliente, setPedidosCliente] = useState<VentaPedidoDto[]>([]);
+  const [devolucionesCliente, setDevolucionesCliente] = useState<DevolucionDto[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   const [newCliente, setNewCliente] = useState<Partial<UsuarioDto>>({
     nombres: '',
     apellidos: '',
@@ -113,7 +119,7 @@ export const Clientes: React.FC = () => {
     fechaNacimiento: new Date().toISOString().split('T')[0],
     rolId: 3, // Rol de Cliente
     estadoUsuario: true,
-    tipo: 'Minorista'
+    tipoCliente: 'Minorista'
   });
 
   useEffect(() => {
@@ -336,9 +342,24 @@ export const Clientes: React.FC = () => {
     }
   };
 
-  const handleViewCliente = (cliente: UsuarioDto) => {
+  const handleViewCliente = async (cliente: UsuarioDto) => {
     setSelectedCliente(cliente);
     setIsViewDialogOpen(true);
+    try {
+      setLoadingHistory(true);
+      const [allVentas, allDevoluciones] = await Promise.all([
+        getVentaPedidos(),
+        getDevoluciones()
+      ]);
+      setPedidosCliente(allVentas.filter(v => v.usuarioId === cliente.id));
+      setDevolucionesCliente(allDevoluciones.filter(d => {
+        return allVentas.some(v => v.id === d.ventaPedidoId && v.usuarioId === cliente.id);
+      }));
+    } catch (error) {
+      console.error("Error loading client history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   const handleEditCliente = (cliente: UsuarioDto) => {
@@ -421,7 +442,7 @@ export const Clientes: React.FC = () => {
       fechaNacimiento: new Date().toISOString().split('T')[0],
       rolId: 3,
       estadoUsuario: true,
-      tipo: 'Minorista'
+      tipoCliente: 'Minorista'
     });
     setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
     setSelectedDepartment('');
@@ -746,8 +767,8 @@ export const Clientes: React.FC = () => {
                     <div className="space-y-2">
                       <Label htmlFor="tipo">Tipo Cliente *</Label>
                       <Select
-                        value={newCliente.tipo || 'Minorista'}
-                        onValueChange={(val: 'Minorista' | 'Mayorista') => setNewCliente({ ...newCliente, tipo: val })}
+                        value={newCliente.tipoCliente || 'Minorista'}
+                        onValueChange={(val: 'Minorista' | 'Mayorista') => setNewCliente({ ...newCliente, tipoCliente: val })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar tipo" />
@@ -830,8 +851,8 @@ export const Clientes: React.FC = () => {
                       <div className="text-sm">{cliente.numeroDocumento}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getTypeColor(cliente.tipo || 'Minorista')}>
-                        {cliente.tipo || 'Minorista'}
+                      <Badge className={getTypeColor(cliente.tipoCliente || 'Minorista')}>
+                        {cliente.tipoCliente || 'Minorista'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -927,8 +948,8 @@ export const Clientes: React.FC = () => {
                     <h3 className="text-lg font-semibold">Identificación</h3>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(selectedCliente.estadoUsuario)}
-                      <Badge className={getTypeColor(selectedCliente.tipo || 'Minorista')}>
-                        {selectedCliente.tipo || 'Minorista'}
+                      <Badge className={getTypeColor(selectedCliente.tipoCliente || 'Minorista')}>
+                        {selectedCliente.tipoCliente || 'Minorista'}
                       </Badge>
                     </div>
                   </div>
@@ -1043,8 +1064,8 @@ export const Clientes: React.FC = () => {
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Tipo de Cliente</Label>
                       <div className="mt-1">
-                        <Badge className={`${getTypeColor(selectedCliente.tipo || 'Minorista')} text-sm px-3 py-1`}>
-                          {selectedCliente.tipo || 'Minorista'}
+                        <Badge className={`${getTypeColor(selectedCliente.tipoCliente || 'Minorista')} text-sm px-3 py-1`}>
+                          {selectedCliente.tipoCliente || 'Minorista'}
                         </Badge>
                       </div>
                     </div>
@@ -1054,24 +1075,92 @@ export const Clientes: React.FC = () => {
 
               {/* Pestaña Historial */}
               <TabsContent value="history" className="space-y-6 mt-6">
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <p className="text-gray-500 py-8">Las métricas de historial no están disponibles en esta versión.</p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-3">Estado del Cliente</h4>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(selectedCliente.estadoUsuario)}
-                      <span className={`font-semibold ${selectedCliente.estadoUsuario ? 'text-green-600' : 'text-gray-500'}`}>
-                        {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </div>
-                    <Badge className={getTypeColor(selectedCliente.tipo || 'Minorista')}>
-                      {selectedCliente.tipo || 'Minorista'}
-                    </Badge>
+                {loadingHistory ? (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    <p className="text-sm text-gray-500 font-medium">Cargando expediente comercial...</p>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4 text-blue-600" />
+                        Historial de Compras ({pedidosCliente.length})
+                      </h4>
+                      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                        <Table>
+                          <TableHeader className="bg-slate-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase">Referencia</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase">Fecha</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase">Estado</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase">Total</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {pedidosCliente.length > 0 ? (
+                              pedidosCliente.map((p) => (
+                                <TableRow key={p.id} className="text-xs hover:bg-slate-50 transition-colors">
+                                  <TableCell className="font-mono text-blue-600">VNT-{p.id}</TableCell>
+                                  <TableCell>{p.fechaCreacion ? new Date(p.fechaCreacion).toLocaleDateString() : 'N/A'}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 leading-tight">
+                                      {p.estadoId === 1 ? 'Entregado' : 'Pendiente'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right font-bold">${p.total.toLocaleString()}</TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-gray-400 italic">
+                                  Sin registros de compras previos.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 text-orange-600" />
+                        Historial de Devoluciones ({devolucionesCliente.length})
+                      </h4>
+                      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                        <Table>
+                          <TableHeader className="bg-slate-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase">ID Dev</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase">Fecha</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase">Motivo</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase">Monto</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {devolucionesCliente.length > 0 ? (
+                              devolucionesCliente.map((d) => (
+                                <TableRow key={d.id} className="text-xs hover:bg-slate-50 transition-colors">
+                                  <TableCell className="font-mono text-orange-600">DEV-{d.id}</TableCell>
+                                  <TableCell>{new Date(d.fechaDevolucion).toLocaleDateString()}</TableCell>
+                                  <TableCell className="max-w-[150px] truncate">{d.motivo || 'N/A'}</TableCell>
+                                  <TableCell className="text-right font-bold text-red-600">-${d.montoTotal.toLocaleString()}</TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-gray-400 italic">
+                                  Sin registros de devoluciones.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </>
+                )}
               </TabsContent>
             </Tabs>
           )}
@@ -1363,8 +1452,8 @@ export const Clientes: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="edit-tipo">Tipo Cliente *</Label>
                   <Select
-                    value={editingCliente.tipo || 'Minorista'}
-                    onValueChange={(val: 'Minorista' | 'Mayorista') => setEditingCliente({ ...editingCliente, tipo: val })}
+                    value={editingCliente.tipoCliente || 'Minorista'}
+                    onValueChange={(val: 'Minorista' | 'Mayorista') => setEditingCliente({ ...editingCliente, tipoCliente: val })}
                   >
                     <SelectTrigger>
                       <SelectValue />

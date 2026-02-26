@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DepartmentColombian, CityColombian, Proveedor, CompraDto } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DetalleVentaPedidoDto, DevolucionDto, DetalleDevolucionDto, DepartmentColombian, CityColombian, Proveedor, CompraDto } from '../types';
 
 const API_URL = '/api';
 
@@ -200,8 +200,59 @@ export const getVentaPedidoById = async (id: number): Promise<VentaPedidoDto> =>
     return response.data;
 };
 
-export const createVentaPedido = async (ventaPedido: VentaPedidoDto): Promise<VentaPedidoDto> => {
+export const getEstados = async (): Promise<any[]> => {
+    const response = await api.get('/Estadoes');
+    return response.data;
+};
+
+export const getDetalleVentaPedidos = async (): Promise<any[]> => {
+    const response = await api.get('/DetalleVentaPedidoes');
+    return response.data;
+};
+
+export const createVentaPedido = async (ventaPedido: VentaPedidoDto): Promise<any> => {
+    console.log("POST /VentaPedidos Payload:", JSON.stringify(ventaPedido));
     const response = await api.post('/VentaPedidos', ventaPedido);
+    console.log("POST /VentaPedidos Response:", response.data);
+    return response.data;
+};
+
+export const createDetalleVentaPedido = async (detalle: DetalleVentaPedidoDto): Promise<any> => {
+    console.log("POST /DetalleVentaPedidoes Payload:", JSON.stringify(detalle));
+    const response = await api.post('/DetalleVentaPedidoes', detalle);
+    console.log("POST /DetalleVentaPedidoes Response:", response.data);
+    return response.data;
+};
+
+// --- SERVICIOS DE DEVOLUCIONES ---
+
+export const getDevoluciones = async (): Promise<DevolucionDto[]> => {
+    const response = await api.get('/Devoluciones');
+    return response.data;
+};
+
+export const createDevolucion = async (devolucion: DevolucionDto): Promise<any> => {
+    console.log("POST /Devoluciones Payload:", JSON.stringify(devolucion));
+    const response = await api.post('/Devoluciones', devolucion);
+    return response.data;
+};
+
+export const updateDevolucion = async (id: number, devolucion: DevolucionDto): Promise<DevolucionDto> => {
+    const response = await api.put(`/Devoluciones/${id}`, {
+        ...devolucion,
+        id
+    });
+    return response.data;
+};
+
+export const getDetalleDevoluciones = async (): Promise<DetalleDevolucionDto[]> => {
+    const response = await api.get('/DetalleDevoluciones');
+    return response.data;
+};
+
+export const createDetalleDevolucion = async (detalle: DetalleDevolucionDto): Promise<any> => {
+    console.log("POST /DetalleDevoluciones Payload:", JSON.stringify(detalle));
+    const response = await api.post('/DetalleDevoluciones', detalle);
     return response.data;
 };
 

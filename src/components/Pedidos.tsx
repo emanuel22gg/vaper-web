@@ -38,7 +38,7 @@ import { Separator } from "./ui/separator";
 import { AbonosIndividuales } from "./AbonosIndividuales";
 import { DetallePedido } from "./DetallePedido";
 import { VentaPedidoDto, UsuarioDto, Producto } from "../types";
-import { getVentaPedidos, getUsuarios, updateVentaPedido } from "../services/api";
+import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados } from "../services/api";
 import { CreateVentaPedidoDialog } from "./pedidos/CreateVentaPedidoDialog";
 import { toast } from "sonner";
 import {
@@ -69,6 +69,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
+  const [statuses, setStatuses] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -94,23 +95,22 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const itemsPerPage = 5;
 
   const getStatusName = (id: number) => {
-    switch (id) {
-      case 1: return "pendiente";
-      case 2: return "entregado";
-      case 3: return "cancelado";
-      default: return "desconocido";
-    }
+    const status = statuses.find(s => s.id === id);
+    if (!status) return "cargando...";
+    return status.nombreEstado.toLowerCase();
   };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [pedidosData, usuariosData] = await Promise.all([
+      const [pedidosData, usuariosData, estadosData] = await Promise.all([
         getVentaPedidos(),
-        getUsuarios()
+        getUsuarios(),
+        getEstados()
       ]);
       setPedidos(pedidosData);
       setUsuarios(usuariosData);
+      setStatuses(estadosData);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Error al cargar los datos");
@@ -153,29 +153,19 @@ export const Pedidos: React.FC<PedidosProps> = ({
   }, [searchTerm, filterStatus]);
 
   const getStatusColor = (estado: string) => {
-    switch (estado) {
-      case "entregado":
-        return "bg-blue-600";
-      case "pendiente":
-        return "bg-gray-700";
-      case "cancelado":
-        return "bg-red-600";
-      default:
-        return "bg-gray-500";
-    }
+    const s = estado.toLowerCase();
+    if (s.includes('completa') || s.includes('entrega')) return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+    if (s.includes('pendien')) return "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100";
+    if (s.includes('anula') || s.includes('cancel')) return "bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100";
+    return "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100";
   };
 
   const getStatusIcon = (estado: string) => {
-    switch (estado) {
-      case "entregado":
-        return <CheckCircle className="h-4 w-4" />;
-      case "pendiente":
-        return <Clock className="h-4 w-4" />;
-      case "cancelado":
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
+    const s = estado.toLowerCase();
+    if (s.includes('completa') || s.includes('entrega')) return <CheckCircle className="h-4 w-4" />;
+    if (s.includes('pendien')) return <Clock className="h-4 w-4" />;
+    if (s.includes('anula') || s.includes('cancel')) return <XCircle className="h-4 w-4" />;
+    return <Clock className="h-4 w-4" />;
   };
 
   const handleExportToPDF = (pedido: VentaPedidoDto) => {
@@ -226,9 +216,9 @@ export const Pedidos: React.FC<PedidosProps> = ({
     yPosition = addWrappedText(`Método de Pago: ${pedido.metodoPago}`, leftMargin, yPosition, maxWidth);
     yPosition += 5;
 
-    if (pedido.detalleVentaPedidos && pedido.detalleVentaPedidos.length > 0) {
+    if (pedido.detalleVenta_Pedido && pedido.detalleVenta_Pedido.length > 0) {
       yPosition = addTitle("PRODUCTOS", yPosition);
-      pedido.detalleVentaPedidos.forEach((detalle) => {
+      pedido.detalleVenta_Pedido.forEach((detalle: any) => {
         if (yPosition > 250) {
           doc.addPage();
           yPosition = 20;
@@ -279,17 +269,16 @@ export const Pedidos: React.FC<PedidosProps> = ({
         const updatedPedido: VentaPedidoDto = {
           ...pedidoToUpdate,
           estadoId: newStatusId,
-          // Si el nuevo estado es entregado (2), guardamos la fecha de entrega
-          fechaEntrega: newStatusId === 2 ? now : pedidoToUpdate.fechaEntrega
+          // Si el nuevo estado es entregado (1), guardamos la fecha de entrega
+          // El ID 1 corresponde a "Entregado" según el API
+          fechaEntrega: newStatusId === 1 ? now : pedidoToUpdate.fechaEntrega
         };
 
         await updateVentaPedido(pedidoToUpdate.id!, updatedPedido);
 
-        const updatedPedidos = pedidos.map((p) =>
-          p.id === pedidoToUpdate.id ? updatedPedido : p
-        );
+        // Forzar refresco completo para asegurar consistencia con el backend
+        await fetchData();
 
-        setPedidos(updatedPedidos);
         setIsStatusDialogOpen(false);
         setPedidoToUpdate(null);
         setNewStatusId(0);
@@ -385,9 +374,9 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="pendiente">Pendiente</SelectItem>
-                  <SelectItem value="entregado">Entregado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                  {statuses.map(s => (
+                    <SelectItem key={s.id} value={s.nombreEstado.toLowerCase()}>{s.nombreEstado}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -420,7 +409,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   </TableRow>
                 ) : (
                   paginatedPedidos.map((pedido) => (
-                    <TableRow key={pedido.id}>
+                    <TableRow key={`order-${pedido.id}`}>
                       <TableCell className="font-medium">#{pedido.id}</TableCell>
                       <TableCell>{getUsuarioName(pedido.usuarioId)}</TableCell>
                       <TableCell>
@@ -430,9 +419,15 @@ export const Pedidos: React.FC<PedidosProps> = ({
                         ${pedido.total.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${getStatusColor(getStatusName(pedido.estadoId))} text-white flex items-center space-x-1 w-fit`}>
-                          {getStatusIcon(getStatusName(pedido.estadoId))}
-                          <span className="capitalize">{getStatusName(pedido.estadoId)}</span>
+                        <Badge
+                          key={`badge-order-${pedido.id}-${pedido.estadoId}`}
+                          variant="outline"
+                          className={`${getStatusColor(getStatusName(pedido.estadoId))} flex items-center space-x-1 w-min min-h-[1.5rem] font-bold shadow-sm`}
+                        >
+                          <span key="badge-content" className="flex items-center gap-1.5 px-0.5 whitespace-nowrap">
+                            <span key="icon-wrapper">{getStatusIcon(getStatusName(pedido.estadoId))}</span>
+                            <span key="text-wrapper" className="capitalize leading-none">{getStatusName(pedido.estadoId)}</span>
+                          </span>
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -524,9 +519,11 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   <SelectValue placeholder="Seleccione un estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Pendiente</SelectItem>
-                  <SelectItem value="2">Entregado</SelectItem>
-                  <SelectItem value="3">Cancelado</SelectItem>
+                  {statuses
+                    .filter(s => s.id !== 3) // Filtrar ID 3 "Anulada"
+                    .map(s => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.nombreEstado}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
