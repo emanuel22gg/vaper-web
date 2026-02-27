@@ -366,15 +366,18 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                         <div className="px-6 border-b">
-                            <TabsList className="grid w-full grid-cols-3 mb-2 bg-transparent">
+                            <TabsList className="grid w-full grid-cols-4 mb-2 bg-transparent">
                                 <TabsTrigger value="cliente" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none shadow-none bg-transparent">
                                     1. Cliente
                                 </TabsTrigger>
                                 <TabsTrigger value="productos" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none shadow-none bg-transparent">
                                     2. Productos
                                 </TabsTrigger>
+                                <TabsTrigger value="vigencia" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none shadow-none bg-transparent">
+                                    3. Devolución
+                                </TabsTrigger>
                                 <TabsTrigger value="entrega" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none shadow-none bg-transparent">
-                                    3. Entrega & Pago
+                                    4. Entrega & Pago
                                 </TabsTrigger>
                             </TabsList>
                         </div>
@@ -382,7 +385,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                         <div className="flex-1 overflow-y-auto p-6">
                             {/* Contenido Pestaña 1: Cliente */}
                             <TabsContent value="cliente" className="space-y-6 mt-0 focus-visible:outline-none">
-                                <div className="space-y-4">
+                                <div className="space-y-4 max-w-[500px] mx-auto">
                                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
                                         <User className="h-5 w-5 text-blue-600 mt-0.5" />
                                         <div>
@@ -547,25 +550,56 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                 </div>
                             </TabsContent>
 
+                            <TabsContent value="vigencia" className="space-y-6 mt-0 focus-visible:outline-none">
+                                <div className="max-w-[500px] mx-auto space-y-6">
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
+                                        <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-blue-900">Vigencia de Devolución</p>
+                                            <p className="text-xs text-blue-700">Seleccione el tiempo máximo permitido para devoluciones en este pedido.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 p-6 border rounded-xl bg-white shadow-sm">
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                <Calendar className="h-4 w-4 text-blue-600" /> Tiempo de Vigencia
+                                            </Label>
+                                            <Select value={vigenciaDevolucion.toString()} onValueChange={(v: string) => setVigenciaDevolucion(parseInt(v))}>
+                                                <SelectTrigger className="h-11 text-base">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="1">1 Mes</SelectItem>
+                                                    <SelectItem value="2">2 Meses</SelectItem>
+                                                    <SelectItem value="3">3 Meses</SelectItem>
+                                                    <SelectItem value="4">4 Meses</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground italic text-center">
+                                            Esta configuración define la política de devolución para esta orden específica.
+                                        </p>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
                             {/* Contenido Pestaña 3: Entrega */}
                             <TabsContent value="entrega" className="space-y-6 mt-0 focus-visible:outline-none">
-                                <div className="space-y-6 max-w-[500px] mx-auto">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                                    {/* Columna 1: Dirección y Ubicación */}
                                     <div className="space-y-5">
                                         <div className="space-y-3">
                                             <Label className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                                                <MapPin className="h-4 w-4 text-blue-600" /> Dirección de Entrega
+                                                <MapPin className="h-4 w-4 text-blue-600" /> Ubicación de Entrega
                                             </Label>
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="space-y-1">
-                                                    <Label className="text-[10px] uppercase text-muted-foreground">Departamento *</Label>
+                                                    <Label className="text-[10px] uppercase text-muted-foreground font-bold">Departamento *</Label>
                                                     <Popover open={isDeptPopoverOpen} onOpenChange={setIsDeptPopoverOpen}>
                                                         <PopoverTrigger asChild>
-                                                            <Button
-                                                                variant="outline"
-                                                                role="combobox"
-                                                                className="w-full justify-between text-xs h-9"
-                                                            >
+                                                            <Button variant="outline" role="combobox" className="w-full justify-between text-xs h-9">
                                                                 {selectedDepartment || "Seleccionar"}
                                                                 <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
                                                             </Button>
@@ -574,7 +608,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                             <Command>
                                                                 <CommandInput placeholder="Buscar..." className="h-8 text-xs" />
                                                                 <CommandList>
-                                                                    <CommandEmpty className="text-xs p-2">No encontrado.</CommandEmpty>
+                                                                    <CommandEmpty className="text-xs p-2">Sin resultados</CommandEmpty>
                                                                     <CommandGroup>
                                                                         {departments.map((dept) => (
                                                                             <CommandItem
@@ -599,9 +633,8 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                 </div>
 
                                                 <div className="space-y-1">
-                                                    <Label className="text-[10px] uppercase text-muted-foreground">Ciudad *</Label>
+                                                    <Label className="text-[10px] uppercase text-muted-foreground font-bold">Ciudad *</Label>
                                                     <Popover open={isCityPopoverOpen} onOpenChange={setIsCityPopoverOpen}>
-                                                        {/* ... Popover content stays same ... */}
                                                         <PopoverTrigger asChild>
                                                             <Button
                                                                 variant="outline"
@@ -617,7 +650,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                             <Command>
                                                                 <CommandInput placeholder="Buscar..." className="h-8 text-xs" />
                                                                 <CommandList>
-                                                                    <CommandEmpty className="text-xs p-2">No encontrada.</CommandEmpty>
+                                                                    <CommandEmpty className="text-xs p-2">Sin resultados</CommandEmpty>
                                                                     <CommandGroup>
                                                                         {cities.map((city) => (
                                                                             <CommandItem
@@ -645,13 +678,14 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                 <Label className="text-[10px] uppercase text-muted-foreground font-bold">Barrio</Label>
                                                 <Input
                                                     className="h-9 text-xs"
-                                                    placeholder="Ej: El Poblado"
+                                                    placeholder="Ej: Centro, El Poblado..."
                                                     value={barrio}
                                                     onChange={(e) => setBarrio(e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="space-y-2 p-3 border rounded-lg bg-gray-50/50">
+                                                <Label className="text-[10px] uppercase text-blue-600 font-black">Detalle de Dirección</Label>
                                                 <div className="grid grid-cols-4 gap-2">
                                                     <div className="col-span-2 space-y-1">
                                                         <Label className="text-[10px] uppercase text-muted-foreground font-bold">Vía</Label>
@@ -677,78 +711,68 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                                                     </div>
                                                 </div>
                                                 <div className="pt-2 border-t mt-1">
-                                                    <p className="text-[10px] font-bold text-blue-600 truncate">Dirección: {direccionEntrega || "..."}</p>
+                                                    <p className="text-[10px] font-bold text-gray-600 truncate">Resultante: <span className="text-blue-600">{direccionEntrega || "..."}</span></p>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
-                                                Notas / Observaciones
-                                            </Label>
-                                            <Input
-                                                placeholder="Ej: Dejar en portería, cliente mayorista, etc."
-                                                value={observaciones}
-                                                onChange={(e) => setObservaciones(e.target.value)}
-                                                className="h-9 text-xs"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4 pt-2">
+                                    {/* Columna 2: Pago y Resumen */}
+                                    <div className="space-y-5">
+                                        <div className="space-y-4">
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
-                                                    <CreditCard className="h-3 w-3 text-green-600" /> Pago
+                                                    <Calendar className="h-3 w-3 text-gray-400" /> Notas / Observaciones
                                                 </Label>
-                                                <Select value={metodoPago} onValueChange={setMetodoPago}>
-                                                    <SelectTrigger className="h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Efectivo" className="text-xs">Efectivo</SelectItem>
-                                                        <SelectItem value="Transferencia" className="text-xs">Transferencia</SelectItem>
-                                                        <SelectItem value="Abonos" className="text-xs">Abonos</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    placeholder="Detalles adicionales del pedido..."
+                                                    value={observaciones}
+                                                    onChange={(e) => setObservaciones(e.target.value)}
+                                                    className="h-9 text-xs"
+                                                />
                                             </div>
 
-                                            <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
-                                                    <Truck className="h-3 w-3 text-orange-600" /> Envío
-                                                </Label>
-                                                <Input type="number" value={costoEnvio} onChange={(e) => setCostoEnvio(Number(e.target.value))} className="h-8 text-xs font-bold" />
-                                            </div>
-                                        </div>
+                                            <div className="grid grid-cols-2 gap-4 pt-1">
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
+                                                        <CreditCard className="h-3 w-3 text-green-600" /> Método de Pago
+                                                    </Label>
+                                                    <Select value={metodoPago} onValueChange={setMetodoPago}>
+                                                        <SelectTrigger className="h-9 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Efectivo" className="text-xs">Efectivo</SelectItem>
+                                                            <SelectItem value="Transferencia" className="text-xs">Transferencia</SelectItem>
+                                                            <SelectItem value="Abonos" className="text-xs">Abonos</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
 
-                                        <div className="space-y-1 pt-2">
-                                            <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
-                                                <Calendar className="h-3 w-3 text-blue-600" /> Vigencia de Devolución
-                                            </Label>
-                                            <Select value={vigenciaDevolucion.toString()} onValueChange={(v: string) => setVigenciaDevolucion(parseInt(v))}>
-                                                <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1" className="text-xs">1 Mes</SelectItem>
-                                                    <SelectItem value="2" className="text-xs">2 Meses</SelectItem>
-                                                    <SelectItem value="3" className="text-xs">3 Meses</SelectItem>
-                                                    <SelectItem value="4" className="text-xs">4 Meses</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1">
+                                                        <Truck className="h-3 w-3 text-orange-600" /> Costo de Envío
+                                                    </Label>
+                                                    <Input type="number" value={costoEnvio} onChange={(e) => setCostoEnvio(Number(e.target.value))} className="h-9 text-xs font-bold" />
+                                                </div>
+                                            </div>
 
-                                        <div className="mt-6 p-4 bg-gray-100 rounded-xl border border-gray-200">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] text-gray-500 font-bold uppercase">Subtotal</span>
-                                                <span className="text-sm font-bold text-gray-700">${calcularSubtotal().toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] text-gray-500 font-bold uppercase">Envío</span>
-                                                <span className="text-sm font-bold text-orange-600">+ ${Number(costoEnvio).toLocaleString()}</span>
-                                            </div>
-                                            <Separator className="my-2" />
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[10px] text-gray-900 font-black uppercase tracking-tighter">TOTAL A PAGAR</span>
-                                                <span className="text-xl font-black text-blue-600">${calcularTotal().toLocaleString()}</span>
+                                            <div className="mt-4 p-4 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100">
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center opacity-80">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Subtotal Productos</span>
+                                                        <span className="text-sm font-bold">${calcularSubtotal().toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center opacity-80">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Costo Envío</span>
+                                                        <span className="text-sm font-bold">+ ${Number(costoEnvio).toLocaleString()}</span>
+                                                    </div>
+                                                    <Separator className="bg-white/20 my-2" />
+                                                    <div className="flex justify-between items-end">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">Total Neto</span>
+                                                        <span className="text-2xl font-black leading-none">${calcularTotal().toLocaleString()}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -764,7 +788,8 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                             <Button
                                 variant="ghost"
                                 onClick={() => {
-                                    if (activeTab === "entrega") setActiveTab("productos");
+                                    if (activeTab === "entrega") setActiveTab("vigencia");
+                                    else if (activeTab === "vigencia") setActiveTab("productos");
                                     else if (activeTab === "productos") setActiveTab("cliente");
                                 }}
                             >
@@ -788,8 +813,16 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                         )}
                         {activeTab === "productos" && (
                             <Button
-                                onClick={() => setActiveTab("entrega")}
+                                onClick={() => setActiveTab("vigencia")}
                                 disabled={carrito.length === 0}
+                                className="bg-blue-600 hover:bg-blue-700"
+                            >
+                                Siguiente <ChevronRight className="h-4 w-4 ml-2" />
+                            </Button>
+                        )}
+                        {activeTab === "vigencia" && (
+                            <Button
+                                onClick={() => setActiveTab("entrega")}
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
                                 Siguiente <ChevronRight className="h-4 w-4 ml-2" />

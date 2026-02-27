@@ -163,10 +163,10 @@ export const Pedidos: React.FC<PedidosProps> = ({
 
   const getStatusColor = (estado: string) => {
     const s = estado.toLowerCase();
-    if (s.includes('completa') || s.includes('entrega')) return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
-    if (s.includes('pendien')) return "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100";
-    if (s.includes('anula') || s.includes('cancel')) return "bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100";
-    return "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100";
+    if (s.includes('completa') || s.includes('entrega')) return "!bg-green-600 !text-white !border-none hover:!bg-green-700";
+    if (s.includes('pendien')) return "!bg-blue-600 !text-white !border-none hover:!bg-blue-700";
+    if (s.includes('anula') || s.includes('cancel')) return "!bg-black !text-white !border-none hover:!bg-gray-900";
+    return "!bg-slate-500 !text-white !border-none hover:!bg-slate-600";
   };
 
   const getStatusIcon = (estado: string) => {
@@ -434,11 +434,10 @@ export const Pedidos: React.FC<PedidosProps> = ({
                         <Badge
                           key={`badge-order-${pedido.id}-${pedido.estadoId}`}
                           variant="outline"
-                          className={`${getStatusColor(getStatusName(pedido.estadoId))} flex items-center space-x-1 w-min min-h-[1.5rem] font-bold shadow-sm`}
+                          className={`${getStatusColor(getStatusName(pedido.estadoId))} rounded-full px-4 py-1.5 font-bold shadow-sm`}
                         >
-                          <span key="badge-content" className="flex items-center gap-1.5 px-0.5 whitespace-nowrap">
-                            <span key="icon-wrapper">{getStatusIcon(getStatusName(pedido.estadoId))}</span>
-                            <span key="text-wrapper" className="capitalize leading-none">{getStatusName(pedido.estadoId)}</span>
+                          <span key="text-wrapper" className="capitalize leading-none text-[10px] tracking-wide">
+                            {getStatusName(pedido.estadoId)}
                           </span>
                         </Badge>
                       </TableCell>
