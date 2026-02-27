@@ -80,6 +80,7 @@ export interface AuthContextType {
   logout: () => void;
   register: (userData: RegisterData) => Promise<boolean>;
   refreshSession: () => Promise<void>;
+  updateUser: (userData: User) => Promise<boolean>;
 }
 
 export interface CambioEstadoCategoria {

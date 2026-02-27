@@ -17,8 +17,20 @@ import {
   EyeOff,
   Crown,
   Briefcase,
-  UserCircle
+  UserCircle,
+  Lock
 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 export const UserProfile: React.FC = () => {
   const { user } = useAuth();
@@ -26,13 +38,23 @@ export const UserProfile: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   const [profileData, setProfileData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    username: user?.username || ''
+    username: user?.username || '',
+    numeroDocumento: user?.numeroDocumento || '',
+    tipoDocumento: user?.tipoDocumento || 'C.C',
+    telefono: user?.telefono || '',
+    ciudad: user?.ciudad || '',
+    direccion: user?.direccion || '',
+    barrio: user?.barrio || '',
+    fechaNacimiento: user?.fechaNacimiento || ''
   });
+
+  const { updateUser } = useAuth();
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -50,32 +72,77 @@ export const UserProfile: React.FC = () => {
     }
   };
 
-  const handleProfileUpdate = () => {
-    // Simular actualización
-    setSuccess('Perfil actualizado exitosamente');
-    setIsEditing(false);
-    setTimeout(() => setSuccess(''), 3000);
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      email: profileData.email,
+      username: profileData.username,
+      numeroDocumento: profileData.numeroDocumento,
+      tipoDocumento: profileData.tipoDocumento,
+      telefono: profileData.telefono,
+      ciudad: profileData.ciudad,
+      direccion: profileData.direccion,
+      barrio: profileData.barrio,
+      fechaNacimiento: profileData.fechaNacimiento
+    };
+
+    const success = await updateUser(updatedUser);
+    if (success) {
+      toast.success('Perfil actualizado', {
+        description: 'Tu información personal ha sido actualizada correctamente.'
+      });
+      setIsEditing(false);
+    } else {
+      toast.error('Error al actualizar', {
+        description: 'No se pudo actualizar el perfil. Intenta nuevamente.'
+      });
+    }
   };
 
-  const handlePasswordUpdate = () => {
+  const handlePasswordUpdate = async () => {
+    if (!user) return;
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      toast.error('Error', { description: 'Las contraseñas no coinciden' });
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+      toast.error('Error', { description: 'La contraseña debe tener al menos 6 caracteres' });
       return;
     }
 
-    // Simular actualización de contraseña
-    setSuccess('Contraseña actualizada exitosamente');
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-    setTimeout(() => setSuccess(''), 3000);
+    setIsConfirmDialogOpen(true);
+  };
+
+  const confirmPasswordUpdate = async () => {
+    if (!user) return;
+    setIsConfirmDialogOpen(false);
+
+    const updatedUser = {
+      ...user,
+      password: passwordData.newPassword
+    };
+
+    const success = await updateUser(updatedUser);
+    if (success) {
+      toast.success('Contraseña actualizada', {
+        description: 'Tu contraseña ha sido cambiada exitosamente.'
+      });
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } else {
+      toast.error('Error', {
+        description: 'No se pudo actualizar la contraseña. Intenta nuevamente.'
+      });
+    }
   };
 
   return (
@@ -88,18 +155,22 @@ export const UserProfile: React.FC = () => {
               {user.firstName.charAt(0)}{user.lastName.charAt(0)}
             </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <h2 className="text-3xl font-bold text-gray-900">{user.firstName} {user.lastName}</h2>
-                <Badge className="flex items-center space-x-1 bg-yellow-400 text-black border-0 px-3 py-1">
-                  {getRoleIcon()}
-                  <span className="font-semibold">{user.role.name}</span>
-                </Badge>
+                <div className="flex flex-wrap gap-2">
+                  <Badge className="flex items-center space-x-1 bg-yellow-400 text-black border-0 px-3 py-1">
+                    {getRoleIcon()}
+                    <span className="font-semibold">{user.role.name}</span>
+                  </Badge>
+                  {user.role.name === 'Cliente' && user.tipoCliente && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-400/40 px-3 py-1">
+                      <UserCircle className="h-4 w-4 mr-1" />
+                      {user.tipoCliente}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <p className="text-gray-600 text-lg">@{user.username} • {user.email}</p>
-              <p className="text-sm text-gray-500 mt-2 flex items-center">
-                <Calendar className="h-4 w-4 mr-2" />
-                Miembro desde {new Date(user.createdAt).toLocaleDateString()}
-              </p>
+              <p className="text-gray-600 text-lg">{user.email}</p>
             </div>
           </div>
         </CardHeader>
@@ -144,12 +215,44 @@ export const UserProfile: React.FC = () => {
 
             <CardContent className="space-y-6 pt-6">
               {success && (
-                <Alert className="border-yellow-400 bg-yellow-50">
-                  <AlertDescription className="text-yellow-700">
+                <Alert className="border-green-400 bg-green-50">
+                  <AlertDescription className="text-green-700">
                     {success}
                   </AlertDescription>
                 </Alert>
               )}
+
+              {error && (
+                <Alert className="border-red-400 bg-red-50">
+                  <AlertDescription className="text-red-700">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="tipoDocumento" className="text-gray-700">Tipo de Documento</Label>
+                  <Input
+                    id="tipoDocumento"
+                    value={profileData.tipoDocumento}
+                    onChange={(e) => setProfileData({ ...profileData, tipoDocumento: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numeroDocumento" className="text-gray-700">Número de Documento</Label>
+                  <Input
+                    id="numeroDocumento"
+                    value={profileData.numeroDocumento}
+                    onChange={(e) => setProfileData({ ...profileData, numeroDocumento: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -175,49 +278,77 @@ export const UserProfile: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-700">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefono" className="text-gray-700">Teléfono</Label>
+                  <Input
+                    id="telefono"
+                    value={profileData.telefono}
+                    onChange={(e) => setProfileData({ ...profileData, telefono: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="ciudad" className="text-gray-700">Ciudad</Label>
+                  <Input
+                    id="ciudad"
+                    value={profileData.ciudad}
+                    onChange={(e) => setProfileData({ ...profileData, ciudad: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="barrio" className="text-gray-700">Barrio</Label>
+                  <Input
+                    id="barrio"
+                    value={profileData.barrio}
+                    onChange={(e) => setProfileData({ ...profileData, barrio: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-gray-700">Nombre de Usuario</Label>
+                <Label htmlFor="direccion" className="text-gray-700">Dirección</Label>
                 <Input
-                  id="username"
-                  value={profileData.username}
-                  onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                  id="direccion"
+                  value={profileData.direccion}
+                  onChange={(e) => setProfileData({ ...profileData, direccion: e.target.value })}
                   disabled={!isEditing}
                   className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  disabled={!isEditing}
-                  className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
-                />
-              </div>
-
-              {/* Account Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-gray-200">
-                <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-yellow-400 transition-all">
-                  <Calendar className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
-                  <div className="text-sm text-gray-600 mb-2">Cuenta Creada</div>
-                  <div className="text-lg font-semibold text-gray-900">{new Date(user.createdAt).toLocaleDateString()}</div>
-                </div>
-
-                <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-yellow-400 transition-all">
-                  <User className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
-                  <div className="text-sm text-gray-600 mb-2">Estado</div>
-                  <Badge variant={user.isActive ? "default" : "secondary"} className={user.isActive ? "bg-green-500 text-white" : "bg-gray-400"}>
-                    {user.isActive ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </div>
-
-                <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-yellow-400 transition-all">
-                  <Shield className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
-                  <div className="text-sm text-gray-600 mb-2">Rol</div>
-                  <div className="text-lg font-semibold text-gray-900">{user.role.name}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="fechaNacimiento" className="text-gray-700">Fecha de Nacimiento</Label>
+                  <Input
+                    id="fechaNacimiento"
+                    type="date"
+                    value={profileData.fechaNacimiento}
+                    onChange={(e) => setProfileData({ ...profileData, fechaNacimiento: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
                 </div>
               </div>
 
@@ -393,6 +524,30 @@ export const UserProfile: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+
+      {/* Confirmation Dialog for Password Change */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-yellow-500" />
+              ¿Confirmar cambio de contraseña?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas cambiar tu contraseña? Se cerrará la sesión actual para aplicar los cambios de seguridad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPasswordUpdate}
+              className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+            >
+              Confirmar Cambio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div >
   );
 };

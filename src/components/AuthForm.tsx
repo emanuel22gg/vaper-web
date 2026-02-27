@@ -122,10 +122,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     setRecoveryData({ email: '' });
     setSentEmail('');
     setResetToken('');
-
-    toast.success('¡Contraseña actualizada!', {
-      description: 'Ya puedes iniciar sesión con tu nueva contraseña.'
-    });
   };
 
   const handlePasswordResetCancel = () => {

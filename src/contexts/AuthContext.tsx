@@ -212,7 +212,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: role,
           isActive: currentUserApi.estadoUsuario,
           firstName: currentUserApi.nombres,
-          lastName: currentUserApi.apellidos
+          lastName: currentUserApi.apellidos,
+          numeroDocumento: currentUserApi.numeroDocumento,
+          tipoDocumento: currentUserApi.tipoDocumento,
+          telefono: currentUserApi.telefono,
+          ciudad: currentUserApi.ciudad,
+          direccion: currentUserApi.direccion,
+          barrio: currentUserApi.barrio,
+          fechaNacimiento: currentUserApi.fechaNacimiento,
+          tipoCliente: currentUserApi.tipoCliente
         };
 
         setUser(updatedUser);
@@ -220,6 +228,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error refrescando sesión:', error);
+    }
+  };
+
+  const updateUser = async (userData: User): Promise<boolean> => {
+    try {
+      const usuarioDto: UsuarioDto = {
+        id: parseInt(userData.id),
+        nombres: userData.firstName,
+        apellidos: userData.lastName,
+        correo: userData.email,
+        contraseña: userData.password,
+        rolId: parseInt(userData.role.id),
+        estadoUsuario: userData.isActive,
+        numeroDocumento: userData.numeroDocumento,
+        tipoDocumento: userData.tipoDocumento,
+        telefono: userData.telefono,
+        ciudad: userData.ciudad,
+        direccion: userData.direccion,
+        barrio: userData.barrio,
+        fechaNacimiento: userData.fechaNacimiento,
+        tipoCliente: userData.tipoCliente
+      };
+
+      await apiService.updateUsuario(usuarioDto.id, usuarioDto);
+      setUser(userData);
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      return true;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return false;
     }
   };
 
@@ -231,7 +269,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     register,
-    refreshSession
+    refreshSession,
+    updateUser
   };
 
   return (

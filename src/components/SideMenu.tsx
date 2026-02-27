@@ -103,9 +103,9 @@ export function SideMenu({
   return (
     <aside
       style={{
-        width: isOpen ? '175px' : '35px',
-        minWidth: isOpen ? '175px' : '35px',
-        maxWidth: isOpen ? '175px' : '35px'
+        width: isOpen ? '200px' : '35px',
+        minWidth: isOpen ? '200px' : '35px',
+        maxWidth: isOpen ? '200px' : '35px'
       }}
       className="bg-white border-r border-gray-200 transition-[width] duration-300 ease-in-out flex flex-col h-full z-40 flex-none overflow-hidden"
     >
@@ -118,8 +118,8 @@ export function SideMenu({
               </div>
               {isOpen && (
                 <div className="overflow-hidden whitespace-nowrap">
-                  <div className="text-[9px] font-medium truncate leading-tight">{user.firstName}</div>
-                  <div className="text-[7px] text-gray-500 flex items-center gap-0.5 leading-tight">
+                  <div className="text-[11px] font-medium truncate leading-tight">{user.firstName}</div>
+                  <div className="text-[9px] text-gray-500 flex items-center gap-0.5 leading-tight">
                     <span>{getRoleIcon()}</span>
                     {user.role.name}
                   </div>
@@ -138,7 +138,7 @@ export function SideMenu({
                 <Button
                   variant={activeAdminView === 'dashboard' ? 'default' : 'ghost'}
                   className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                  style={{ fontSize: '11.5px' }}
+                  style={{ fontSize: '13px' }}
                   onClick={() => handleAdminNavigation('dashboard')}
                   title="Dashboard"
                 >
@@ -153,7 +153,7 @@ export function SideMenu({
                 <Button
                   variant={activeAdminView === 'usuarios' ? 'default' : 'ghost'}
                   className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                  style={{ fontSize: '11.5px' }}
+                  style={{ fontSize: '13px' }}
                   onClick={() => handleAdminNavigation('usuarios')}
                   title="Usuarios"
                 >
@@ -168,7 +168,7 @@ export function SideMenu({
                 <Button
                   variant={activeAdminView === 'roles' ? 'default' : 'ghost'}
                   className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                  style={{ fontSize: '11.5px' }}
+                  style={{ fontSize: '13px' }}
                   onClick={() => handleAdminNavigation('roles')}
                   title="Roles y Permisos"
                 >
@@ -186,8 +186,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Proveedores') && (
                     <Button
                       variant={activeAdminView === 'proveedores' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('proveedores')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -199,8 +199,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Categorías') && (
                     <Button
                       variant={activeAdminView === 'categorias' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('categorias')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -212,8 +212,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Productos') && (
                     <Button
                       variant={activeAdminView === 'productos' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('productos')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -225,8 +225,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Compras') && (
                     <Button
                       variant={activeAdminView === 'compras' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('compras')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -241,8 +241,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Clientes') && (
                     <Button
                       variant={activeAdminView === 'clientes' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('clientes')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -254,8 +254,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Cotizaciones') && (
                     <Button
                       variant={activeAdminView === 'cotizaciones' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('cotizaciones')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -267,8 +267,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Pedidos') && (
                     <Button
                       variant={activeAdminView === 'pedidos' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('pedidos')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -280,8 +280,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Ventas') && (
                     <Button
                       variant={activeAdminView === 'ventas' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('ventas')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -293,8 +293,8 @@ export function SideMenu({
                   {hasPermission('Gestionar Devoluciones') && (
                     <Button
                       variant={activeAdminView === 'devoluciones' ? 'default' : 'ghost'}
-                      className="w-full h-8 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
-                      style={{ fontSize: '11px' }}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('devoluciones')}
                     >
                       <div className="flex items-center min-w-0 flex-1">
@@ -373,26 +373,26 @@ export function SideMenu({
             <div className="space-y-1">
               <Button
                 variant={currentView === 'home' ? 'default' : 'ghost'}
-                className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                style={{ fontSize: '9px' }}
+                className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                style={{ fontSize: '11.5px' }}
                 onClick={() => handleNavigation('home')}
                 title="Inicio"
               >
                 <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-                  <Home className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                  <Home className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                   {isOpen && <span className="truncate">Inicio</span>}
                 </div>
               </Button>
 
               <Button
                 variant={currentView === 'shop' ? 'default' : 'ghost'}
-                className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                style={{ fontSize: '9px' }}
+                className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                style={{ fontSize: '11.5px' }}
                 onClick={() => handleNavigation('shop')}
                 title="Tienda"
               >
                 <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-                  <ShoppingCart className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                  <ShoppingCart className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                   {isOpen && <span className="truncate">Tienda</span>}
                 </div>
               </Button>
@@ -400,13 +400,13 @@ export function SideMenu({
               {isAuthenticated && (
                 <Button
                   variant={currentView === 'profile' ? 'default' : 'ghost'}
-                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                  style={{ fontSize: '9px' }}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleNavigation('profile')}
                   title="Mi Perfil"
                 >
                   <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-                    <User className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    <User className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Mi Perfil</span>}
                   </div>
                 </Button>
@@ -415,13 +415,13 @@ export function SideMenu({
               {isAuthenticated && user?.role.name === 'Cliente' && (
                 <Button
                   variant={currentView === 'pedidos' ? 'default' : 'ghost'}
-                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
-                  style={{ fontSize: '9px' }}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start' : 'justify-center'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleNavigation('pedidos')}
                   title="Mis Pedidos"
                 >
                   <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-                    <Package className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    <Package className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Mis Pedidos</span>}
                   </div>
                 </Button>
@@ -430,13 +430,13 @@ export function SideMenu({
               {isAuthenticated && canAccessAdmin && (
                 <Button
                   variant={currentView === 'admin' ? 'default' : 'secondary'}
-                  className={`w-full h-8 px-1 whitespace-normal overflow-hidden ${isOpen ? 'justify-start mt-2' : 'justify-center mt-2'}`}
-                  style={{ fontSize: '9px' }}
+                  className={`w-full h-10 px-3 whitespace-normal overflow-hidden ${isOpen ? 'justify-start mt-2' : 'justify-center mt-2'}`}
+                  style={{ fontSize: '11.5px' }}
                   onClick={() => handleNavigation('admin')}
                   title="Administración"
                 >
                   <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-                    <Settings className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+                    <Settings className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate font-semibold">Admin</span>}
                   </div>
                 </Button>
@@ -448,30 +448,30 @@ export function SideMenu({
         {/* Categories Shortcut (Solo cuando está abierto) */}
         {isOpen && !showAdminMenu && (
           <div className="pt-2">
-            <h3 className="px-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            <h3 className="px-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
               Categorías
             </h3>
             <div className="space-y-0.5">
-              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Desechables</Button>
-              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Recargables</Button>
-              <Button variant="ghost" className="w-full justify-start text-[10px] h-7 px-2 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Líquidos</Button>
+              <Button variant="ghost" className="w-full justify-start text-[11px] h-8 px-3 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Desechables</Button>
+              <Button variant="ghost" className="w-full justify-start text-[11px] h-8 px-3 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Recargables</Button>
+              <Button variant="ghost" className="w-full justify-start text-[11px] h-8 px-3 whitespace-normal overflow-hidden" onClick={() => handleNavigation('shop')}>Líquidos</Button>
             </div>
           </div>
         )}
       </div>
 
       {/* Footer / Logout */}
-      <div className="p-4 border-t border-gray-100">
+      <div className={`border-t border-gray-100 ${isOpen ? 'p-4' : 'px-0.5 py-4'}`}>
         {isAuthenticated ? (
           <Button
             variant="ghost"
-            className={`w-full h-8 px-1 whitespace-normal overflow-hidden text-red-600 hover:text-red-700 hover:bg-red-50 ${isOpen ? 'justify-start' : 'justify-center'}`}
-            style={{ fontSize: '9px' }}
+            className={`w-full h-10 whitespace-normal overflow-hidden text-red-600 hover:text-red-700 hover:bg-red-50 ${isOpen ? 'px-3 justify-start' : 'px-0 justify-center'}`}
+            style={{ fontSize: '11.5px' }}
             onClick={handleLogout}
             title="Cerrar Sesión"
           >
             <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
-              <LogOut className={`${isOpen ? 'h-3.5 w-3.5 mr-1 flex-shrink-0' : 'h-6 w-6'}`} />
+              <LogOut className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
               {isOpen && <span className="truncate">Cerrar Sesión</span>}
             </div>
           </Button>
