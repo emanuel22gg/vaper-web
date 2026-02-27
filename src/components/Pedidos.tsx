@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import jsPDF from "jspdf";
 import { Button } from "./ui/button";
 import {
@@ -97,7 +97,9 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusName = (id: number) => {
     const status = statuses.find(s => s.id === id);
     if (!status) return "cargando...";
-    return status.nombreEstado.toLowerCase();
+    const name = status.nombreEstado.toLowerCase();
+    if (name === 'anulado' || name === 'anulada') return 'cancelado';
+    return name;
   };
 
   const fetchData = async () => {
@@ -124,19 +126,26 @@ export const Pedidos: React.FC<PedidosProps> = ({
     return usuario ? `${usuario.nombres} ${usuario.apellidos}` : `ID: ${usuarioId}`;
   };
 
-  const filteredPedidos = pedidos.filter((pedido) => {
-    const usuarioName = getUsuarioName(pedido.usuarioId).toLowerCase();
-    const statusName = getStatusName(pedido.estadoId).toLowerCase();
+  // Filtrado derivado de los estados (uso de useMemo para evitar desincronización y crashes)
+  const filteredPedidos = useMemo(() => {
+    return pedidos.filter((pedido) => {
+      const term = (searchTerm || "").toLowerCase().trim();
+      const usuarioName = getUsuarioName(pedido.usuarioId).toLowerCase();
+      const statusName = getStatusName(pedido.estadoId).toLowerCase();
+      const idMatch = pedido.id?.toString().includes(term) || term === `#${pedido.id}`;
 
-    const matchesSearch =
-      usuarioName.includes(searchTerm.toLowerCase()) ||
-      pedido.metodoPago.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+        term === "" ||
+        usuarioName.includes(term) ||
+        (pedido.metodoPago || "").toLowerCase().includes(term) ||
+        idMatch;
 
-    const matchesStatus =
-      filterStatus === "all" || statusName === filterStatus;
+      const matchesStatus =
+        filterStatus === "all" || statusName === filterStatus;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [pedidos, searchTerm, filterStatus, usuarios, statuses]); // Dependencias completas
 
   const totalPages = Math.max(
     Math.ceil(filteredPedidos.length / itemsPerPage),
@@ -374,9 +383,12 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  {statuses.map(s => (
-                    <SelectItem key={s.id} value={s.nombreEstado.toLowerCase()}>{s.nombreEstado}</SelectItem>
-                  ))}
+                  {statuses.map(s => {
+                    const label = s.nombreEstado.toLowerCase() === 'anulada' || s.nombreEstado.toLowerCase() === 'anulado' ? 'Cancelado' : s.nombreEstado;
+                    return (
+                      <SelectItem key={s.id} value={label.toLowerCase()}>{label}</SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -520,10 +532,12 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {statuses
-                    .filter(s => s.id !== 3) // Filtrar ID 3 "Anulada"
-                    .map(s => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.nombreEstado}</SelectItem>
-                    ))}
+                    .map(s => {
+                      const label = s.nombreEstado.toLowerCase() === 'anulada' || s.nombreEstado.toLowerCase() === 'anulado' ? 'Cancelado' : s.nombreEstado;
+                      return (
+                        <SelectItem key={s.id} value={s.id.toString()}>{label}</SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>

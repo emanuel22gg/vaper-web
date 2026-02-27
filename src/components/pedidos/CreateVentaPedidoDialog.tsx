@@ -309,7 +309,7 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                 throw new Error("El servidor no devolvió el ID del pedido");
             }
 
-            // CREACIÓN MANUAL DE DETALLES Y DESCUENTO DE INVENTARIO
+            // CREACIÓN MANUAL DE DETALLES
             for (const item of carrito) {
                 const prod = item.producto;
 
@@ -327,28 +327,9 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                 } catch (detError) {
                     console.error(`Error al crear detalle para producto ${prod.id}:`, detError);
                 }
-
-                // 2. Actualizar el stock del producto
-                const nuevoStock = Math.max(0, prod.stock - item.cantidad);
-                const prodDto: ProductoDto = {
-                    id: prod.id,
-                    nombreProducto: prod.nombreProducto,
-                    precio: prod.precio,
-                    stock: nuevoStock,
-                    categoriaId: prod.categoriaId,
-                    descripcion: prod.descripcion,
-                    idImagen: prod.idImagen,
-                    estado: prod.estado
-                };
-
-                try {
-                    await updateProducto(prod.id, prodDto);
-                } catch (stockError) {
-                    console.error(`Error al descontar stock del producto ${prod.id}:`, stockError);
-                }
             }
 
-            toast.success("Pedido creado, detalles registrados y stock actualizado");
+            toast.success("Pedido creado y detalles registrados");
 
             // FIX CRASH: Primero cerramos el diálogo para que Radix maneje el desmontaje antes del re-render del padre
             onOpenChange(false);

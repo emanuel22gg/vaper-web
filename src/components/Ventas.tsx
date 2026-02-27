@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { updateVentaPedido, getVentaPedidoById } from '../services/api';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -166,12 +167,6 @@ interface Venta {
 }
 
 // Datos simulados
-// Datos simulados de pedidos
-const pedidosDisponibles = [
-  { id: 1, numero: 'PED-001', cliente: 'Ana María López', items: ['Pod System Premium'] },
-  { id: 2, numero: 'PED-002', cliente: 'Carlos Pérez', items: ['Vape Desechable 2000 puffs', 'Líquido Frutal 30ml'] },
-  { id: 3, numero: 'PED-003', cliente: 'Valentina López', items: ['Mod Premium 80W', 'Líquido Premium 60ml'] }
-];
 
 const ventasIniciales: Venta[] = [
   {
@@ -573,13 +568,44 @@ export const Ventas: React.FC = () => {
     return savedVentas ? JSON.parse(savedVentas) : ventasIniciales;
   });
 
-  const [ventasFiltradas, setVentasFiltradas] = useState<Venta[]>([]);
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
   const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
   const [isLoadingProductos, setIsLoadingProductos] = useState(false);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+
+  // Filtrado derivado de los estados (uso de useMemo para evitar desincronización)
+  const ventasFiltradas = useMemo(() => {
+    let result = [...ventas];
+
+    // Filtro por búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      const isNumeric = /^\d+$/.test(term); // Verificar si el término es puramente numérico
+
+      result = result.filter(venta => {
+        // 1. Si es un número buscar coincidencia EXACTA por ID
+        if (isNumeric) {
+          return venta.id.toString() === term;
+        }
+
+        // 2. Si es texto, buscar en Nombre, Email y Número de venta (Excluyendo teléfonos)
+        const matchesName = venta.nombreCliente.toLowerCase().includes(term);
+        const matchesEmail = venta.emailCliente.toLowerCase().includes(term);
+        const matchesVentaNum = venta.numeroVenta.toLowerCase().includes(term);
+
+        return matchesName || matchesEmail || matchesVentaNum;
+      });
+    }
+
+    // Filtro por estado
+    if (filtroEstado !== 'todos') {
+      result = result.filter(venta => venta.estado === filtroEstado);
+    }
+
+    return result;
+  }, [ventas, searchTerm, filtroEstado]);
   const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -617,6 +643,17 @@ export const Ventas: React.FC = () => {
   const [selectedProducto, setSelectedProducto] = useState('');
   const [cantidad, setCantidad] = useState(1);
   const [openClientes, setOpenClientes] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+
+  // Filtrado de clientes para el buscador en diálogo de nueva venta
+  const clientesFiltradosParaBusqueda = useMemo(() => {
+    const term = clientSearchTerm.toLowerCase().trim();
+    if (!term) return clientesDisponibles;
+    return clientesDisponibles.filter(cliente =>
+      `${cliente.nombres} ${cliente.apellidos}`.toLowerCase().includes(term) ||
+      cliente.numeroDocumento.toLowerCase().includes(term)
+    );
+  }, [clientesDisponibles, clientSearchTerm]);
 
   // Estados para pagos
   const [newPago, setNewPago] = useState({
@@ -629,10 +666,7 @@ export const Ventas: React.FC = () => {
   // Estados para anulación
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
 
-  // Efectos
-  useEffect(() => {
-    filtrarVentas();
-  }, [ventas, searchTerm, filtroEstado]);
+
 
   // Cargar productos desde la API
   const fetchProductos = async () => {
@@ -707,9 +741,9 @@ export const Ventas: React.FC = () => {
         if (!response.ok) throw new Error('Error al cargar pedidos');
         const data = await response.json();
 
-        // Filtrar por el cliente seleccionado y estado pendiente (ID 1)
+        // Filtrar por el cliente seleccionado y estado pendiente (ID 2 según análisis)
         const pendientes = data.filter((p: any) =>
-          p.usuarioId === parseInt(formData.clienteId) && p.estadoId === 1
+          p.usuarioId === parseInt(formData.clienteId) && p.estadoId === 2
         );
         setPedidosPendientes(pendientes);
       } catch (error) {
@@ -735,7 +769,8 @@ export const Ventas: React.FC = () => {
       if (!response.ok) throw new Error('Error al cargar detalles del pedido');
       const pedido = await response.json();
 
-      // 0. Antes de cargar el nuevo pedido, devolvemos el stock de los items que ya estaban en el formulario
+      // 0. Antes de cargar el nuevo pedido, devolvemos el stock LOCALMENTE (ya que no se ha descontado en el servidor aún para pedidos)
+      // Si antes era una venta directa o un pedido ya cargado, restauramos el stock local de los productos para refrescar la UI
       setProductosDisponibles(prevProd => {
         let currentProds = [...prevProd];
         formData.items.forEach(item => {
@@ -747,63 +782,56 @@ export const Ventas: React.FC = () => {
       });
 
       // Mapear los items del pedido a items de venta (probamos varias nomenclaturas de la API)
-      const detallesRaw = pedido.detalleVentaPedidos ||
+      let detallesRaw = pedido.detalleVenta_Pedido ||
+        pedido.detalleVentaPedidos ||
         pedido.DetalleVentaPedidos ||
         pedido.detallePedidos ||
         pedido.DetallePedidos || [];
 
-      const itemsVenta: ItemVenta[] = [];
-      let stockError = false;
+      // FALLBACK: Si no vienen en el pedido, los buscamos directamente en el endpoint de detalles
+      if (detallesRaw.length === 0) {
+        try {
+          const detRes = await fetch('/api/DetalleVentaPedidoes');
+          if (detRes.ok) {
+            const allDetalles = await detRes.json();
+            detallesRaw = allDetalles.filter((d: any) =>
+              Number(d.ventaPedidoId) === Number(pedidoId)
+            );
+          }
+        } catch (e) {
+          console.error("Error en fallback de detalles:", e);
+        }
+      }
 
-      // Usamos una copia temporal de productos para validar stock secuencialmente
-      let tempProductos = [...productosDisponibles];
-      // Nota: Aquí productosDisponibles podría estar desactualizado respecto al setProductosDisponibles de arriba 
-      // pero como es asíncrono, mejor manejamos la lógica de descuento después.
+      const itemsVenta: ItemVenta[] = [];
 
       detallesRaw.forEach((detalle: any, index: number) => {
-        const producto = tempProductos.find(p => p.id === detalle.productoId);
+        const producto = productosDisponibles.find(p => p.id === detalle.productoId);
         if (producto) {
-          if (producto.stock < detalle.cantidad) {
-            stockError = true;
-            toast.warning(`Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`);
-          }
-
           itemsVenta.push({
             id: index + 1,
             productoId: detalle.productoId,
             nombreProducto: producto.nombre,
             cantidad: detalle.cantidad,
-            precioUnitario: detalle.precioUnitario,
-            subtotal: detalle.subtotal
+            precioUnitario: detalle.precioUnitario || detalle.precio || producto.precio || 0,
+            subtotal: detalle.subtotal || ((detalle.precioUnitario || detalle.precio || producto.precio || 0) * detalle.cantidad)
           });
         }
       });
 
-      // Descontar stock del pedido cargado en el SERVIDOR DE FORMA MASIVA
-      const syncLoadingToast = toast.loading('Sincronizando inventario con el pedido...');
-      try {
-        for (const item of itemsVenta) {
-          const getRes = await fetch(`/api/Productoes/${item.productoId}`);
-          if (getRes.ok) {
-            const pOriginal = await getRes.json();
-            // Validamos stock actual en servidor por si acaso
-            const stockReal = pOriginal.stock;
-            const cantidadADescontar = Math.min(stockReal, item.cantidad);
+      // NO SINCRONIZAMOS EN EL SERVIDOR TODAVÍA PARA EVITAR 503
+      // Solo actualizamos el estado local para feedback visual inmediato
 
-            await fetch(`/api/Productoes/${item.productoId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...pOriginal, stock: stockReal - cantidadADescontar })
-            });
-          }
-        }
-        toast.success('Inventario sincronizado con el pedido', { id: syncLoadingToast });
-      } catch (e) {
-        console.error('Error sincronizando masivamente:', e);
-        toast.error('Error en sincronización masiva', { id: syncLoadingToast });
-      }
+      // Actualizar el formulario con los datos del pedido
+      setFormData(prev => ({
+        ...prev,
+        items: itemsVenta,
+        metodoPago: pedido.metodoPago || prev.metodoPago,
+        descuento: pedido.descuento || 0,
+        pedidoId: pedidoId
+      }));
 
-      // Descontar stock localmente
+      // Actualizar stock localmente
       setProductosDisponibles(prevProd => {
         let updatedProds = [...prevProd];
         itemsVenta.forEach(item => {
@@ -814,20 +842,14 @@ export const Ventas: React.FC = () => {
         return updatedProds;
       });
 
-      setFormData(prev => ({
-        ...prev,
-        items: itemsVenta,
-        metodoPago: pedido.metodoPago || prev.metodoPago
-      }));
-
-      if (itemsVenta.length > 0) {
-        toast.success(`Pedido #${pedidoId} cargado. Inventario sincronizado.`, { id: loadingToast });
-      } else {
+      if (itemsVenta.length === 0) {
         toast.warning(`El pedido #${pedidoId} no tiene productos válidos`, { id: loadingToast });
       }
     } catch (error) {
       console.error('Error fetching pedido details:', error);
       toast.error('No se pudieron cargar los datos del pedido', { id: loadingToast });
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -835,62 +857,6 @@ export const Ventas: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filtroEstado, itemsPerPage]);
-
-  // Auto-completar campos cuando se selecciona un pedido
-  useEffect(() => {
-    if (formData.tipoVenta === 'pedido' && formData.pedidoId) {
-      const pedido = pedidosDisponibles.find(p => p.id === parseInt(formData.pedidoId));
-      if (pedido) {
-        setFormData(prev => ({
-          ...prev,
-          nombreCliente: pedido.cliente,
-          clienteId: pedido.id.toString()
-        }));
-
-        // Auto-llenar productos del pedido
-        const itemsPedido: ItemVenta[] = pedido.items.map((nombreProducto, index) => {
-          const producto = productosDisponibles.find(p => p.nombre === nombreProducto);
-          if (producto) {
-            return {
-              id: index + 1,
-              productoId: producto.id,
-              nombreProducto: producto.nombre,
-              cantidad: 1,
-              precioUnitario: producto.precio,
-              subtotal: producto.precio
-            };
-          }
-          return null;
-        }).filter(Boolean) as ItemVenta[];
-
-        setFormData(prev => ({
-          ...prev,
-          items: itemsPedido
-        }));
-      }
-    }
-  }, [formData.tipoVenta, formData.pedidoId, productosDisponibles]);
-
-  // Funciones de filtrado
-  const filtrarVentas = () => {
-    let ventasFiltradas = [...ventas];
-
-    // Filtro por búsqueda
-    if (searchTerm) {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        venta.nombreCliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        venta.telefonoCliente.includes(searchTerm) ||
-        venta.emailCliente.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtro por estado
-    if (filtroEstado !== 'todos') {
-      ventasFiltradas = ventasFiltradas.filter(venta => venta.estado === filtroEstado);
-    }
-
-    setVentasFiltradas(ventasFiltradas);
-  };
 
   // Funciones CRUD - MODIFICADO: solo crear venta, sin editar
   const handleCreateVenta = async () => {
@@ -903,7 +869,45 @@ export const Ventas: React.FC = () => {
 
     try {
       setIsConfirmed(true);
-      // 1. El stock ya se descontó inmediatamente al "Agregar", así que aquí solo guardamos el registro de venta.
+
+      // 1. Si es venta por pedido, ahora sí sincronizamos el stock en el servidor de forma masiva
+      // Y actualizamos el estado del pedido a 'entregado'
+      if (formData.tipoVenta === 'pedido' && formData.pedidoId) {
+        const syncToast = toast.loading('Sincronizando inventario y pedido...');
+        try {
+          // Actualizar stock de productos
+          for (const item of formData.items) {
+            const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+            if (getRes.ok) {
+              const pOriginal = await getRes.json();
+              await fetch(`/api/Productoes/${item.productoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - item.cantidad })
+              });
+            }
+          }
+
+          // Actualizar estado del pedido a 'entregado' (ID 1)
+          const pedidoIdNum = parseInt(formData.pedidoId);
+          const pedidoOriginal = await getVentaPedidoById(pedidoIdNum);
+          if (pedidoOriginal) {
+            const now = new Date().toISOString();
+            const updatedPedido = {
+              ...pedidoOriginal,
+              estadoId: 1, // 1 = Entregado
+              fechaEntrega: now
+            };
+            await updateVentaPedido(pedidoIdNum, updatedPedido);
+          }
+
+          toast.success('Inventario y pedido sincronizados', { id: syncToast });
+        } catch (e) {
+          console.error("Error en sincronización final:", e);
+          toast.error("Error al sincronizar inventario o pedido", { id: syncToast });
+        }
+      }
+
       // (En una app real, aquí se enviaría el POST de la venta al backend)
 
       const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
@@ -974,7 +978,27 @@ export const Ventas: React.FC = () => {
         // 2. Refrescar productos disponibles localmente
         fetchProductos();
 
-        // 3. Marcar como anulada en el estado local
+        // 3. Si era una venta por pedido, cancelamos el pedido en el servidor
+        if (ventaToDelete.tipoVenta === 'pedido' && ventaToDelete.pedidoId) {
+          const cancelPedidoToast = toast.loading('Cancelando pedido asociado...');
+          try {
+            const pedidoIdNum = ventaToDelete.pedidoId;
+            const pedidoOriginal = await getVentaPedidoById(pedidoIdNum);
+            if (pedidoOriginal) {
+              const updatedPedido = {
+                ...pedidoOriginal,
+                estadoId: 3 // 3 = Cancelado
+              };
+              await updateVentaPedido(pedidoIdNum, updatedPedido);
+              toast.success('Pedido asociado cancelado', { id: cancelPedidoToast });
+            }
+          } catch (e) {
+            console.error("Error al cancelar pedido asociado:", e);
+            toast.error("Error al cancelar el pedido en el servidor", { id: cancelPedidoToast });
+          }
+        }
+
+        // 4. Marcar como anulada en el estado local
         const ventaAnulada = {
           ...ventaToDelete,
           estado: 'anulada' as const,
@@ -1103,6 +1127,14 @@ export const Ventas: React.FC = () => {
   // Función para restaurar stock globalmente (usada al cancelar o cerrar diálogo sin guardar)
   const handleRestoreStock = async () => {
     if (formData.items.length === 0) return;
+
+    // Solo restauramos en el servidor si la venta es DIRECTA, 
+    // porque en PEDIDO no se descontó nada en el servidor hasta el final.
+    if (formData.tipoVenta === 'pedido') {
+      // Solo refrescamos localmente para devolver lo que quitamos de la UI
+      fetchProductos();
+      return;
+    }
 
     const loadingToast = toast.loading('Restaurando inventario...');
     try {
@@ -1427,7 +1459,7 @@ export const Ventas: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 id="search"
-                placeholder="Buscar por cliente, teléfono o email..."
+                placeholder="Buscar por ID (número) o nombre..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -1457,6 +1489,7 @@ export const Ventas: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Total</TableHead>
@@ -1467,6 +1500,7 @@ export const Ventas: React.FC = () => {
             <TableBody>
               {currentVentas.map((venta) => (
                 <TableRow key={venta.id}>
+                  <TableCell className="font-medium text-blue-600">#{venta.id}</TableCell>
                   <TableCell>{venta.nombreCliente}</TableCell>
                   <TableCell>
                     <Badge variant={venta.tipoVenta === 'pedido' ? 'secondary' : 'outline'}>
@@ -1540,6 +1574,9 @@ export const Ventas: React.FC = () => {
         if (!open && formData.items.length > 0 && !isConfirmed) {
           handleRestoreStock();
         }
+        if (!open) {
+          setClientSearchTerm('');
+        }
         setIsCreateDialogOpen(open);
       }}>
         <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-[700px] lg:max-w-[800px] h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
@@ -1604,6 +1641,8 @@ export const Ventas: React.FC = () => {
                       <CommandInput
                         placeholder="Buscar por nombre o documento..."
                         className="h-9"
+                        value={clientSearchTerm}
+                        onValueChange={setClientSearchTerm}
                       />
                       <CommandList>
                         {isLoadingClientes ? (
@@ -1615,7 +1654,7 @@ export const Ventas: React.FC = () => {
                           <>
                             <CommandEmpty>No se encontraron clientes.</CommandEmpty>
                             <CommandGroup>
-                              {clientesDisponibles.map((cliente) => (
+                              {clientesFiltradosParaBusqueda.map((cliente) => (
                                 <CommandItem
                                   key={cliente.id}
                                   value={`${cliente.nombres} ${cliente.apellidos} ${cliente.numeroDocumento}`}
@@ -1626,6 +1665,7 @@ export const Ventas: React.FC = () => {
                                       nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
                                     });
                                     setSelectedPedidoId(''); // Resetear pedido al cambiar cliente
+                                    setClientSearchTerm(''); // Limpiar búsqueda
                                     setOpenClientes(false);
                                   }}
                                   className="flex flex-col items-start py-2 px-3"
@@ -1719,65 +1759,67 @@ export const Ventas: React.FC = () => {
 
               <Separator className="my-3 sm:my-4" />
 
-              {/* Agregar Productos */}
-              <div className="space-y-3">
-                <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
+              {/* Agregar Productos (Solo para Venta Directa) */}
+              {formData.tipoVenta === 'directa' && (
                 <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm">Producto</Label>
-                    <Select value={selectedProducto} onValueChange={setSelectedProducto}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleccionar producto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isLoadingProductos ? (
-                          <div className="flex items-center justify-center p-4">
-                            <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
-                            <span className="text-sm">Cargando productos...</span>
-                          </div>
-                        ) : productosDisponibles.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-muted-foreground">
-                            No hay productos disponibles
-                          </div>
-                        ) : (
-                          productosDisponibles.map(producto => (
-                            <SelectItem key={producto.id} value={producto.id.toString()} disabled={producto.stock <= 0}>
-                              <div className="flex justify-between w-full items-center">
-                                <span>{producto.nombre} - ${producto.precio.toLocaleString()}</span>
-                                <Badge variant={producto.stock > 5 ? "secondary" : "destructive"} className="ml-2">
-                                  {producto.stock} disp.
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1 space-y-2">
-                      <Label className="text-sm">Cantidad</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
-                        className="w-full"
-                      />
+                  <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Producto</Label>
+                      <Select value={selectedProducto} onValueChange={setSelectedProducto}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccionar producto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {isLoadingProductos ? (
+                            <div className="flex items-center justify-center p-4">
+                              <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
+                              <span className="text-sm">Cargando productos...</span>
+                            </div>
+                          ) : productosDisponibles.length === 0 ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              No hay productos disponibles
+                            </div>
+                          ) : (
+                            productosDisponibles.map(producto => (
+                              <SelectItem key={producto.id} value={producto.id.toString()} disabled={producto.stock <= 0}>
+                                <div className="flex justify-between w-full items-center">
+                                  <span>{producto.nombre} - ${producto.precio.toLocaleString()}</span>
+                                  <Badge variant={producto.stock > 5 ? "secondary" : "destructive"} className="ml-2">
+                                    {producto.stock} disp.
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-end">
-                      <Button
-                        onClick={agregarProducto}
-                        disabled={!selectedProducto}
-                        className="bg-gray-600 hover:bg-gray-700 w-full sm:w-auto px-6"
-                      >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Agregar</span>
-                      </Button>
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-sm">Cantidad</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={cantidad}
+                          onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          onClick={agregarProducto}
+                          disabled={!selectedProducto}
+                          className="bg-gray-600 hover:bg-gray-700 w-full sm:w-auto px-6"
+                        >
+                          <Plus className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Agregar</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Productos Seleccionados */}
               {formData.items.length > 0 && (
@@ -1791,42 +1833,56 @@ export const Ventas: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm sm:text-base truncate">{item.nombreProducto}</p>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1.5">
-                            <div className="flex items-center border rounded-md bg-background h-7">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => cambiarCantidad(item.id, -1)}
-                                className="h-6 w-6 rounded-r-none border-r hover:bg-muted"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="px-2.5 text-xs font-semibold min-w-[2rem] text-center">
-                                {item.cantidad}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => cambiarCantidad(item.id, 1)}
-                                className="h-6 w-6 rounded-l-none border-l hover:bg-muted"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-                              <span className="whitespace-nowrap">Precio: ${item.precioUnitario.toLocaleString()}</span>
-                              <span>•</span>
-                              <span className="whitespace-nowrap font-medium text-foreground">Subtotal: ${item.subtotal.toLocaleString()}</span>
-                            </div>
+                            {/* Solo mostrar controles de cantidad y eliminar para Venta Directa */}
+                            {formData.tipoVenta === 'directa' ? (
+                              <>
+                                <div className="flex items-center border rounded-md bg-background h-7">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => cambiarCantidad(item.id, -1)}
+                                    className="h-6 w-6 rounded-r-none border-r hover:bg-muted"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="px-2.5 text-xs font-semibold min-w-[2rem] text-center">
+                                    {item.cantidad}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => cambiarCantidad(item.id, 1)}
+                                    className="h-6 w-6 rounded-l-none border-l hover:bg-muted"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                                  <span className="whitespace-nowrap">Precio: ${item.precioUnitario.toLocaleString()}</span>
+                                  <span>•</span>
+                                  <span className="whitespace-nowrap font-medium text-foreground">Subtotal: ${item.subtotal.toLocaleString()}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
+                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs">Cantidad: {item.cantidad}</span>
+                                <span className="whitespace-nowrap">Precio: ${item.precioUnitario.toLocaleString()}</span>
+                                <span>•</span>
+                                <span className="whitespace-nowrap font-medium text-foreground">Subtotal: ${item.subtotal.toLocaleString()}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => eliminarProducto(item.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        {formData.tipoVenta === 'directa' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => eliminarProducto(item.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2005,7 +2061,7 @@ export const Ventas: React.FC = () => {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="motivoAnulacion">Motivo de anulación</Label>
+              <Label htmlFor="motivoAnulacion" className="mb-2 block">Motivo de anulación</Label>
               <Textarea
                 id="motivoAnulacion"
                 value={motivoAnulacion}
