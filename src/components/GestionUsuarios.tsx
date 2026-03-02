@@ -36,14 +36,14 @@ import {
   Filter,
   Plus
 } from 'lucide-react';
-
 export const GestionUsuarios: React.FC = () => {
   const {
     users,
     roles,
     updateUser,
     deleteUser,
-    createUser
+    createUser,
+    isLoading
   } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,6 +102,20 @@ export const GestionUsuarios: React.FC = () => {
     }
   };
 
+  const isOlderThan18 = (birthDate: string): boolean => {
+    if (!birthDate) return false;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+
+    return age >= 18;
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,47 +139,86 @@ export const GestionUsuarios: React.FC = () => {
   const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
   const handleCreateUser = async () => {
-    const roleObj = roles.find(r => r.name === newUser.role) || roles[2];
+    try {
+      const roleObj = roles.find(r => r.name === newUser.role);
 
-    await createUser({
-      username: newUser.documento,
-      email: newUser.email,
-      password: 'temp123',
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      numeroDocumento: newUser.documento,
-      tipoDocumento: newUser.tipoDocumento,
-      telefono: newUser.telefono,
-      ciudad: newUser.ciudad || 'N/A',
-      direccion: newUser.direccion,
-      barrio: newUser.barrio,
-      fechaNacimiento: newUser.fechaNacimiento,
-      role: roleObj,
-      isActive: newUser.isActive
-    });
+      if (!roleObj) {
+        toast.error("Error al crear usuario", {
+          description: "El rol seleccionado no es válido.",
+        });
+        return;
+      }
 
-    // Toast de confirmación de creación
-    toast.success("Usuario creado", {
-      description: `${newUser.firstName} ${newUser.lastName} ha sido creado exitosamente con el rol ${newUser.role}.`,
-      duration: 4000,
-    });
+      // Validar duplicados (correo y documento)
+      const duplicateEmail = users.find(u => u.email.toLowerCase() === newUser.email.toLowerCase());
+      const duplicateDoc = users.find(u => u.numeroDocumento === newUser.documento);
 
-    setNewUser({
-      documento: '',
-      tipoDocumento: 'C.C',
-      firstName: '',
-      lastName: '',
-      email: '',
-      telefono: '',
-      ciudad: '',
-      direccion: '',
-      barrio: '',
-      fechaNacimiento: '',
-      role: 'Cliente',
-      isActive: true
-    });
+      if (duplicateEmail) {
+        toast.error("Error al crear usuario", {
+          description: `Ya existe un usuario con el correo ${newUser.email}.`,
+        });
+        return;
+      }
 
-    setIsCreateDialogOpen(false);
+      if (duplicateDoc) {
+        toast.error("Error al crear usuario", {
+          description: `Ya existe un usuario con el documento ${newUser.documento}.`,
+        });
+        return;
+      }
+
+      if (!isOlderThan18(newUser.fechaNacimiento)) {
+        toast.error("Error al crear usuario", {
+          description: "El usuario debe ser mayor de edad (18 años).",
+        });
+        return;
+      }
+
+      await createUser({
+        username: newUser.documento,
+        email: newUser.email,
+        password: 'temp123',
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        numeroDocumento: newUser.documento,
+        tipoDocumento: newUser.tipoDocumento,
+        telefono: newUser.telefono,
+        ciudad: newUser.ciudad || 'N/A',
+        direccion: newUser.direccion,
+        barrio: newUser.barrio,
+        fechaNacimiento: newUser.fechaNacimiento,
+        role: roleObj,
+        isActive: newUser.isActive
+      });
+
+      // Toast de confirmación de creación
+      toast.success("Usuario creado", {
+        description: `${newUser.firstName} ${newUser.lastName} ha sido creado exitosamente con el rol ${newUser.role}.`,
+        duration: 4000,
+      });
+
+      setNewUser({
+        documento: '',
+        tipoDocumento: 'C.C',
+        firstName: '',
+        lastName: '',
+        email: '',
+        telefono: '',
+        ciudad: '',
+        direccion: '',
+        barrio: '',
+        fechaNacimiento: '',
+        role: 'Cliente',
+        isActive: true
+      });
+
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      toast.error("Error al crear usuario", {
+        description: error instanceof Error ? error.message : "Ocurrió un error inesperado al intentar crear el usuario.",
+      });
+    }
   };
 
   const handleEditUser = (user: User) => {
@@ -189,35 +242,67 @@ export const GestionUsuarios: React.FC = () => {
 
   const handleUpdateUser = async () => {
     if (editingUser) {
-      const roleObj = roles.find(r => r.name === editUserData.role) || editingUser.role;
+      try {
+        const roleObj = roles.find(r => r.name === editUserData.role) || editingUser.role;
 
-      const updatedUser: User = {
-        ...editingUser,
-        username: editUserData.documento,
-        firstName: editUserData.firstName,
-        lastName: editUserData.lastName,
-        email: editUserData.email,
-        numeroDocumento: editUserData.documento,
-        tipoDocumento: editUserData.tipoDocumento,
-        telefono: editUserData.telefono,
-        ciudad: editUserData.ciudad || 'N/A',
-        direccion: editUserData.direccion,
-        barrio: editUserData.barrio,
-        fechaNacimiento: editUserData.fechaNacimiento,
-        role: roleObj,
-        isActive: editUserData.isActive
-      };
+        // Validar duplicados (correo y documento) excluyendo al usuario actual
+        const duplicateEmail = users.find(u => u.id !== editingUser.id && u.email.toLowerCase() === editUserData.email.toLowerCase());
+        const duplicateDoc = users.find(u => u.id !== editingUser.id && u.numeroDocumento === editUserData.documento);
 
-      await updateUser(updatedUser);
-      setEditingUser(null);
-      setIsEditUserDialogOpen(false);
-      resetEditUserForm();
+        if (duplicateEmail) {
+          toast.error("Error al actualizar usuario", {
+            description: `Ya existe otro usuario con el correo ${editUserData.email}.`,
+          });
+          return;
+        }
 
-      // Toast de confirmación de éxito
-      toast.success("Usuario actualizado", {
-        description: `Los datos de ${updatedUser.firstName} ${updatedUser.lastName} han sido actualizados correctamente.`,
-        duration: 3000,
-      });
+        if (duplicateDoc) {
+          toast.error("Error al actualizar usuario", {
+            description: `Ya existe otro usuario con el documento ${editUserData.documento}.`,
+          });
+          return;
+        }
+
+        if (!isOlderThan18(editUserData.fechaNacimiento)) {
+          toast.error("Error al actualizar usuario", {
+            description: "La fecha de nacimiento indica que el usuario es menor de edad (18 años).",
+          });
+          return;
+        }
+
+        const updatedUser: User = {
+          ...editingUser,
+          username: editUserData.documento,
+          firstName: editUserData.firstName,
+          lastName: editUserData.lastName,
+          email: editUserData.email,
+          numeroDocumento: editUserData.documento,
+          tipoDocumento: editUserData.tipoDocumento,
+          telefono: editUserData.telefono,
+          ciudad: editUserData.ciudad || 'N/A',
+          direccion: editUserData.direccion,
+          barrio: editUserData.barrio,
+          fechaNacimiento: editUserData.fechaNacimiento,
+          role: roleObj,
+          isActive: editUserData.isActive
+        };
+
+        await updateUser(updatedUser);
+        setEditingUser(null);
+        setIsEditUserDialogOpen(false);
+        resetEditUserForm();
+
+        // Toast de confirmación de éxito
+        toast.success("Usuario actualizado", {
+          description: `Los datos de ${updatedUser.firstName} ${updatedUser.lastName} han sido actualizados correctamente.`,
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error al actualizar usuario:', error);
+        toast.error("Error al actualizar usuario", {
+          description: error instanceof Error ? error.message : "Ocurrió un error inesperado al intentar actualizar el usuario.",
+        });
+      }
     }
   };
 
@@ -463,20 +548,15 @@ export const GestionUsuarios: React.FC = () => {
                       <Label htmlFor="create-active">Usuario Activo</Label>
                     </div>
 
-                    <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                      <div className="mb-1">ℹ️ <strong>Información:</strong></div>
-                      <div>• Se asignará una contraseña temporal "temp123"</div>
-                      <div>• El documento se usará como nombre de usuario</div>
-                    </div>
                   </div>
                 </ScrollArea>
 
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isLoading}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleCreateUser}>
-                    Crear Usuario
+                  <Button onClick={handleCreateUser} disabled={isLoading}>
+                    {isLoading ? "Creando..." : "Crear Usuario"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -516,6 +596,7 @@ export const GestionUsuarios: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Usuario</TableHead>
+                  <TableHead>Documento</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -532,6 +613,14 @@ export const GestionUsuarios: React.FC = () => {
                             <div className="text-sm text-gray-500">{user.email}</div>
                           </div>
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm font-medium">
+                        <Badge variant="outline" className="mr-1 text-[10px] px-1 h-4">
+                          {user.tipoDocumento}
+                        </Badge>
+                        {user.numeroDocumento}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -788,11 +877,6 @@ export const GestionUsuarios: React.FC = () => {
                   <Label>Usuario Activo {editUserData.role === 'Super Administrador' && "(No modificable para Super Administradores)"}</Label>
                 </div>
 
-                <div className="text-xs text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
-                  <div className="mb-1">⚠️ <strong>Atención:</strong></div>
-                  <div>• Cambiar el documento actualizará el nombre de usuario</div>
-                  <div>• Asegúrate de que el nuevo documento sea correcto</div>
-                </div>
               </div>
             </ScrollArea>
           )}
@@ -802,11 +886,11 @@ export const GestionUsuarios: React.FC = () => {
               setIsEditUserDialogOpen(false);
               setEditingUser(null);
               resetEditUserForm();
-            }}>
+            }} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button onClick={handleUpdateUser}>
-              Actualizar Usuario
+            <Button onClick={handleUpdateUser} disabled={isLoading}>
+              {isLoading ? "Actualizando..." : "Actualizar Usuario"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -948,6 +1032,8 @@ export const GestionUsuarios: React.FC = () => {
         description="¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer."
         itemName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
         itemType="usuario"
+        isDisabled={isLoading || (userToDelete?.role.name === 'Super Administrador')}
+        disableReason={userToDelete?.role.name === 'Super Administrador' ? "No se puede eliminar al Super Administrador" : undefined}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Role, Permission } from '../types';
+import { User, Role, Permission, RolPermisoDto } from '../types';
 import * as apiService from '../services/api';
 import { useAuth } from './useAuth';
 
@@ -9,6 +9,7 @@ export const useUsers = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
     const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([]);
+    const [rolePermissions, setRolePermissions] = useState<RolPermisoDto[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const loadData = async (showLoading = true) => {
@@ -81,6 +82,7 @@ export const useUsers = () => {
 
             setUsers(mappedUsers);
             setAvailableRoles(mappedRoles);
+            setRolePermissions(apiRolPermisos);
 
             console.log('API Roles result:', apiRoles);
             console.log('Permisos cargados:', mappedPermissions.map(p => p.name));
@@ -102,6 +104,7 @@ export const useUsers = () => {
         permissions: availablePermissions,
         isLoading,
         updateUser: async (updatedUser: User) => {
+            setIsLoading(true);
             try {
                 await apiService.updateUsuario(parseInt(updatedUser.id), {
                     id: parseInt(updatedUser.id),
@@ -119,22 +122,28 @@ export const useUsers = () => {
                     estadoUsuario: updatedUser.isActive,
                     rolId: parseInt(updatedUser.role.id)
                 });
-                await loadData();
+                await loadData(false);
             } catch (error) {
                 console.error('Error al actualizar usuario:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         deleteUser: async (userId: string) => {
+            setIsLoading(true);
             try {
                 await apiService.deleteUsuario(parseInt(userId));
-                await loadData();
+                await loadData(false);
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         createUser: async (userData: Omit<User, 'id' | 'createdAt'>) => {
+            setIsLoading(true);
             try {
                 await apiService.createUsuario({
                     nombres: userData.firstName,
@@ -151,13 +160,16 @@ export const useUsers = () => {
                     estadoUsuario: userData.isActive,
                     rolId: parseInt(userData.role.id)
                 });
-                await loadData();
+                await loadData(false);
             } catch (error) {
                 console.error('Error al crear usuario:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         createRole: async (roleData: Omit<Role, 'id'>) => {
+            setIsLoading(true);
             try {
                 // 1. Crear el rol en la base de datos
                 const newRolApi = await apiService.createRol({
@@ -177,26 +189,28 @@ export const useUsers = () => {
 
                 await Promise.all(permissionPromises);
 
-                await loadData();
+                await loadData(false);
                 return { ...roleData, id: newRolApi.id.toString() } as Role;
             } catch (error) {
                 console.error('Error al crear rol:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         updateRole: async (updatedRole: Role) => {
+            setIsLoading(true);
             try {
                 // 1. Actualizar datos básicos del rol
-                await apiService.updateRol(parseInt(updatedRole.id), {
+                const roleUpdatePromise = apiService.updateRol(parseInt(updatedRole.id), {
                     id: parseInt(updatedRole.id),
                     nombreRol: updatedRole.name,
                     descripcion: updatedRole.description,
                     estadoRol: updatedRole.isActive
                 });
 
-                // 2. Sincronizar permisos
-                const allRolesPermisos = await apiService.getRolesPermisos();
-                const rolesPermisosForThisRole = allRolesPermisos.filter(rp => rp.rolId === parseInt(updatedRole.id));
+                // 2. Sincronizar permisos (usando los datos cacheados para evitar un fetch adicional)
+                const rolesPermisosForThisRole = rolePermissions.filter(rp => rp.rolId === parseInt(updatedRole.id));
                 const currentPermIds = rolesPermisosForThisRole.map(rp => rp.permisoId.toString());
 
                 const targetPermIds = updatedRole.permissions.map(p => p.id);
@@ -219,16 +233,20 @@ export const useUsers = () => {
                     return record ? apiService.deleteRolPermiso(record.id) : Promise.resolve();
                 });
 
-                await Promise.all([...addPromises, ...removePromises]);
+                // Ejecutamos la actualización del rol y cambios de permisos en paralelo
+                await Promise.all([roleUpdatePromise, ...addPromises, ...removePromises]);
 
-                await loadData();
-                await refreshSession();
+                // 3. Recargar datos en segundo plano
+                loadData(false).then(() => refreshSession());
             } catch (error) {
                 console.error('Error al actualizar rol:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         deleteRole: async (roleId: string) => {
+            setIsLoading(true);
             try {
                 // 1. Verificar si hay usuarios asignados
                 const usersWithRole = users.filter(u => u.role.id === roleId);
@@ -238,8 +256,8 @@ export const useUsers = () => {
 
                 // 2. IMPORTANTE: Antes de eliminar el rol, debemos eliminar sus asociaciones en RolesPermisoes
                 // de lo contrario la API fallará por restricción de clave foránea.
-                const allRolesPermisos = await apiService.getRolesPermisos();
-                const associationsToRemove = allRolesPermisos.filter(rp => rp.rolId === parseInt(roleId));
+                // Usamos los permisos cacheados para evitar el fetch completo
+                const associationsToRemove = rolePermissions.filter(rp => rp.rolId === parseInt(roleId));
 
                 if (associationsToRemove.length > 0) {
                     console.log(`Eliminando ${associationsToRemove.length} asociaciones de permisos para el rol ${roleId}...`);
@@ -249,10 +267,14 @@ export const useUsers = () => {
 
                 // 3. Ahora sí podemos eliminar el rol
                 await apiService.deleteRol(parseInt(roleId));
-                await loadData();
+
+                // Recargar datos en segundo plano
+                loadData(false);
             } catch (error) {
                 console.error('Error al eliminar rol:', error);
                 throw error;
+            } finally {
+                setIsLoading(false);
             }
         },
         toggleRoleStatus: async (roleId: string) => {

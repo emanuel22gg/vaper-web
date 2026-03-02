@@ -128,6 +128,19 @@ export const GestionRoles: React.FC = () => {
       return;
     }
 
+    // Validación de nombre duplicado
+    const nameExists = roles.some(role =>
+      role.name.trim().toLowerCase() === newRole.name.trim().toLowerCase()
+    );
+
+    if (nameExists) {
+      toast.error("Error de validación", {
+        description: `Ya existe un rol con el nombre "${newRole.name.trim()}".`,
+        duration: 3000,
+      });
+      return;
+    }
+
     const rolePermissions = permissions.filter(p => newRole.permissions.includes(p.id));
 
     const role: Omit<Role, 'id'> = {
@@ -183,6 +196,20 @@ export const GestionRoles: React.FC = () => {
     if (!editingRole || !editRole.name.trim()) {
       toast.error("Error de validación", {
         description: "El nombre del rol es obligatorio.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Validación de nombre duplicado (excluyendo el rol actual)
+    const nameExists = roles.some(role =>
+      role.id !== editingRole.id &&
+      role.name.trim().toLowerCase() === editRole.name.trim().toLowerCase()
+    );
+
+    if (nameExists) {
+      toast.error("Error de validación", {
+        description: `Ya existe otro rol con el nombre "${editRole.name.trim()}".`,
         duration: 3000,
       });
       return;
