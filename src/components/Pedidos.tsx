@@ -39,7 +39,7 @@ import { AbonosIndividuales } from "./AbonosIndividuales";
 import { DetallePedido } from "./DetallePedido";
 import { VentaPedidoDto, UsuarioDto, Producto } from "../types";
 import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados } from "../services/api";
-import { CreateVentaPedidoDialog } from "./pedidos/CreateVentaPedidoDialog";
+import { CreateVentaPedidoView } from "./pedidos/CreateVentaPedidoView";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -88,7 +88,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const [showDetallePedido, setShowDetallePedido] = useState(false);
 
   // Estados para crear pedido
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showCreateView, setShowCreateView] = useState(false);
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,6 +126,11 @@ export const Pedidos: React.FC<PedidosProps> = ({
     return usuario ? `${usuario.nombres} ${usuario.apellidos}` : `ID: ${usuarioId}`;
   };
 
+  const getUsuarioDocument = (usuarioId: number) => {
+    const usuario = usuarios.find(u => u.id === usuarioId);
+    return usuario ? usuario.numeroDocumento : "N/A";
+  };
+
   // Filtrado derivado de los estados (uso de useMemo para evitar desincronización y crashes)
   const filteredPedidos = useMemo(() => {
     return pedidos.filter((pedido) => {
@@ -138,6 +143,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
         term === "" ||
         usuarioName.includes(term) ||
         (pedido.metodoPago || "").toLowerCase().includes(term) ||
+        getUsuarioDocument(pedido.usuarioId).toLowerCase().includes(term) ||
         idMatch;
 
       const matchesStatus =
@@ -163,19 +169,28 @@ export const Pedidos: React.FC<PedidosProps> = ({
 
   const getStatusColor = (estado: string) => {
     const s = estado.toLowerCase();
-    if (s.includes('completa') || s.includes('entrega')) return "!bg-green-600 !text-white !border-none hover:!bg-green-700";
-    if (s.includes('pendien')) return "!bg-blue-600 !text-white !border-none hover:!bg-blue-700";
-    if (s.includes('anula') || s.includes('cancel')) return "!bg-black !text-white !border-none hover:!bg-gray-900";
-    return "!bg-slate-500 !text-white !border-none hover:!bg-slate-600";
+    if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "text-green-600";
+    if (s.includes('pendien')) return "text-amber-600";
+    if (s.includes('anula') || s.includes('cancel')) return "text-red-600";
+    return "text-slate-600";
   };
 
   const getStatusIcon = (estado: string) => {
     const s = estado.toLowerCase();
-    if (s.includes('completa') || s.includes('entrega')) return <CheckCircle className="h-4 w-4" />;
-    if (s.includes('pendien')) return <Clock className="h-4 w-4" />;
-    if (s.includes('anula') || s.includes('cancel')) return <XCircle className="h-4 w-4" />;
-    return <Clock className="h-4 w-4" />;
+    if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return <CheckCircle className="h-3 w-3" />;
+    if (s.includes('pendien')) return <Clock className="h-3 w-3" />;
+    if (s.includes('anula') || s.includes('cancel')) return <XCircle className="h-3 w-3" />;
+    return <Clock className="h-3 w-3" />;
   };
+
+  const getStatusVariant = (estado: string) => {
+    const s = estado.toLowerCase();
+    if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "default" as const;
+    if (s.includes('anula') || s.includes('cancel')) return "destructive" as const;
+    return "secondary" as const;
+  };
+  // Eliminado getStatusIcon previo para evitar duplicados si existía
+
 
   const handleExportToPDF = (pedido: VentaPedidoDto) => {
     const doc = new jsPDF();
@@ -314,7 +329,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   };
 
   const handleCreatePedido = () => {
-    setIsCreateDialogOpen(true);
+    setShowCreateView(true);
   };
 
   if (showAbonosIndividuales && selectedPedidoForAbonos) {
@@ -338,6 +353,20 @@ export const Pedidos: React.FC<PedidosProps> = ({
           setSelectedPedido(null);
         }}
       />
+    );
+  }
+
+  if (showCreateView) {
+    return (
+      <div className="p-6">
+        <CreateVentaPedidoView
+          onBack={() => setShowCreateView(false)}
+          onSuccess={() => {
+            setShowCreateView(false);
+            fetchData();
+          }}
+        />
+      </div>
     );
   }
 
@@ -368,7 +397,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por cliente o método de pago..."
+                  placeholder="Buscar por ID, documento o nombre del cliente..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -383,12 +412,15 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  {statuses.map(s => {
-                    const label = s.nombreEstado.toLowerCase() === 'anulada' || s.nombreEstado.toLowerCase() === 'anulado' ? 'Cancelado' : s.nombreEstado;
-                    return (
-                      <SelectItem key={s.id} value={label.toLowerCase()}>{label}</SelectItem>
-                    );
-                  })}
+                  {Array.from(new Set(statuses
+                    .map(s => {
+                      const name = s.nombreEstado.toLowerCase();
+                      return (name === 'anulada' || name === 'anulado') ? 'cancelado' : name;
+                    })
+                    .filter(name => name !== 'aceptada')
+                  )).map(label => (
+                    <SelectItem key={label} value={label} className="capitalize">{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -399,6 +431,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Pedido ID</TableHead>
+                  <TableHead>Documento</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Total</TableHead>
@@ -423,6 +456,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   paginatedPedidos.map((pedido) => (
                     <TableRow key={`order-${pedido.id}`}>
                       <TableCell className="font-medium">#{pedido.id}</TableCell>
+                      <TableCell>{getUsuarioDocument(pedido.usuarioId)}</TableCell>
                       <TableCell>{getUsuarioName(pedido.usuarioId)}</TableCell>
                       <TableCell>
                         {pedido.fechaCreacion ? new Date(pedido.fechaCreacion).toLocaleDateString() : 'N/A'}
@@ -432,11 +466,11 @@ export const Pedidos: React.FC<PedidosProps> = ({
                       </TableCell>
                       <TableCell>
                         <Badge
-                          key={`badge-order-${pedido.id}-${pedido.estadoId}`}
-                          variant="outline"
-                          className={`${getStatusColor(getStatusName(pedido.estadoId))} rounded-full px-4 py-1.5 font-bold shadow-sm`}
+                          variant={getStatusVariant(getStatusName(pedido.estadoId))}
+                          className="flex items-center gap-1 w-fit"
                         >
-                          <span key="text-wrapper" className="capitalize leading-none text-[10px] tracking-wide">
+                          {getStatusIcon(getStatusName(pedido.estadoId))}
+                          <span className="capitalize">
                             {getStatusName(pedido.estadoId)}
                           </span>
                         </Badge>
@@ -455,7 +489,10 @@ export const Pedidos: React.FC<PedidosProps> = ({
                             variant="outline"
                             size="sm"
                             onClick={() => handleCambiarEstado(pedido)}
-                            title="Cambiar estado"
+                            disabled={getStatusName(pedido.estadoId) === 'entregado' || getStatusName(pedido.estadoId) === 'cancelado'}
+                            title={getStatusName(pedido.estadoId) === 'entregado' || getStatusName(pedido.estadoId) === 'cancelado'
+                              ? "No se puede cambiar el estado de un pedido finalizado"
+                              : "Cambiar estado"}
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
@@ -548,11 +585,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
         </DialogContent>
       </Dialog>
 
-      <CreateVentaPedidoDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSuccess={fetchData}
-      />
     </div>
   );
 };

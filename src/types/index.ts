@@ -219,6 +219,7 @@ export interface VentaPedidoDto {
   envio: number;
   total: number;
   vigenciaDevolucion?: number; // Meses de vigencia (1-4)
+  tipoVenta: string; // "Pedido" o "Venta"
   detalleVenta_Pedido?: DetalleVentaPedidoDto[]; // Conexión con la tabla detalleVenta_Pedido
 }
 
