@@ -37,6 +37,7 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { AbonosIndividuales } from "./AbonosIndividuales";
 import { DetallePedido } from "./DetallePedido";
+import { TablePagination } from './ui/TablePagination';
 import { VentaPedidoDto, UsuarioDto, Producto } from "../types";
 import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados } from "../services/api";
 import { CreateVentaPedidoView } from "./pedidos/CreateVentaPedidoView";
@@ -300,6 +301,46 @@ export const Pedidos: React.FC<PedidosProps> = ({
           fechaEntrega: newStatusId === 1 ? now : pedidoToUpdate.fechaEntrega
         };
 
+        // Si el estado cambia a Entregado (1) desde otro estado, deducir inventario
+        if (newStatusId === 1 && pedidoToUpdate.estadoId !== 1) {
+          const syncToast = toast.loading('Sincronizando inventario...');
+          try {
+            let detallesRaw: any[] = pedidoToUpdate.detalleVenta_Pedido ||
+              (pedidoToUpdate as any).detalleVentaPedidos ||
+              (pedidoToUpdate as any).DetalleVentaPedidos ||
+              [];
+
+            // Fallback si los detalles no vienen completos en la consulta principal
+            if (detallesRaw.length === 0) {
+              const detRes = await fetch('/api/DetalleVentaPedidoes');
+              if (detRes.ok) {
+                const allDetalles = await detRes.json();
+                detallesRaw = allDetalles.filter((d: any) => Number(d.ventaPedidoId) === Number(pedidoToUpdate.id));
+              }
+            }
+
+            // Actualizar stock de cada producto
+            for (const item of detallesRaw) {
+              const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+              if (getRes.ok) {
+                const pOriginal = await getRes.json();
+                // Asegurar que el stock no sea negativo si no lo deseamos, o dejarlo deducir libremente
+                const nuevoStock = Math.max(0, (pOriginal.stock || 0) - (item.cantidad || 0));
+
+                await fetch(`/api/Productoes/${item.productoId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...pOriginal, stock: nuevoStock })
+                });
+              }
+            }
+            toast.dismiss(syncToast);
+          } catch (e) {
+            console.error("Error al sincronizar inventario al entregar pedido:", e);
+            toast.error("Advertencia: No se pudo descontar todo el inventario de la API.");
+          }
+        }
+
         await updateVentaPedido(pedidoToUpdate.id!, updatedPedido);
 
         // Forzar refresco completo para asegurar consistencia con el backend
@@ -309,7 +350,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
         setPedidoToUpdate(null);
         setNewStatusId(0);
 
-        toast.success("Estado actualizado", {
+        toast.success("Estado actualizado y sincronizado", {
           description: `El pedido ahora está en estado: ${getStatusName(newStatusId)}.`,
         });
       } catch (error) {
@@ -523,33 +564,16 @@ export const Pedidos: React.FC<PedidosProps> = ({
             </Table>
           </div>
 
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              Mostrando {Math.min(startIndex + 1, filteredPedidos.length)} a {Math.min(startIndex + itemsPerPage, filteredPedidos.length)} de {filteredPedidos.length} pedidos
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1 || loading}
-              >
-                <ChevronLeft className="h-4 w-4" /> Anterior
-              </Button>
-              <div className="text-sm font-medium">
-                Página {currentPage} de {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages || loading}
-              >
-                Siguiente <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          {totalPages > 1 && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPedidos.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              itemName="pedidos"
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -570,12 +594,21 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {statuses
-                    .map(s => {
-                      const label = s.nombreEstado.toLowerCase() === 'anulada' || s.nombreEstado.toLowerCase() === 'anulado' ? 'Cancelado' : s.nombreEstado;
-                      return (
-                        <SelectItem key={s.id} value={s.id.toString()}>{label}</SelectItem>
-                      );
-                    })}
+                    .reduce((acc: { id: number, label: string }[], s) => {
+                      const name = s.nombreEstado.toLowerCase();
+                      let label = '';
+                      if (name === 'pendiente') label = 'Pendiente';
+                      else if (name === 'entregado') label = 'Entregado';
+                      else if (name === 'anulada' || name === 'anulado' || name === 'cancelado') label = 'Cancelado';
+
+                      if (label && !acc.find(item => item.label === label)) {
+                        acc.push({ id: s.id, label });
+                      }
+                      return acc;
+                    }, [])
+                    .map(s => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.label}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

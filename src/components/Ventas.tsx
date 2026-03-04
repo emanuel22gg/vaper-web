@@ -91,7 +91,10 @@ import {
 
 // Función helper para formatear fechas
 const formatDate = (date: Date | string): string => {
-  const d = new Date(date);
+  if (!date) return '';
+  // Si la fecha es un string YYYY-MM-DD, añadir tiempo para evitar problemas de zona horaria
+  const dateStr = typeof date === 'string' && date.length === 10 ? `${date}T12:00:00` : date;
+  const d = new Date(dateStr);
   return d.toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
@@ -153,6 +156,7 @@ interface Venta {
   subtotal: number;
   descuento: number;
   impuestos?: number;
+  envio?: number;
   total: number;
   estado: 'aceptada' | 'anulada'; // Cambiado: aceptada y anulada
   metodoPago: string;
@@ -356,7 +360,7 @@ export const Ventas: React.FC = () => {
       const clients = currentClientes || clientesDisponibles;
 
       const ventasMapeadas: Venta[] = ventasRaw
-        .filter((v: any) => !(v.tipoVenta === 'Pedido' && v.estadoId === 2))
+        .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
         .map(v => {
           const cliente = clients.find(c => c.id === v.usuarioId);
           const detallesVenta = detallesRaw.filter(d => d.ventaPedidoId === v.id);
@@ -381,7 +385,8 @@ export const Ventas: React.FC = () => {
               };
             }),
             subtotal: v.subtotal,
-            descuento: 0,
+            descuento: Math.max(0, Math.round((v.subtotal + (v.envio || 0)) - v.total)),
+            envio: v.envio || 0,
             total: v.total,
             estado: v.estadoId === 1 ? 'aceptada' : 'anulada',
             metodoPago: v.metodoPago,
@@ -609,6 +614,7 @@ export const Ventas: React.FC = () => {
             barrio: "Local",
             observaciones: "Venta directa desde caja",
             subtotal: subtotal,
+            descuento: montoDescuento > 0 ? montoDescuento : 0,
             envio: 0,
             total: total,
             tipoVenta: "Venta" // <--- REVERTIDO: Ocultar de Pedidos usando el tipo estándar
@@ -725,7 +731,8 @@ export const Ventas: React.FC = () => {
             if (pedidoOriginal) {
               const updatedPedido = {
                 ...pedidoOriginal,
-                estadoId: 3 // 3 = Cancelado
+                estadoId: 3, // 3 = Cancelado
+                observaciones: pedidoOriginal.observaciones ? `${pedidoOriginal.observaciones} [Cancelado desde Ventas]` : '[Cancelado desde Ventas]'
               };
               await updateVentaPedido(pedidoIdNum, updatedPedido);
               toast.success('Pedido asociado cancelado', { id: cancelPedidoToast });
@@ -1437,16 +1444,14 @@ export const Ventas: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tipoVenta" className="text-sm">Tipo de Venta</Label>
-                  <Select value={formData.tipoVenta} onValueChange={handleTipoVentaChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="directa">Venta Directa</SelectItem>
-                      <SelectItem value="pedido">Venta por Pedido</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="fechaCreacion" className="text-sm">Fecha de Creación</Label>
+                  <Input
+                    id="fechaCreacion"
+                    value={formatDate(formData.fecha)}
+                    readOnly
+                    disabled
+                    className="bg-muted text-muted-foreground w-full cursor-not-allowed"
+                  />
                 </div>
               </div>
 
@@ -1842,6 +1847,12 @@ export const Ventas: React.FC = () => {
                         <div className="flex justify-between">
                           <span>Descuento:</span>
                           <span>-${selectedVenta.descuento.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {(selectedVenta.envio || 0) > 0 && selectedVenta.tipoVenta === 'pedido' && (
+                        <div className="flex justify-between">
+                          <span>Envío:</span>
+                          <span>+${(selectedVenta.envio || 0).toLocaleString()}</span>
                         </div>
                       )}
                       <div className="flex justify-between font-bold text-lg pt-2 border-t">
