@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { updateVentaPedido, getVentaPedidoById } from '../services/api';
+import { jsPDF } from 'jspdf';
+import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos } from '../services/api';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -168,405 +169,13 @@ interface Venta {
 
 // Datos simulados
 
-const ventasIniciales: Venta[] = [
-  {
-    id: 1,
-    numeroVenta: 'VNT-001',
-    fecha: '2024-01-15',
-    clienteId: 1,
-    nombreCliente: 'Carlos Rodríguez',
-    telefonoCliente: '+57 300 123 4567',
-    emailCliente: 'carlos@email.com',
-    items: [
-      { id: 1, productoId: 1, nombreProducto: 'Vape Desechable 2000 puffs', cantidad: 2, precioUnitario: 25000, subtotal: 50000 },
-      { id: 2, productoId: 3, nombreProducto: 'Líquido Frutal 30ml', cantidad: 1, precioUnitario: 35000, subtotal: 35000 }
-    ],
-    subtotal: 85000,
-    descuento: 5000,
-    impuestos: 0,
-    total: 80000,
-    estado: 'aceptada',
-    metodoPago: 'Tarjeta de crédito',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 1, fecha: '2024-01-15', monto: 80000, metodoPago: 'tarjeta', referencia: 'TXN-456789' }
-    ],
-    cotizacionId: 1,
-    fechaCreacion: '2024-01-15T10:30:00',
-    fechaActualizacion: '2024-01-15T10:35:00',
-    creadoPor: 'María González'
-  },
-  {
-    id: 2,
-    numeroVenta: 'VNT-002',
-    fecha: '2024-01-16',
-    clienteId: 2,
-    nombreCliente: 'Ana María López',
-    telefonoCliente: '+57 301 987 6543',
-    emailCliente: 'ana@email.com',
-    items: [
-      { id: 3, productoId: 2, nombreProducto: 'Pod System Premium', cantidad: 1, precioUnitario: 80000, subtotal: 80000 }
-    ],
-    subtotal: 80000,
-    descuento: 0,
-    impuestos: 0,
-    total: 80000,
-    estado: 'aceptada',
-    metodoPago: 'Efectivo + Transferencia',
-    tipoVenta: 'pedido',
-    pedidoId: 1,
-    pagos: [
-      { id: 2, fecha: '2024-01-16', monto: 50000, metodoPago: 'efectivo' },
-      { id: 3, fecha: '2024-01-18', monto: 30000, metodoPago: 'transferencia', referencia: 'TRANS-789123' }
-    ],
-    fechaCreacion: '2024-01-16T14:20:00',
-    fechaActualizacion: '2024-01-18T09:15:00',
-    creadoPor: 'José Martínez'
-  },
-  {
-    id: 3,
-    numeroVenta: 'VNT-003',
-    fecha: '2024-01-17',
-    clienteId: 3,
-    nombreCliente: 'Pedro Sánchez',
-    telefonoCliente: '+57 302 456 7890',
-    emailCliente: 'pedro@email.com',
-    items: [
-      { id: 4, productoId: 4, nombreProducto: 'Mod Premium 80W', cantidad: 1, precioUnitario: 150000, subtotal: 150000 },
-      { id: 5, productoId: 5, nombreProducto: 'Coil Resistencia 0.5ohm', cantidad: 3, precioUnitario: 12000, subtotal: 36000 }
-    ],
-    subtotal: 186000,
-    descuento: 10000,
-    impuestos: 0,
-    total: 176000,
-    estado: 'aceptada',
-    metodoPago: 'Transferencia',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 10, fecha: '2024-01-17', monto: 176000, metodoPago: 'transferencia', referencia: 'TRF-123456' }
-    ],
-    fechaCreacion: '2024-01-17T16:45:00',
-    fechaActualizacion: '2024-01-17T16:45:00',
-    creadoPor: 'Laura Herrera'
-  },
-  {
-    id: 4,
-    numeroVenta: 'VNT-004',
-    fecha: '2024-01-18',
-    clienteId: 4,
-    nombreCliente: 'Lucía Fernández',
-    telefonoCliente: '+57 315 888 9999',
-    emailCliente: 'lucia@email.com',
-    items: [
-      { id: 6, productoId: 6, nombreProducto: 'Líquido Premium 60ml', cantidad: 2, precioUnitario: 55000, subtotal: 110000 }
-    ],
-    subtotal: 110000,
-    descuento: 0,
-    impuestos: 20900,
-    total: 130900,
-    estado: 'aceptada',
-    metodoPago: 'Efectivo',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 4, fecha: '2024-01-18', monto: 130900, metodoPago: 'efectivo' }
-    ],
-    fechaCreacion: '2024-01-18T11:20:00',
-    fechaActualizacion: '2024-01-18T11:25:00',
-    creadoPor: 'Carlos Ruiz'
-  },
-  {
-    id: 5,
-    numeroVenta: 'VNT-005',
-    fecha: '2024-01-19',
-    clienteId: 5,
-    nombreCliente: 'Miguel Torres',
-    telefonoCliente: '+57 320 777 8888',
-    emailCliente: 'miguel@email.com',
-    items: [
-      { id: 7, productoId: 7, nombreProducto: 'Batería Externa 2600mAh', cantidad: 1, precioUnitario: 45000, subtotal: 45000 }
-    ],
-    subtotal: 45000,
-    descuento: 0,
-    impuestos: 8550,
-    total: 53550,
-    estado: 'anulada',
-    metodoPago: 'Transferencia',
-    tipoVenta: 'directa',
-    motivoAnulacion: 'Cliente canceló por demora en entrega',
-    pagos: [],
-    fechaCreacion: '2024-01-19T14:30:00',
-    fechaActualizacion: '2024-01-19T14:30:00',
-    creadoPor: 'Ana Méndez'
-  },
-  {
-    id: 6,
-    numeroVenta: 'VNT-006',
-    fecha: '2024-01-20',
-    clienteId: 6,
-    nombreCliente: 'Isabella Ramírez',
-    telefonoCliente: '+57 318 555 6666',
-    emailCliente: 'isabella@email.com',
-    items: [
-      { id: 8, productoId: 8, nombreProducto: 'Vape Desechable 5000 puffs', cantidad: 1, precioUnitario: 40000, subtotal: 40000 },
-      { id: 9, productoId: 3, nombreProducto: 'Líquido Frutal 30ml', cantidad: 2, precioUnitario: 35000, subtotal: 70000 }
-    ],
-    subtotal: 110000,
-    descuento: 5500,
-    impuestos: 19855,
-    total: 124355,
-    estado: 'aceptada',
-    metodoPago: 'Tarjeta de débito',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 11, fecha: '2024-01-20', monto: 124355, metodoPago: 'tarjeta', referencia: 'TDB-987654' }
-    ],
-    fechaCreacion: '2024-01-20T09:15:00',
-    fechaActualizacion: '2024-01-20T09:20:00',
-    creadoPor: 'Roberto Silva'
-  },
-  {
-    id: 7,
-    numeroVenta: 'VNT-007',
-    fecha: '2024-01-21',
-    clienteId: 7,
-    nombreCliente: 'Diego Morales',
-    telefonoCliente: '+57 310 444 5555',
-    emailCliente: 'diego@email.com',
-    items: [
-      { id: 10, productoId: 2, nombreProducto: 'Pod System Premium', cantidad: 2, precioUnitario: 80000, subtotal: 160000 },
-      { id: 11, productoId: 5, nombreProducto: 'Coil Resistencia 0.5ohm', cantidad: 4, precioUnitario: 12000, subtotal: 48000 }
-    ],
-    subtotal: 208000,
-    descuento: 10000,
-    impuestos: 37620,
-    total: 235620,
-    estado: 'aceptada',
-    metodoPago: 'Efectivo + Transferencia',
-    tipoVenta: 'pedido',
-    pedidoId: 2,
-    pagos: [
-      { id: 12, fecha: '2024-01-21', monto: 100000, metodoPago: 'efectivo' },
-      { id: 13, fecha: '2024-01-21', monto: 135620, metodoPago: 'transferencia', referencia: 'TRANS-456789' }
-    ],
-    fechaCreacion: '2024-01-21T13:45:00',
-    fechaActualizacion: '2024-01-21T13:50:00',
-    creadoPor: 'Patricia Moreno'
-  },
-  {
-    id: 8,
-    numeroVenta: 'VNT-008',
-    fecha: '2024-01-22',
-    clienteId: 8,
-    nombreCliente: 'Carolina Vega',
-    telefonoCliente: '+57 322 333 4444',
-    emailCliente: 'carolina@email.com',
-    items: [
-      { id: 12, productoId: 6, nombreProducto: 'Líquido Premium 60ml', cantidad: 3, precioUnitario: 55000, subtotal: 165000 }
-    ],
-    subtotal: 165000,
-    descuento: 0,
-    impuestos: 31350,
-    total: 196350,
-    estado: 'aceptada',
-    metodoPago: 'Transferencia',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 14, fecha: '2024-01-22', monto: 196350, metodoPago: 'transferencia', referencia: 'BANK-789456' }
-    ],
-    fechaCreacion: '2024-01-22T16:30:00',
-    fechaActualizacion: '2024-01-22T16:35:00',
-    creadoPor: 'Fernando Castro'
-  },
-  {
-    id: 9,
-    numeroVenta: 'VNT-009',
-    fecha: '2024-01-23',
-    clienteId: 9,
-    nombreCliente: 'Alejandro Torres',
-    telefonoCliente: '+57 316 222 3333',
-    emailCliente: 'alejandro@email.com',
-    items: [
-      { id: 13, productoId: 1, nombreProducto: 'Vape Desechable 2000 puffs', cantidad: 5, precioUnitario: 25000, subtotal: 125000 },
-      { id: 14, productoId: 7, nombreProducto: 'Batería Externa 2600mAh', cantidad: 1, precioUnitario: 45000, subtotal: 45000 }
-    ],
-    subtotal: 170000,
-    descuento: 8500,
-    impuestos: 30685,
-    total: 192185,
-    estado: 'anulada',
-    metodoPago: 'Efectivo',
-    tipoVenta: 'directa',
-    motivoAnulacion: 'Cliente solicitó cancelación por cambio de decisión',
-    pagos: [],
-    fechaCreacion: '2024-01-23T10:20:00',
-    fechaActualizacion: '2024-01-23T11:45:00',
-    creadoPor: 'Valentina López'
-  },
-  {
-    id: 10,
-    numeroVenta: 'VNT-010',
-    fecha: '2024-01-24',
-    clienteId: 10,
-    nombreCliente: 'Sebastián Cruz',
-    telefonoCliente: '+57 314 111 2222',
-    emailCliente: 'sebastian@email.com',
-    items: [
-      { id: 15, productoId: 4, nombreProducto: 'Mod Premium 80W', cantidad: 1, precioUnitario: 150000, subtotal: 150000 },
-      { id: 16, productoId: 6, nombreProducto: 'Líquido Premium 60ml', cantidad: 1, precioUnitario: 55000, subtotal: 55000 },
-      { id: 17, productoId: 5, nombreProducto: 'Coil Resistencia 0.5ohm', cantidad: 2, precioUnitario: 12000, subtotal: 24000 }
-    ],
-    subtotal: 229000,
-    descuento: 15000,
-    impuestos: 40660,
-    total: 254660,
-    estado: 'aceptada',
-    metodoPago: 'Tarjeta de crédito',
-    tipoVenta: 'pedido',
-    pedidoId: 3,
-    pagos: [
-      { id: 15, fecha: '2024-01-24', monto: 254660, metodoPago: 'tarjeta', referencia: 'TCC-654321' }
-    ],
-    fechaCreacion: '2024-01-24T14:10:00',
-    fechaActualizacion: '2024-01-24T14:15:00',
-    creadoPor: 'Gabriel Ramos'
-  },
-  {
-    id: 11,
-    numeroVenta: 'VNT-011',
-    fecha: '2024-01-25',
-    clienteId: 11,
-    nombreCliente: 'Natalia Herrera',
-    telefonoCliente: '+57 313 999 0000',
-    emailCliente: 'natalia@email.com',
-    items: [
-      { id: 18, productoId: 8, nombreProducto: 'Vape Desechable 5000 puffs', cantidad: 2, precioUnitario: 40000, subtotal: 80000 }
-    ],
-    subtotal: 80000,
-    descuento: 0,
-    impuestos: 15200,
-    total: 95200,
-    estado: 'aceptada',
-    metodoPago: 'Efectivo',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 16, fecha: '2024-01-25', monto: 95200, metodoPago: 'efectivo' }
-    ],
-    fechaCreacion: '2024-01-25T11:30:00',
-    fechaActualizacion: '2024-01-25T11:35:00',
-    creadoPor: 'Ricardo Moreno'
-  },
-  {
-    id: 12,
-    numeroVenta: 'VNT-012',
-    fecha: '2024-01-26',
-    clienteId: 12,
-    nombreCliente: 'Camila Mendoza',
-    telefonoCliente: '+57 312 888 7777',
-    emailCliente: 'camila@email.com',
-    items: [
-      { id: 19, productoId: 3, nombreProducto: 'Líquido Frutal 30ml', cantidad: 4, precioUnitario: 35000, subtotal: 140000 },
-      { id: 20, productoId: 1, nombreProducto: 'Vape Desechable 2000 puffs', cantidad: 1, precioUnitario: 25000, subtotal: 25000 }
-    ],
-    subtotal: 165000,
-    descuento: 8250,
-    impuestos: 29782,
-    total: 186532,
-    estado: 'aceptada',
-    metodoPago: 'Transferencia',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 17, fecha: '2024-01-26', monto: 186532, metodoPago: 'transferencia', referencia: 'WIRE-123789' }
-    ],
-    fechaCreacion: '2024-01-26T15:45:00',
-    fechaActualizacion: '2024-01-26T15:50:00',
-    creadoPor: 'Alejandro Ruiz'
-  },
-  {
-    id: 13,
-    numeroVenta: 'VNT-013',
-    fecha: '2024-01-27',
-    clienteId: 13,
-    nombreCliente: 'Andrés Vargas',
-    telefonoCliente: '+57 311 666 5555',
-    emailCliente: 'andres@email.com',
-    items: [
-      { id: 21, productoId: 7, nombreProducto: 'Batería Externa 2600mAh', cantidad: 2, precioUnitario: 45000, subtotal: 90000 },
-      { id: 22, productoId: 5, nombreProducto: 'Coil Resistencia 0.5ohm', cantidad: 6, precioUnitario: 12000, subtotal: 72000 }
-    ],
-    subtotal: 162000,
-    descuento: 12000,
-    impuestos: 28500,
-    total: 178500,
-    estado: 'anulada',
-    metodoPago: 'Tarjeta de débito',
-    tipoVenta: 'directa',
-    motivoAnulacion: 'Producto defectuoso reportado por el cliente',
-    pagos: [],
-    fechaCreacion: '2024-01-27T12:20:00',
-    fechaActualizacion: '2024-01-27T16:30:00',
-    creadoPor: 'Carmen López'
-  },
-  {
-    id: 14,
-    numeroVenta: 'VNT-014',
-    fecha: '2024-01-28',
-    clienteId: 14,
-    nombreCliente: 'Valeria Castro',
-    telefonoCliente: '+57 319 444 3333',
-    emailCliente: 'valeria@email.com',
-    items: [
-      { id: 23, productoId: 2, nombreProducto: 'Pod System Premium', cantidad: 1, precioUnitario: 80000, subtotal: 80000 },
-      { id: 24, productoId: 3, nombreProducto: 'Líquido Frutal 30ml', cantidad: 3, precioUnitario: 35000, subtotal: 105000 }
-    ],
-    subtotal: 185000,
-    descuento: 9250,
-    impuestos: 33392,
-    total: 209142,
-    estado: 'aceptada',
-    metodoPago: 'Efectivo + Tarjeta',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 18, fecha: '2024-01-28', monto: 100000, metodoPago: 'efectivo' },
-      { id: 19, fecha: '2024-01-28', monto: 109142, metodoPago: 'tarjeta', referencia: 'TJT-987123' }
-    ],
-    fechaCreacion: '2024-01-28T09:40:00',
-    fechaActualizacion: '2024-01-28T09:45:00',
-    creadoPor: 'Miguel Castro'
-  },
-  {
-    id: 15,
-    numeroVenta: 'VNT-015',
-    fecha: '2024-01-29',
-    clienteId: 15,
-    nombreCliente: 'Joaquín Silva',
-    telefonoCliente: '+57 317 222 1111',
-    emailCliente: 'joaquin@email.com',
-    items: [
-      { id: 25, productoId: 6, nombreProducto: 'Líquido Premium 60ml', cantidad: 2, precioUnitario: 55000, subtotal: 110000 },
-      { id: 26, productoId: 8, nombreProducto: 'Vape Desechable 5000 puffs', cantidad: 1, precioUnitario: 40000, subtotal: 40000 }
-    ],
-    subtotal: 150000,
-    descuento: 0,
-    impuestos: 28500,
-    total: 178500,
-    estado: 'aceptada',
-    metodoPago: 'Transferencia',
-    tipoVenta: 'directa',
-    pagos: [
-      { id: 20, fecha: '2024-01-29', monto: 178500, metodoPago: 'transferencia', referencia: 'BANK-456123' }
-    ],
-    fechaCreacion: '2024-01-29T13:15:00',
-    fechaActualizacion: '2024-01-29T13:20:00',
-    creadoPor: 'Isabella Torres'
-  }
-];
+// Datos simulados eliminados para usar API real
+const ventasIniciales: Venta[] = [];
 
 export const Ventas: React.FC = () => {
-  // Inicialización de ventas desde LocalStorage o datos iniciales
-  const [ventas, setVentas] = useState<Venta[]>(() => {
-    const savedVentas = typeof window !== 'undefined' ? localStorage.getItem('vaper_web_ventas') : null;
-    return savedVentas ? JSON.parse(savedVentas) : ventasIniciales;
-  });
+  // Inicialización de ventas vacía para cargar desde API
+  const [ventas, setVentas] = useState<Venta[]>([]);
+  const [isLoadingVentas, setIsLoadingVentas] = useState(false);
 
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
   const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
@@ -618,10 +227,7 @@ export const Ventas: React.FC = () => {
   const [isLoadingPedidos, setIsLoadingPedidos] = useState(false);
   const [selectedPedidoId, setSelectedPedidoId] = useState<string>('');
 
-  // Guardar ventas en LocalStorage cada vez que cambien
-  useEffect(() => {
-    localStorage.setItem('vaper_web_ventas', JSON.stringify(ventas));
-  }, [ventas]);
+  // Eliminado LocalStorage sync para usar API real
 
   // Estados de paginación mejorados
   const [currentPage, setCurrentPage] = useState(1);
@@ -644,6 +250,8 @@ export const Ventas: React.FC = () => {
   const [cantidad, setCantidad] = useState(1);
   const [openClientes, setOpenClientes] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [openProductos, setOpenProductos] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
 
   // Filtrado de clientes para el buscador en diálogo de nueva venta
   const clientesFiltradosParaBusqueda = useMemo(() => {
@@ -654,6 +262,15 @@ export const Ventas: React.FC = () => {
       cliente.numeroDocumento.toLowerCase().includes(term)
     );
   }, [clientesDisponibles, clientSearchTerm]);
+
+  // Filtrado de productos para el buscador
+  const productosFiltradosParaBusqueda = useMemo(() => {
+    const term = productSearchTerm.toLowerCase().trim();
+    if (!term) return productosDisponibles;
+    return productosDisponibles.filter(producto =>
+      producto.nombre.toLowerCase().includes(term)
+    );
+  }, [productosDisponibles, productSearchTerm]);
 
   // Estados para pagos
   const [newPago, setNewPago] = useState({
@@ -686,9 +303,11 @@ export const Ventas: React.FC = () => {
       }));
 
       setProductosDisponibles(productosMapeados);
+      return productosMapeados;
     } catch (error) {
       console.error('Error fetching productos:', error);
       toast.error('No se pudieron cargar los productos de la API');
+      return [];
     } finally {
       setIsLoadingProductos(false);
     }
@@ -705,19 +324,82 @@ export const Ventas: React.FC = () => {
       // Filtrar usuarios de prueba o sistema (IDs 1 y 2)
       const clientesFiltrados = data.filter((u: Usuario) => u.id !== 1 && u.id !== 2);
       setClientesDisponibles(clientesFiltrados);
+      return clientesFiltrados;
     } catch (error) {
       console.error('Error fetching clientes:', error);
       toast.error('No se pudieron cargar los clientes de la API');
+      return [];
     } finally {
       setIsLoadingClientes(false);
     }
   };
 
-  // Efecto para carga inicial de productos y clientes
+  // Cargar datos iniciales
   useEffect(() => {
-    fetchProductos();
-    fetchClientes();
+    const loadData = async () => {
+      setIsLoadingVentas(true);
+      const [prods, cats] = await Promise.all([fetchProductos(), fetchClientes()]);
+      await fetchVentas(prods, cats);
+      setIsLoadingVentas(false);
+    };
+    loadData();
   }, []);
+
+  const fetchVentas = async (currentProds?: Producto[], currentClientes?: Usuario[]) => {
+    try {
+      const [ventasRaw, detallesRaw] = await Promise.all([
+        getVentaPedidos(),
+        getDetalleVentaPedidos()
+      ]);
+
+      const prods = currentProds || productosDisponibles;
+      const clients = currentClientes || clientesDisponibles;
+
+      const ventasMapeadas: Venta[] = ventasRaw
+        .filter((v: any) => !(v.tipoVenta === 'Pedido' && v.estadoId === 2))
+        .map(v => {
+          const cliente = clients.find(c => c.id === v.usuarioId);
+          const detallesVenta = detallesRaw.filter(d => d.ventaPedidoId === v.id);
+
+          return {
+            id: v.id || 0,
+            numeroVenta: `VNT-${String(v.id).padStart(3, '0')}`,
+            fecha: v.fechaCreacion?.split('T')[0] || new Date().toISOString().split('T')[0],
+            clienteId: v.usuarioId,
+            nombreCliente: cliente ? `${cliente.nombres} ${cliente.apellidos}` : 'Cliente Desconocido',
+            telefonoCliente: cliente?.telefono || '',
+            emailCliente: cliente?.correo || '',
+            items: detallesVenta.map(d => {
+              const prod = prods.find(p => p.id === d.productoId);
+              return {
+                id: d.id || 0,
+                productoId: d.productoId,
+                nombreProducto: prod?.nombre || 'Producto Desconocido',
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario,
+                subtotal: d.subtotal
+              };
+            }),
+            subtotal: v.subtotal,
+            descuento: 0,
+            total: v.total,
+            estado: v.estadoId === 1 ? 'aceptada' : 'anulada',
+            metodoPago: v.metodoPago,
+            tipoVenta: v.tipoVenta === 'Venta' ? 'directa' : 'pedido',
+            pedidoId: v.id,
+            fechaCreacion: v.fechaCreacion || '',
+            fechaActualizacion: v.fechaCreacion || '',
+            creadoPor: 'Sistema',
+            pagos: []
+          };
+        });
+
+      setVentas(ventasMapeadas);
+    } catch (error) {
+      console.error('Error fetching ventas:', error);
+      toast.error('No se pudieron cargar las ventas de la API');
+    }
+  };
 
   // Cargar productos al abrir el diálogo de creación
   useEffect(() => {
@@ -909,7 +591,62 @@ export const Ventas: React.FC = () => {
       }
 
       // (En una app real, aquí se enviaría el POST de la venta al backend)
+      // --- INTEGRACIÓN CON LA API PARA VENTA DIRECTA ---
+      if (formData.tipoVenta === 'directa') {
+        try {
+          const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
+          const montoDescuento = (subtotal * formData.descuento) / 100;
+          const total = subtotal - montoDescuento;
 
+          // 1. Crear la cabecera del VentaPedido
+          const payloadVenta: any = {
+            usuarioId: parseInt(formData.clienteId) || 3, // ID 3 como fallback si no hay cliente (ajustar según DB)
+            estadoId: 1, // 1 = Entregado/Completado para venta directa
+            metodoPago: formData.metodoPago,
+            direccionEntrega: "Venta Presencial",
+            ciudadEntrega: "Local",
+            departamentoEntrega: "Local",
+            barrio: "Local",
+            observaciones: "Venta directa desde caja",
+            subtotal: subtotal,
+            envio: 0,
+            total: total,
+            tipoVenta: "Venta" // <--- REVERTIDO: Ocultar de Pedidos usando el tipo estándar
+          };
+
+          const responseVenta = await createVentaPedido(payloadVenta);
+          const createdVentaId = responseVenta.id || responseVenta.Id || responseVenta.ID;
+
+          if (createdVentaId) {
+            // 2. Crear los detalles y actualizar stock
+            for (const item of formData.items) {
+              await createDetalleVentaPedido({
+                ventaPedidoId: createdVentaId,
+                productoId: item.productoId,
+                cantidad: item.cantidad,
+                precioUnitario: item.precioUnitario,
+                subtotal: item.subtotal
+              });
+
+              // Actualizar stock para venta directa
+              const getRes = await fetch(`/api/Productoes/${item.productoId}`);
+              if (getRes.ok) {
+                const pOriginal = await getRes.json();
+                await fetch(`/api/Productoes/${item.productoId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - item.cantidad })
+                });
+              }
+            }
+          }
+        } catch (apiError) {
+          console.error("Error al guardar venta en la API:", apiError);
+          // Continuamos para guardar localmente aunque falle la API (o podrías lanzar error)
+        }
+      }
+
+      const today = new Date().toISOString().split('T')[0];
       const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
       const montoDescuento = (subtotal * formData.descuento) / 100;
       const total = subtotal - montoDescuento;
@@ -917,7 +654,7 @@ export const Ventas: React.FC = () => {
       const nuevaVenta: Venta = {
         id: Math.max(...ventas.map(v => v.id)) + 1,
         numeroVenta: `VNT-${String(ventas.length + 1).padStart(3, '0')}`,
-        fecha: formData.fecha,
+        fecha: today,
         clienteId: parseInt(formData.clienteId) || 0,
         nombreCliente: formData.nombreCliente,
         telefonoCliente: '', // Campo eliminado, valor por defecto
@@ -935,7 +672,7 @@ export const Ventas: React.FC = () => {
         pagos: [
           {
             id: 1,
-            fecha: formData.fecha,
+            fecha: today,
             monto: total,
             metodoPago: formData.metodoPago === 'Efectivo' ? 'efectivo' :
               formData.metodoPago === 'Tarjeta' ? 'tarjeta' :
@@ -947,7 +684,8 @@ export const Ventas: React.FC = () => {
         creadoPor: 'Usuario Actual'
       };
 
-      setVentas([...ventas, nuevaVenta]);
+      // Refrescar lista de ventas desde la API
+      await fetchVentas();
       setIsCreateDialogOpen(false);
       resetForm();
       toast.success('Venta creada e inventario actualizado con éxito', { id: loadingToast });
@@ -1203,6 +941,27 @@ export const Ventas: React.FC = () => {
     }
   };
 
+  const handleTipoVentaChange = async (value: 'directa' | 'pedido') => {
+    if (value === formData.tipoVenta) return;
+
+    // Restaurar stock actual si hay items
+    if (formData.items.length > 0) {
+      await handleRestoreStock();
+    }
+
+    // Resetear datos relacionados (manteniendo el cliente)
+    setFormData(prev => ({
+      ...prev,
+      tipoVenta: value,
+      fecha: new Date().toISOString().split('T')[0],
+      items: [],
+      pedidoId: '',
+      metodoPago: '',
+      descuento: 0
+    }));
+    setSelectedPedidoId('');
+  };
+
   // Funciones auxiliares - MODIFICADO: sin vendedor, con tipoVenta y descuento
   const resetForm = () => {
     setFormData({
@@ -1219,16 +978,19 @@ export const Ventas: React.FC = () => {
 
   const getEstadoBadge = (estado: string) => {
     const variants = {
-      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'text-green-600' },
-      'anulada': { variant: 'destructive' as const, icon: <X className="h-3 w-3" />, color: 'text-red-600' }
+      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90' },
+      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700' }
     };
 
     const config = variants[estado as keyof typeof variants] || variants.aceptada;
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
+      <Badge
+        variant={config.variant}
+        className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
+      >
         {config.icon}
-        {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        {estado}
       </Badge>
     );
   };
@@ -1244,150 +1006,133 @@ export const Ventas: React.FC = () => {
   // Función para generar y descargar PDF de la venta
   const downloadVentaPDF = (venta: Venta) => {
     try {
-      // Crear contenido HTML de la venta para el PDF
-      const pdfContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Venta ${venta.numeroVenta}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-            .company-name { font-size: 24px; font-weight: bold; color: #333; }
-            .document-type { font-size: 18px; margin-top: 10px; color: #666; }
-            .info-section { margin: 20px 0; }
-            .info-row { display: flex; justify-content: space-between; margin: 8px 0; }
-            .label { font-weight: bold; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            .totals { margin-top: 20px; text-align: right; }
-            .total-row { display: flex; justify-content: space-between; margin: 5px 0; }
-            .final-total { font-size: 18px; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; }
-            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
-            .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-            .status-pagada { background-color: #d4edda; color: #155724; }
-            .status-anulada { background-color: #f8d7da; color: #721c24; }
-            .signature-section { margin-top: 60px; display: flex; justify-content: space-between; }
-            .signature-box { border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="company-name">VAPELAND COMPANY</div>
-            <div class="document-type">FACTURA DE VENTA</div>
-          </div>
-          
-          <div class="info-section">
-            <div class="info-row">
-              <span><span class="label">Número de Venta:</span> ${venta.numeroVenta}</span>
-              <span><span class="label">Fecha:</span> ${formatDate(venta.fecha)}</span>
-            </div>
-            <div class="info-row">
-              <span><span class="label">Cliente:</span> ${venta.nombreCliente}</span>
-              <span><span class="label">Estado:</span> <span class="status-badge status-${venta.estado}">${venta.estado.toUpperCase()}</span></span>
-            </div>
-            <div class="info-row">
-              <span><span class="label">Teléfono:</span> ${venta.telefonoCliente}</span>
-              <span><span class="label">Email:</span> ${venta.emailCliente}</span>
-            </div>
-            <div class="info-row">
-              <span><span class="label">Tipo de Venta:</span> ${venta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}</span>
-              <span><span class="label">Método de Pago:</span> ${venta.metodoPago}</span>
-            </div>
-            ${venta.motivoAnulacion ? `<div class="info-row"><span><span class="label">Motivo Anulación:</span> ${venta.motivoAnulacion}</span></div>` : ''}
-          </div>
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
 
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio Unitario</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${venta.items.map(item => `
-                <tr>
-                  <td>${item.nombreProducto}</td>
-                  <td>${item.cantidad}</td>
-                  <td>$${item.precioUnitario.toLocaleString()}</td>
-                  <td>$${item.subtotal.toLocaleString()}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(33, 33, 33);
+      doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+      y += 10;
+      doc.setFontSize(16);
+      doc.setTextColor(100, 100, 100);
+      doc.text("FACTURA DE VENTA", pageWidth / 2, y, { align: "center" });
 
-          <div class="totals">
-            ${venta.descuento > 0 ? `
-            <div class="total-row">
-              <span class="label">Descuento:</span>
-              <span>-$${venta.descuento.toLocaleString()}</span>
-            </div>
-            ` : ''}
-            <div class="total-row final-total">
-              <span class="label">TOTAL:</span>
-              <span>$${venta.total.toLocaleString()}</span>
-            </div>
-          </div>
+      y += 15;
+      doc.setDrawColor(33, 33, 33);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
 
-          ${venta.pagos.length > 0 ? `
-          <div class="info-section">
-            <h3>Información de Pagos</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Método</th>
-                  <th>Monto</th>
-                  <th>Referencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${venta.pagos.map(pago => `
-                  <tr>
-                    <td>${formatDate(pago.fecha)}</td>
-                    <td>${pago.metodoPago.charAt(0).toUpperCase() + pago.metodoPago.slice(1)}</td>
-                    <td>$${pago.monto.toLocaleString()}</td>
-                    <td>${pago.referencia || 'N/A'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-          ` : ''}
+      y += 10;
+      doc.setFontSize(11);
+      doc.setTextColor(33, 33, 33);
 
-          <div class="signature-section">
-            <div class="signature-box">
-              <div>Firma del Cliente</div>
-            </div>
-            <div class="signature-box">
-              <div>Firma del Vendedor</div>
-            </div>
-          </div>
+      // Info Section
+      doc.setFont("helvetica", "bold");
+      doc.text("Número de Venta:", margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(venta.numeroVenta, margin + 35, y);
 
-          <div class="footer">
-            <p>Generado el ${formatDate(new Date())} por ${venta.creadoPor}</p>
-            <p>VAPELAND COMPANY - Sistema de Gestión de Ventas</p>
-          </div>
-        </body>
-        </html>
-      `;
+      doc.setFont("helvetica", "bold");
+      doc.text("Fecha:", pageWidth - margin - 50, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(formatDate(venta.fecha), pageWidth - margin - 35, y);
 
-      // Crear blob y descargar
-      const blob = new Blob([pdfContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `venta-${venta.numeroVenta}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Cliente:", margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(venta.nombreCliente, margin + 35, y);
 
-      toast.success(`PDF de la venta ${venta.numeroVenta} descargado exitosamente`);
+      doc.setFont("helvetica", "bold");
+      doc.text("Estado:", pageWidth - margin - 50, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(venta.estado.toUpperCase(), pageWidth - margin - 35, y);
+
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Tipo de Venta:", margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(venta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa', margin + 35, y);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Método Pago:", pageWidth - margin - 50, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(venta.metodoPago, pageWidth - margin - 23, y);
+
+      if (venta.motivoAnulacion) {
+        y += 7;
+        doc.setFont("helvetica", "bold");
+        doc.text("Motivo Anulación:", margin, y);
+        doc.setFont("helvetica", "normal");
+        doc.text(venta.motivoAnulacion, margin + 35, y);
+      }
+
+      y += 15;
+
+      // Table Header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.text("Producto", margin + 5, y + 7);
+      doc.text("Cant", margin + 100, y + 7);
+      doc.text("Precio", margin + 120, y + 7);
+      doc.text("Subtotal", margin + 150, y + 7);
+
+      y += 10;
+      doc.setFont("helvetica", "normal");
+
+      // Table Content
+      venta.items.forEach((item) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(item.nombreProducto.substring(0, 45), margin + 5, y + 7);
+        doc.text(String(item.cantidad), margin + 100, y + 7);
+        doc.text(`$${item.precioUnitario.toLocaleString()}`, margin + 120, y + 7);
+        doc.text(`$${item.subtotal.toLocaleString()}`, margin + 150, y + 7);
+        y += 8;
+      });
+
+      y += 5;
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Totals
+      doc.setFont("helvetica", "bold");
+      if (venta.descuento > 0) {
+        doc.text("Descuento:", margin + 120, y);
+        doc.text(`-$${venta.descuento.toLocaleString()}`, margin + 150, y);
+        y += 7;
+      }
+      doc.setFontSize(14);
+      doc.text("TOTAL:", margin + 120, y);
+      doc.text(`$${venta.total.toLocaleString()}`, margin + 150, y);
+
+      y += 30;
+      // Signatures
+      if (y > 250) {
+        doc.addPage();
+        y = 40;
+      }
+      doc.setFontSize(10);
+      doc.line(margin, y, margin + 60, y);
+      doc.text("Firma del Cliente", margin, y + 5);
+
+      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+      doc.text("Firma del Vendedor", pageWidth - margin - 60, y + 5);
+
+      y += 30;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generado el ${formatDate(new Date())} por ${venta.creadoPor}`, pageWidth / 2, y, { align: "center" });
+      doc.text("Vaper One - Sistema de Gestión de Ventas", pageWidth / 2, y + 4, { align: "center" });
+
+      doc.save(`venta-${venta.numeroVenta}.pdf`);
+      toast.success(`PDF de la venta ${venta.numeroVenta} generado exitosamente`);
     } catch (error) {
       toast.error('Error al generar el PDF');
       console.error('Error generating PDF:', error);
@@ -1500,7 +1245,7 @@ export const Ventas: React.FC = () => {
             <TableBody>
               {currentVentas.map((venta) => (
                 <TableRow key={venta.id}>
-                  <TableCell className="font-medium text-blue-600">#{venta.id}</TableCell>
+                  <TableCell className="font-medium text-black">{venta.numeroVenta}</TableCell>
                   <TableCell>{venta.nombreCliente}</TableCell>
                   <TableCell>
                     <Badge variant={venta.tipoVenta === 'pedido' ? 'secondary' : 'outline'}>
@@ -1509,14 +1254,7 @@ export const Ventas: React.FC = () => {
                   </TableCell>
                   <TableCell>${venta.total.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge
-                      className={`${venta.estado === "aceptada"
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                        }`}
-                    >
-                      {venta.estado === "aceptada" ? "Aceptada" : "Anulada"}
-                    </Badge>
+                    {getEstadoBadge(venta.estado)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -1589,21 +1327,118 @@ export const Ventas: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4 sm:space-y-5">
-              {/* Fecha y Tipo de Venta */}
+              {/* Cliente y Tipo de Venta */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fecha" className="text-sm">Fecha</Label>
-                  <Input
-                    id="fecha"
-                    type="date"
-                    value={formData.fecha}
-                    onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
-                    className="w-full"
-                  />
+                <div className="space-y-2 relative">
+                  <Label htmlFor="clienteSearch" className="text-sm">Cliente</Label>
+                  <div className="relative group">
+                    {formData.clienteId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-full z-10"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, clienteId: '', nombreCliente: '' }));
+                          setClientSearchTerm('');
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Input
+                      id="clienteSearch"
+                      placeholder="Buscar por nombre o documento..."
+                      className={cn(
+                        "h-10 transition-all border-muted-foreground/20 focus:border-primary focus:ring-1 focus:ring-primary/20",
+                        formData.clienteId ? "pl-10 bg-primary/[0.02]" : "px-4"
+                      )}
+                      value={formData.clienteId && !clientSearchTerm
+                        ? (clientesDisponibles.find(c => c.id.toString() === formData.clienteId)
+                          ? `${clientesDisponibles.find(c => c.id.toString() === formData.clienteId)?.nombres} ${clientesDisponibles.find(c => c.id.toString() === formData.clienteId)?.apellidos}`
+                          : clientSearchTerm)
+                        : clientSearchTerm
+                      }
+                      onChange={(e) => {
+                        setClientSearchTerm(e.target.value);
+                        setOpenClientes(true);
+                        if (formData.clienteId) {
+                          setFormData(prev => ({ ...prev, clienteId: '', nombreCliente: '' }));
+                        }
+                      }}
+                      onFocus={() => setOpenClientes(true)}
+                    />
+                  </div>
+
+                  {openClientes && (clientSearchTerm || isLoadingClientes) && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-2xl max-h-72 overflow-hidden border-muted-foreground/20 animate-in fade-in zoom-in-95 duration-200">
+                      {isLoadingClientes ? (
+                        <div className="flex items-center justify-center p-6 text-muted-foreground">
+                          <Clock className="h-4 w-4 animate-spin mr-3 text-primary" />
+                          <span className="text-sm font-medium">Buscando clientes...</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col h-full">
+                          <div className="p-2 border-b bg-muted/30">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                              Resultados de búsqueda
+                            </span>
+                          </div>
+                          <div className="overflow-y-auto p-1 max-h-60 custom-scrollbar">
+                            {clientesFiltradosParaBusqueda.length > 0 ? (
+                              clientesFiltradosParaBusqueda.map((cliente) => (
+                                <button
+                                  key={cliente.id}
+                                  className="w-full flex items-center gap-3 py-2.5 px-3 hover:bg-primary/5 rounded-md text-left transition-all group group-hover:pl-4"
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      clienteId: cliente.id.toString(),
+                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
+                                    });
+                                    setSelectedPedidoId('');
+                                    setClientSearchTerm('');
+                                    setOpenClientes(false);
+                                  }}
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                                    <User className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors italic">
+                                        {cliente.nombres} {cliente.apellidos}
+                                      </span>
+                                      {formData.clienteId === cliente.id.toString() && (
+                                        <Check className="h-3 w-3 text-primary shrink-0" />
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                      <span className="text-[11px] font-medium bg-muted px-1.5 rounded leading-tight border border-border/50">
+                                        Doc: {cliente.numeroDocumento}
+                                      </span>
+                                      <span className="text-[11px] text-muted-foreground italic">
+                                        Tel: {cliente.telefono}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-8 text-center flex flex-col items-center gap-2">
+                                <Search className="h-8 w-8 text-muted-foreground/30" />
+                                <p className="text-sm font-medium text-muted-foreground">No se encontraron clientes</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="tipoVenta" className="text-sm">Tipo de Venta</Label>
-                  <Select value={formData.tipoVenta} onValueChange={(value: 'directa' | 'pedido') => setFormData({ ...formData, tipoVenta: value })}>
+                  <Select value={formData.tipoVenta} onValueChange={handleTipoVentaChange}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -1613,81 +1448,6 @@ export const Ventas: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* Cliente */}
-              <div className="space-y-2">
-                <Label htmlFor="clienteId" className="text-sm">Cliente</Label>
-                <Popover open={openClientes} onOpenChange={setOpenClientes}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openClientes}
-                      className="w-full justify-between font-normal bg-background border-input"
-                    >
-                      {formData.clienteId
-                        ? clientesDisponibles.find(
-                          (cliente) => cliente.id.toString() === formData.clienteId
-                        )
-                          ? `${clientesDisponibles.find((c) => c.id.toString() === formData.clienteId)?.nombres} ${clientesDisponibles.find((c) => c.id.toString() === formData.clienteId)?.apellidos}`
-                          : "Seleccionar cliente"
-                        : "Seleccionar cliente"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Buscar por nombre o documento..."
-                        className="h-9"
-                        value={clientSearchTerm}
-                        onValueChange={setClientSearchTerm}
-                      />
-                      <CommandList>
-                        {isLoadingClientes ? (
-                          <div className="flex items-center justify-center p-4">
-                            <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
-                            <span className="text-sm">Cargando clientes...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <CommandEmpty>No se encontraron clientes.</CommandEmpty>
-                            <CommandGroup>
-                              {clientesFiltradosParaBusqueda.map((cliente) => (
-                                <CommandItem
-                                  key={cliente.id}
-                                  value={`${cliente.nombres} ${cliente.apellidos} ${cliente.numeroDocumento}`}
-                                  onSelect={() => {
-                                    setFormData({
-                                      ...formData,
-                                      clienteId: cliente.id.toString(),
-                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
-                                    });
-                                    setSelectedPedidoId(''); // Resetear pedido al cambiar cliente
-                                    setClientSearchTerm(''); // Limpiar búsqueda
-                                    setOpenClientes(false);
-                                  }}
-                                  className="flex flex-col items-start py-2 px-3"
-                                >
-                                  <div className="flex items-center w-full justify-between">
-                                    <span className="font-medium">{cliente.nombres} {cliente.apellidos}</span>
-                                    {formData.clienteId === cliente.id.toString() && (
-                                      <Check className="h-4 w-4 text-primary" />
-                                    )}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    Doc: {cliente.numeroDocumento} | Tel: {cliente.telefono}
-                                  </span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
               </div>
 
               {/* Selector de Pedido Pendiente (Solo para Tipo Pedido) */}
@@ -1763,39 +1523,118 @@ export const Ventas: React.FC = () => {
               {formData.tipoVenta === 'directa' && (
                 <div className="space-y-3">
                   <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-end">
+                    <div className="space-y-2 relative">
                       <Label className="text-sm">Producto</Label>
-                      <Select value={selectedProducto} onValueChange={setSelectedProducto}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccionar producto" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <div className="relative group">
+                        {selectedProducto && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-full z-10"
+                            onClick={() => {
+                              setSelectedProducto('');
+                              setProductSearchTerm('');
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Input
+                          placeholder="Escribir nombre del producto..."
+                          className={cn(
+                            "h-10 transition-all border-muted-foreground/20 focus:border-primary focus:ring-1 focus:ring-primary/20",
+                            selectedProducto ? "pl-10 bg-primary/[0.02]" : "px-4"
+                          )}
+                          value={selectedProducto && !productSearchTerm
+                            ? (productosDisponibles.find(p => p.id.toString() === selectedProducto)?.nombre || productSearchTerm)
+                            : productSearchTerm
+                          }
+                          onChange={(e) => {
+                            setProductSearchTerm(e.target.value);
+                            setOpenProductos(true);
+                            if (selectedProducto) {
+                              setSelectedProducto('');
+                            }
+                          }}
+                          onFocus={() => setOpenProductos(true)}
+                        />
+                      </div>
+
+                      {openProductos && (productSearchTerm || isLoadingProductos) && (
+                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-2xl max-h-72 overflow-hidden border-muted-foreground/20 animate-in fade-in zoom-in-95 duration-200">
                           {isLoadingProductos ? (
-                            <div className="flex items-center justify-center p-4">
-                              <Clock className="h-4 w-4 animate-spin mr-2 text-primary" />
-                              <span className="text-sm">Cargando productos...</span>
-                            </div>
-                          ) : productosDisponibles.length === 0 ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              No hay productos disponibles
+                            <div className="flex items-center justify-center p-6 text-muted-foreground">
+                              <Clock className="h-4 w-4 animate-spin mr-3 text-primary" />
+                              <span className="text-sm font-medium">Buscando productos...</span>
                             </div>
                           ) : (
-                            productosDisponibles.map(producto => (
-                              <SelectItem key={producto.id} value={producto.id.toString()} disabled={producto.stock <= 0}>
-                                <div className="flex justify-between w-full items-center">
-                                  <span>{producto.nombre} - ${producto.precio.toLocaleString()}</span>
-                                  <Badge variant={producto.stock > 5 ? "secondary" : "destructive"} className="ml-2">
-                                    {producto.stock} disp.
-                                  </Badge>
-                                </div>
-                              </SelectItem>
-                            ))
+                            <div className="flex flex-col h-full">
+                              <div className="p-2 border-b bg-muted/30 text-center">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                                  Productos Disponibles
+                                </span>
+                              </div>
+                              <div className="overflow-y-auto p-1 max-h-60 custom-scrollbar">
+                                {productosFiltradosParaBusqueda.length > 0 ? (
+                                  productosFiltradosParaBusqueda.map((producto) => (
+                                    <button
+                                      key={producto.id}
+                                      disabled={producto.stock <= 0}
+                                      className={cn(
+                                        "w-full flex items-center gap-3 py-2.5 px-3 rounded-md text-left transition-all group",
+                                        producto.stock <= 0
+                                          ? "opacity-50 cursor-not-allowed bg-muted/20"
+                                          : "hover:bg-primary/5 group-hover:pl-4"
+                                      )}
+                                      onClick={() => {
+                                        setSelectedProducto(producto.id.toString());
+                                        setProductSearchTerm('');
+                                        setOpenProductos(false);
+                                      }}
+                                    >
+                                      <div className={cn(
+                                        "h-8 w-8 rounded-md flex items-center justify-center shrink-0 transition-colors",
+                                        producto.stock <= 0 ? "bg-muted" : "bg-primary/10 group-hover:bg-primary/20"
+                                      )}>
+                                        <FileText className={cn("h-4 w-4", producto.stock <= 0 ? "text-muted-foreground" : "text-primary")} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className={cn(
+                                            "font-semibold text-sm truncate transition-colors italic",
+                                            producto.stock > 0 && "group-hover:text-primary"
+                                          )}>
+                                            {producto.nombre}
+                                          </span>
+                                          <span className="font-bold text-xs text-primary shrink-0">
+                                            ${producto.precio.toLocaleString()}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <Badge
+                                            variant={producto.stock > 5 ? "secondary" : "destructive"}
+                                            className="text-[8px] px-1 py-0 h-4 min-h-0 flex items-center"
+                                          >
+                                            {producto.stock} disp.
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="p-8 text-center flex flex-col items-center gap-2">
+                                    <Search className="h-8 w-8 text-muted-foreground/30" />
+                                    <p className="text-sm font-medium text-muted-foreground">No se encontraron productos</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
                       <div className="flex-1 space-y-2">
                         <Label className="text-sm">Cantidad</Label>
                         <Input
@@ -1806,16 +1645,14 @@ export const Ventas: React.FC = () => {
                           className="w-full"
                         />
                       </div>
-                      <div className="flex items-end">
-                        <Button
-                          onClick={agregarProducto}
-                          disabled={!selectedProducto}
-                          className="bg-gray-600 hover:bg-gray-700 w-full sm:w-auto px-6"
-                        >
-                          <Plus className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Agregar</span>
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={agregarProducto}
+                        disabled={!selectedProducto}
+                        className="bg-gray-600 hover:bg-gray-700 w-full sm:w-auto px-6"
+                      >
+                        <Plus className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Agregar</span>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1827,7 +1664,7 @@ export const Ventas: React.FC = () => {
                   <h4 className="text-sm sm:text-base font-medium">Productos Seleccionados</h4>
 
                   {/* Lista con scroll independiente para móvil */}
-                  <div className="space-y-2 max-h-[200px] sm:max-h-[250px] overflow-y-auto pr-2">
+                  <div className="space-y-2">
                     {formData.items.map((item) => (
                       <div key={item.id} className="flex items-start sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-muted/30 rounded-lg border">
                         <div className="flex-1 min-w-0">
@@ -1997,9 +1834,9 @@ export const Ventas: React.FC = () => {
                 <Separator />
 
                 {/* Resumen financiero */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4>Resumen Financiero</h4>
+                <div className="space-y-4">
+                  <div className="max-w-md ml-auto">
+                    <h4 className="border-b pb-2 mb-3">Resumen Financiero</h4>
                     <div className="space-y-2">
                       {selectedVenta.descuento > 0 && (
                         <div className="flex justify-between">
@@ -2012,29 +1849,6 @@ export const Ventas: React.FC = () => {
                         <span>${selectedVenta.total.toLocaleString()}</span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Información de pagos */}
-                  <div>
-                    <h4>Pagos Registrados</h4>
-                    {selectedVenta.pagos.length > 0 ? (
-                      <div className="space-y-2">
-                        {selectedVenta.pagos.map((pago) => (
-                          <div key={pago.id} className="border rounded p-3">
-                            <div className="flex justify-between">
-                              <span>{pago.metodoPago.charAt(0).toUpperCase() + pago.metodoPago.slice(1)}:</span>
-                              <span>${pago.monto.toLocaleString()}</span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatDate(pago.fecha)}
-                              {pago.referencia && ` - Ref: ${pago.referencia}`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">No hay pagos registrados</p>
-                    )}
                   </div>
                 </div>
               </div>

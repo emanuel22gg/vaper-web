@@ -149,7 +149,9 @@ export const Pedidos: React.FC<PedidosProps> = ({
       const matchesStatus =
         filterStatus === "all" || statusName === filterStatus;
 
-      return matchesSearch && matchesStatus;
+      const matchesTipo = pedido.tipoVenta !== 'Venta';
+
+      return matchesSearch && matchesStatus && matchesTipo;
     });
   }, [pedidos, searchTerm, filterStatus, usuarios, statuses]); // Dependencias completas
 

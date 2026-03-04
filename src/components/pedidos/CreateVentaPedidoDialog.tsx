@@ -291,7 +291,8 @@ export const CreateVentaPedidoDialog: React.FC<CreateVentaPedidoDialogProps> = (
                 subtotal: calcularSubtotal(),
                 envio: Number(costoEnvio),
                 total: calcularTotal(),
-                vigenciaDevolucion: vigenciaDevolucion
+                vigenciaDevolucion: vigenciaDevolucion,
+                tipoVenta: "Pedido"
                 // Ya no enviamos detalles anidados por si el API no los soporta automáticamente
             };
 
