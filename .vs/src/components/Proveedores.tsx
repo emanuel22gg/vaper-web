@@ -114,212 +114,9 @@ interface Proveedor {
   observaciones?: string;
 }
 
-// Datos simulados actualizados (sin régimen, con nombres separados)
-const mockProveedores: Proveedor[] = [
-  {
-    id: "1",
-    codigo: "PROV-001",
-    tipoPersona: "juridica",
-    razonSocial: "VapeMax Distribuciones SAS",
-    nit: "900123456-1",
-    representanteLegal: "Juan Pérez",
-    email: "juan@vapemax.com",
-    telefono: "+57 300 123 4567",
-    celular: "+57 300 123 4567",
-    direccion: "Calle 45 #23-15",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Desechables", "Líquidos"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-01-15"),
-    ultimaCompra: new Date("2024-03-10"),
-    totalCompras: 15200000,
-    banco: "Bancolombia",
-    numeroCuenta: "123456789",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "María López",
-      cargo: "Gerente Comercial",
-      telefono: "+57 310 987 6543",
-      email: "maria.lopez@vapemax.com",
-    },
-    observaciones:
-      "Proveedor confiable con excelente calidad de productos.",
-  },
-  {
-    id: "2",
-    codigo: "PROV-002",
-    tipoPersona: "natural",
-    nombres: "María González",
-    apellidos: "Rodríguez Castro",
-    cedula: "43123456",
-    email: "maria.gonzalez@gmail.com",
-    telefono: "+57 310 987 6543",
-    celular: "+57 320 555 7777",
-    direccion: "Carrera 70 #45-30",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Mods", "Accesorios", "Baterías"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-02-01"),
-    ultimaCompra: new Date("2024-03-08"),
-    totalCompras: 28500000,
-    banco: "Banco de Bogotá",
-    numeroCuenta: "987654321",
-    tipoCuenta: "Ahorros",
-    observaciones:
-      "Especialista en productos premium, entrega rápida.",
-  },
-  {
-    id: "3",
-    codigo: "PROV-003",
-    tipoPersona: "juridica",
-    razonSocial: "Premium Vapes Ltd",
-    nit: "700555999-3",
-    representanteLegal: "Carlos Ramírez",
-    email: "carlos@premiumvapes.com",
-    telefono: "+57 320 555 7890",
-    direccion: "Avenida El Poblado #12-34",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Pods", "Líquidos Premium"],
-    estado: "Inactivo",
-    fechaRegistro: new Date("2024-01-20"),
-    ultimaCompra: new Date("2023-12-15"),
-    totalCompras: 8900000,
-    observaciones: "Proveedor temporalmente inactivo.",
-  },
-  {
-    id: "4",
-    codigo: "PROV-004",
-    tipoPersona: "natural",
-    nombres: "Luis Alberto",
-    apellidos: "Martínez Suárez",
-    cedula: "52789123",
-    email: "luis.martinez@hotmail.com",
-    telefono: "+57 315 888 9999",
-    celular: "+57 315 888 9999",
-    direccion: "Carrera 85 #50-20",
-    ciudad: "Bogotá",
-    pais: "Colombia",
-    productos: ["Resistencias", "Atomizadores"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-02-15"),
-    ultimaCompra: new Date("2024-03-15"),
-    totalCompras: 12300000,
-    banco: "Davivienda",
-    numeroCuenta: "456789123",
-    tipoCuenta: "Ahorros",
-    observaciones: "Proveedor especializado en repuestos.",
-  },
-  {
-    id: "5",
-    codigo: "PROV-005",
-    tipoPersona: "juridica",
-    razonSocial: "TechVape Colombia Ltda",
-    nit: "800444777-5",
-    representanteLegal: "Ana Patricia Gómez",
-    email: "ana@techvape.co",
-    telefono: "+57 318 222 3333",
-    direccion: "Zona Industrial #45-67",
-    ciudad: "Cali",
-    pais: "Colombia",
-    productos: ["Dispositivos", "Accesorios"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-03-01"),
-    ultimaCompra: new Date("2024-03-20"),
-    totalCompras: 45600000,
-    banco: "BBVA",
-    numeroCuenta: "789123456",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "Roberto Silva",
-      cargo: "Coordinador de Ventas",
-      telefono: "+57 318 444 5555",
-      email: "roberto@techvape.co",
-    },
-    observaciones:
-      "Proveedor mayorista con excelente servicio.",
-  },
-  {
-    id: "6",
-    codigo: "PROV-006",
-    tipoPersona: "natural",
-    nombres: "Carmen Elena",
-    apellidos: "Torres Vásquez",
-    cedula: "65432198",
-    email: "carmen.torres@gmail.com",
-    telefono: "+57 312 777 8888",
-    direccion: "Avenida 30 #15-25",
-    ciudad: "Barranquilla",
-    pais: "Colombia",
-    productos: ["Líquidos Artesanales"],
-    estado: "Activo",
-    fechaRegistro: new Date("2024-01-25"),
-    ultimaCompra: new Date("2024-03-12"),
-    totalCompras: 8750000,
-    banco: "Colpatria",
-    numeroCuenta: "321654987",
-    tipoCuenta: "Ahorros",
-    observaciones: "Fabricante artesanal de líquidos premium.",
-  },
-  {
-    id: "7",
-    codigo: "PROV-007",
-    tipoPersona: "juridica",
-    razonSocial: "Global Smoke Solutions SAS",
-    nit: "900888999-2",
-    representanteLegal: "Andrés Felipe Castro",
-    email: "andres@globalsmoke.com",
-    telefono: "+57 314 111 2222",
-    direccion: "Centro Empresarial Torre B #28-40",
-    ciudad: "Medellín",
-    pais: "Colombia",
-    productos: ["Importaciones", "Marcas Internacionales"],
-    estado: "Activo",
-    fechaRegistro: new Date("2023-12-10"),
-    ultimaCompra: new Date("2024-03-18"),
-    totalCompras: 125000000,
-    banco: "Banco Popular",
-    numeroCuenta: "147258369",
-    tipoCuenta: "Corriente",
-    contactoAdicional: {
-      nombre: "Sandra Milena López",
-      cargo: "Gerente de Importaciones",
-      telefono: "+57 314 333 4444",
-      email: "sandra@globalsmoke.com",
-    },
-    observaciones:
-      "Importador autorizado de marcas internacionales.",
-  },
-  {
-    id: "8",
-    codigo: "PROV-008",
-    tipoPersona: "natural",
-    nombres: "Diego Armando",
-    apellidos: "Ruiz Moreno",
-    cedula: "98765432",
-    email: "diego.ruiz@outlook.com",
-    telefono: "+57 317 555 6666",
-    direccion: "Carrera 50 #80-15",
-    ciudad: "Bucaramanga",
-    pais: "Colombia",
-    productos: ["Mods Mecánicos", "Drippers"],
-    estado: "Inactivo",
-    fechaRegistro: new Date("2024-02-20"),
-    ultimaCompra: new Date("2024-02-28"),
-    totalCompras: 5420000,
-    banco: "Banco Agrario",
-    numeroCuenta: "258147369",
-    tipoCuenta: "Ahorros",
-    observaciones:
-      "Proveedor especializado en productos para vapeadores avanzados.",
-  },
-];
 
 export const Proveedores: React.FC = () => {
-  const [proveedores, setProveedores] =
-    useState<Proveedor[]>(mockProveedores);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTipo, setFilterTipo] = useState("all");
@@ -664,21 +461,17 @@ export const Proveedores: React.FC = () => {
                   Nuevo Proveedor
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
+              <DialogContent className="sm:max-w-[700px] p-4 max-h-[95vh] overflow-y-auto">
+                <DialogHeader className="pb-2">
+                  <DialogTitle className="text-base">
                     Registrar Nuevo Proveedor
                   </DialogTitle>
-                  <DialogDescription>
-                    Selecciona el tipo de proveedor y completa
-                    la información correspondiente.
-                  </DialogDescription>
                 </DialogHeader>
 
                 {/* Selector de tipo de proveedor */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Tipo de Proveedor</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs whitespace-nowrap">Tipo de Proveedor:</Label>
                     <Select
                       value={tipoProveedorSeleccionado}
                       onValueChange={(
@@ -691,43 +484,33 @@ export const Proveedores: React.FC = () => {
                         });
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-[180px]">
                         <SelectValue placeholder="Seleccionar tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="natural">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-2" />
-                            Persona Natural
-                          </div>
+                        <SelectItem value="natural" className="text-xs">
+                          Persona Natural
                         </SelectItem>
-                        <SelectItem value="juridica">
-                          <div className="flex items-center">
-                            <Building2 className="h-4 w-4 mr-2" />
-                            Persona Jurídica
-                          </div>
+                        <SelectItem value="juridica" className="text-xs">
+                          Persona Jurídica
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <Separator />
-
                   {/* Formulario para Persona Natural */}
                   {tipoProveedorSeleccionado === "natural" && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium flex items-center">
-                        <User className="h-5 w-5 mr-2 text-blue-500" />
-                        Información de Persona Natural
+                    <div className="space-y-2 pt-1 border-t">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                        Información Personal
                       </h3>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="nombres">
-                            Nombres *
-                          </Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="nombres" className="text-xs">Nombres *</Label>
                           <Input
                             id="nombres"
+                            className="h-8 text-sm"
                             value={newProveedor.nombres || ""}
                             onChange={(e) =>
                               setNewProveedor({
@@ -738,12 +521,11 @@ export const Proveedores: React.FC = () => {
                             placeholder="María González"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="apellidos">
-                            Apellidos *
-                          </Label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="apellidos" className="text-xs">Apellidos *</Label>
                           <Input
                             id="apellidos"
+                            className="h-8 text-sm"
                             value={newProveedor.apellidos || ""}
                             onChange={(e) =>
                               setNewProveedor({
@@ -754,84 +536,73 @@ export const Proveedores: React.FC = () => {
                             placeholder="Rodríguez Castro"
                           />
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="cedula">Cédula *</Label>
-                        <Input
-                          id="cedula"
-                          value={newProveedor.cedula || ""}
-                          onChange={(e) =>
-                            setNewProveedor({
-                              ...newProveedor,
-                              cedula: e.target.value,
-                            })
-                          }
-                          placeholder="43123456"
-                        />
+                        <div className="space-y-1.5">
+                          <Label htmlFor="cedula" className="text-xs">Cédula *</Label>
+                          <Input
+                            id="cedula"
+                            className="h-8 text-sm"
+                            value={newProveedor.cedula || ""}
+                            onChange={(e) =>
+                              setNewProveedor({
+                                ...newProveedor,
+                                cedula: e.target.value,
+                              })
+                            }
+                            placeholder="43123456"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {/* Formulario para Persona Jurídica */}
                   {tipoProveedorSeleccionado === "juridica" && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium flex items-center">
-                        <Building2 className="h-5 w-5 mr-2 text-purple-500" />
-                        Información de Persona Jurídica
+                    <div className="space-y-2 pt-1 border-t">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                        Información Jurídica
                       </h3>
 
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="razonSocial">
-                              Razón Social *
-                            </Label>
-                            <Input
-                              id="razonSocial"
-                              value={
-                                newProveedor.razonSocial || ""
-                              }
-                              onChange={(e) =>
-                                setNewProveedor({
-                                  ...newProveedor,
-                                  razonSocial: e.target.value,
-                                })
-                              }
-                              placeholder="VapeMax Distribuciones SAS"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="nit">NIT *</Label>
-                            <Input
-                              id="nit"
-                              value={newProveedor.nit || ""}
-                              onChange={(e) =>
-                                setNewProveedor({
-                                  ...newProveedor,
-                                  nit: e.target.value,
-                                })
-                              }
-                              placeholder="900123456-1"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="representanteLegal">
-                            Representante Legal *
-                          </Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="razonSocial" className="text-xs">Razón Social *</Label>
                           <Input
-                            id="representanteLegal"
-                            value={
-                              newProveedor.representanteLegal ||
-                              ""
-                            }
+                            id="razonSocial"
+                            className="h-8 text-sm"
+                            value={newProveedor.razonSocial || ""}
                             onChange={(e) =>
                               setNewProveedor({
                                 ...newProveedor,
-                                representanteLegal:
-                                  e.target.value,
+                                razonSocial: e.target.value,
+                              })
+                            }
+                            placeholder="VapeMax Distribuciones SAS"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="nit" className="text-xs">NIT *</Label>
+                          <Input
+                            id="nit"
+                            className="h-8 text-sm"
+                            value={newProveedor.nit || ""}
+                            onChange={(e) =>
+                              setNewProveedor({
+                                ...newProveedor,
+                                nit: e.target.value,
+                              })
+                            }
+                            placeholder="900123456-1"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="representanteLegal" className="text-xs">Representante Legal *</Label>
+                          <Input
+                            id="representanteLegal"
+                            className="h-8 text-sm"
+                            value={newProveedor.representanteLegal || ""}
+                            onChange={(e) =>
+                              setNewProveedor({
+                                ...newProveedor,
+                                representanteLegal: e.target.value,
                               })
                             }
                             placeholder="Juan Pérez"
@@ -841,20 +612,18 @@ export const Proveedores: React.FC = () => {
                     </div>
                   )}
 
-                  <Separator />
-
-                  {/* Información de contacto común */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">
-                      Información de Contacto
+                  <div className="space-y-2 pt-1 border-t">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                      Contacto y Ubicación
                     </h3>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="email" className="text-xs">Email *</Label>
                         <Input
                           id="email"
                           type="email"
+                          className="h-8 text-sm"
                           value={newProveedor.email || ""}
                           onChange={(e) =>
                             setNewProveedor({
@@ -865,12 +634,11 @@ export const Proveedores: React.FC = () => {
                           placeholder="contacto@ejemplo.com"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="telefono">
-                          Teléfono *
-                        </Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="telefono" className="text-xs">Teléfono *</Label>
                         <Input
                           id="telefono"
+                          className="h-8 text-sm"
                           value={newProveedor.telefono || ""}
                           onChange={(e) =>
                             setNewProveedor({
@@ -883,44 +651,44 @@ export const Proveedores: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="direccion">
-                        Dirección *
-                      </Label>
-                      <Input
-                        id="direccion"
-                        value={newProveedor.direccion || ""}
-                        onChange={(e) =>
-                          setNewProveedor({
-                            ...newProveedor,
-                            direccion: e.target.value,
-                          })
-                        }
-                        placeholder="Calle 45 #23-15"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="direccion" className="text-xs">Dirección *</Label>
+                        <Input
+                          id="direccion"
+                          className="h-8 text-sm"
+                          value={newProveedor.direccion || ""}
+                          onChange={(e) =>
+                            setNewProveedor({
+                              ...newProveedor,
+                              direccion: e.target.value,
+                            })
+                          }
+                          placeholder="Calle 45 #23-15"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ciudad" className="text-xs">Ciudad *</Label>
+                        <Input
+                          id="ciudad"
+                          className="h-8 text-sm"
+                          value={newProveedor.ciudad || ""}
+                          onChange={(e) =>
+                            setNewProveedor({
+                              ...newProveedor,
+                              ciudad: e.target.value,
+                            })
+                          }
+                          placeholder="Medellín"
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="ciudad">Ciudad *</Label>
-                      <Input
-                        id="ciudad"
-                        value={newProveedor.ciudad || ""}
-                        onChange={(e) =>
-                          setNewProveedor({
-                            ...newProveedor,
-                            ciudad: e.target.value,
-                          })
-                        }
-                        placeholder="Medellín"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="observaciones">
-                        Observaciones
-                      </Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="observaciones" className="text-[10px] uppercase font-semibold">Observaciones</Label>
                       <Textarea
                         id="observaciones"
+                        className="text-sm min-h-[40px] py-1"
                         value={newProveedor.observaciones || ""}
                         onChange={(e) =>
                           setNewProveedor({
@@ -928,21 +696,23 @@ export const Proveedores: React.FC = () => {
                             observaciones: e.target.value,
                           })
                         }
-                        placeholder="Notas adicionales sobre el proveedor..."
-                        rows={3}
+                        placeholder="Notas adicionales..."
+                        rows={1}
                       />
                     </div>
                   </div>
                 </div>
 
-                <DialogFooter className="mt-6">
+                <DialogFooter className="pt-2">
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setIsCreateDialogOpen(false)}
                   >
                     Cancelar
                   </Button>
                   <Button
+                    size="sm"
                     onClick={handleValidateAndShowConfirmation}
                   >
                     Crear Proveedor

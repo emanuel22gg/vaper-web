@@ -29,7 +29,9 @@ import { Ventas } from "./Ventas";
 import { Productos } from "./Productos";
 import { Categorias } from "./Categorias";
 import { Cotizaciones } from "./CotizacionesMejoradas";
-import { Devoluciones } from "./Devoluciones";
+import { Devoluciones } from "./devoluciones";
+import { getVentaPedidos, getCompras, getProductos, getCategorias, getDetalleVentaPedidos } from "../services/api";
+import { VentaPedidoDto, CompraDto, Producto, Categoria } from "../types";
 
 import { TiendaCliente } from "./TiendaCliente";
 import { AdminPanel } from "./AdminPanel";
@@ -61,840 +63,11 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Shield,
 } from "lucide-react";
 
-// Datos simulados para las gráficas (mantener los mismos datos)
-const ventasData = [
-  { mes: "Ene", ventas: 4200000, meta: 4000000 },
-  { mes: "Feb", ventas: 3800000, meta: 4000000 },
-  { mes: "Mar", ventas: 5100000, meta: 4500000 },
-  { mes: "Abr", ventas: 4700000, meta: 4500000 },
-  { mes: "May", ventas: 5300000, meta: 5000000 },
-  { mes: "Jun", ventas: 6200000, meta: 5500000 },
-];
+// --- DATOS REALES PROCESADOS DESDE LA API ---
 
-// Datos de ventas por día (últimas 2 semanas)
-const ventasDiariaData = [
-  { dia: "Lun 1", ventas: 285000, fecha: "2024-08-01" },
-  { dia: "Mar 2", ventas: 320000, fecha: "2024-08-02" },
-  { dia: "Mié 3", ventas: 298000, fecha: "2024-08-03" },
-  { dia: "Jue 4", ventas: 410000, fecha: "2024-08-04" },
-  { dia: "Vie 5", ventas: 520000, fecha: "2024-08-05" },
-  { dia: "Sáb 6", ventas: 680000, fecha: "2024-08-06" },
-  { dia: "Dom 7", ventas: 590000, fecha: "2024-08-07" },
-  { dia: "Lun 8", ventas: 295000, fecha: "2024-08-08" },
-  { dia: "Mar 9", ventas: 335000, fecha: "2024-08-09" },
-  { dia: "Mié 10", ventas: 312000, fecha: "2024-08-10" },
-  { dia: "Jue 11", ventas: 425000, fecha: "2024-08-11" },
-  { dia: "Vie 12", ventas: 545000, fecha: "2024-08-12" },
-  { dia: "Sáb 13", ventas: 715000, fecha: "2024-08-13" },
-  { dia: "Dom 14", ventas: 620000, fecha: "2024-08-14" },
-];
-
-// Datos ampliados para mostrar más fechas cuando se filtra
-const ventasDiariaCompleta = [
-  { dia: "Lun 15", ventas: 310000, fecha: "2024-08-15" },
-  { dia: "Mar 16", ventas: 380000, fecha: "2024-08-16" },
-  { dia: "Mié 17", ventas: 420000, fecha: "2024-08-17" },
-  { dia: "Jue 18", ventas: 465000, fecha: "2024-08-18" },
-  { dia: "Vie 19", ventas: 580000, fecha: "2024-08-19" },
-  { dia: "Sáb 20", ventas: 750000, fecha: "2024-08-20" },
-  { dia: "Dom 21", ventas: 650000, fecha: "2024-08-21" },
-  { dia: "Lun 22", ventas: 330000, fecha: "2024-08-22" },
-  { dia: "Mar 23", ventas: 395000, fecha: "2024-08-23" },
-  { dia: "Mié 24", ventas: 445000, fecha: "2024-08-24" },
-  { dia: "Jue 25", ventas: 520000, fecha: "2024-08-25" },
-  { dia: "Vie 26", ventas: 615000, fecha: "2024-08-26" },
-  { dia: "Sáb 27", ventas: 780000, fecha: "2024-08-27" },
-  { dia: "Dom 28", ventas: 680000, fecha: "2024-08-28" },
-  ...ventasDiariaData,
-];
-
-const comprasData = [
-  { mes: "Ene", compras: 2800000, presupuesto: 3000000 },
-  { mes: "Feb", compras: 2500000, presupuesto: 3000000 },
-  { mes: "Mar", compras: 3200000, presupuesto: 3500000 },
-  { mes: "Abr", compras: 2900000, presupuesto: 3500000 },
-  { mes: "May", compras: 3400000, presupuesto: 3800000 },
-  { mes: "Jun", compras: 3800000, presupuesto: 4000000 },
-];
-
-// Datos de ganancias comparativas con mes anterior
-const gananciasComparativasData = [
-  {
-    mes: "Ene",
-    gananciaMesActual: 1400000,
-    gananciaMesAnterior: 1200000,
-    gastos: 2800000,
-    diferencia: 200000,
-    porcentajeCrecimiento: 16.7,
-  },
-  {
-    mes: "Feb",
-    gananciaMesActual: 1300000,
-    gananciaMesAnterior: 1400000,
-    gastos: 2500000,
-    diferencia: -100000,
-    porcentajeCrecimiento: -7.1,
-  },
-  {
-    mes: "Mar",
-    gananciaMesActual: 1900000,
-    gananciaMesAnterior: 1300000,
-    gastos: 3200000,
-    diferencia: 600000,
-    porcentajeCrecimiento: 46.2,
-  },
-  {
-    mes: "Abr",
-    gananciaMesActual: 1800000,
-    gananciaMesAnterior: 1900000,
-    gastos: 2900000,
-    diferencia: -100000,
-    porcentajeCrecimiento: -5.3,
-  },
-  {
-    mes: "May",
-    gananciaMesActual: 1900000,
-    gananciaMesAnterior: 1800000,
-    gastos: 3400000,
-    diferencia: 100000,
-    porcentajeCrecimiento: 5.6,
-  },
-  {
-    mes: "Jun",
-    gananciaMesActual: 2400000,
-    gananciaMesAnterior: 1900000,
-    gastos: 3800000,
-    diferencia: 500000,
-    porcentajeCrecimiento: 26.3,
-  },
-];
-
-const gananciasData = [
-  { mes: "Ene", ganancia: 1400000, gastos: 2800000 },
-  { mes: "Feb", ganancia: 1300000, gastos: 2500000 },
-  { mes: "Mar", ganancia: 1900000, gastos: 3200000 },
-  { mes: "Abr", ganancia: 1800000, gastos: 2900000 },
-  { mes: "May", ganancia: 1900000, gastos: 3400000 },
-  { mes: "Jun", ganancia: 2400000, gastos: 3800000 },
-];
-
-const productosVendidosData = [
-  {
-    nombre: "Vape Desechable 2000 puffs",
-    ventas: 850,
-    ingresos: 21250000,
-    categoria: "Desechables",
-    precio: 25000,
-  },
-  {
-    nombre: "Líquido Frutal 30ml",
-    ventas: 620,
-    ingresos: 21700000,
-    categoria: "Líquidos",
-    precio: 35000,
-  },
-  {
-    nombre: "Pod System Premium",
-    ventas: 340,
-    ingresos: 27200000,
-    categoria: "Pods",
-    precio: 80000,
-  },
-  {
-    nombre: "Mod Premium 80W",
-    ventas: 180,
-    ingresos: 27000000,
-    categoria: "Mods",
-    precio: 150000,
-  },
-  {
-    nombre: "Líquido Premium 60ml",
-    ventas: 290,
-    ingresos: 15950000,
-    categoria: "Líquidos",
-    precio: 55000,
-  },
-];
-
-// Datos de productos más vendidos por mes
-const productosVendidosPorMes = {
-  "2024-01": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 680,
-      ingresos: 17000000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 520,
-      ingresos: 18200000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 280,
-      ingresos: 22400000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 240,
-      ingresos: 13200000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 150,
-      ingresos: 22500000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-02": [
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 590,
-      ingresos: 20650000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 720,
-      ingresos: 18000000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 310,
-      ingresos: 24800000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 260,
-      ingresos: 14300000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 165,
-      ingresos: 24750000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-03": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 780,
-      ingresos: 19500000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 610,
-      ingresos: 21350000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 330,
-      ingresos: 26400000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 175,
-      ingresos: 26250000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 275,
-      ingresos: 15125000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-  ],
-  "2024-04": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 810,
-      ingresos: 20250000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 600,
-      ingresos: 21000000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 325,
-      ingresos: 26000000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 285,
-      ingresos: 15675000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 170,
-      ingresos: 25500000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-05": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 830,
-      ingresos: 20750000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 615,
-      ingresos: 21525000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 338,
-      ingresos: 27040000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 288,
-      ingresos: 15840000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 178,
-      ingresos: 26700000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-06": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 845,
-      ingresos: 21125000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 618,
-      ingresos: 21630000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 339,
-      ingresos: 27120000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 289,
-      ingresos: 15895000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 179,
-      ingresos: 26850000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-07": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 848,
-      ingresos: 21200000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 619,
-      ingresos: 21665000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 340,
-      ingresos: 27200000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 290,
-      ingresos: 15950000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 180,
-      ingresos: 27000000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-  ],
-  "2024-08": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      ventas: 850,
-      ingresos: 21250000,
-      categoria: "Desechables",
-      precio: 25000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      ventas: 620,
-      ingresos: 21700000,
-      categoria: "Líquidos",
-      precio: 35000,
-    },
-    {
-      nombre: "Pod System Premium",
-      ventas: 340,
-      ingresos: 27200000,
-      categoria: "Pods",
-      precio: 80000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      ventas: 180,
-      ingresos: 27000000,
-      categoria: "Mods",
-      precio: 150000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      ventas: 290,
-      ingresos: 15950000,
-      categoria: "Líquidos",
-      precio: 55000,
-    },
-  ],
-};
-
-const stockCategoriasData = [
-  {
-    categoria: "Desechables",
-    stock: 450,
-    valor: "#8884d8",
-    totalProductos: 25,
-    valorInventario: 11250000,
-  },
-  {
-    categoria: "Líquidos",
-    stock: 320,
-    valor: "#82ca9d",
-    totalProductos: 18,
-    valorInventario: 14400000,
-  },
-  {
-    categoria: "Pods",
-    stock: 180,
-    valor: "#ffc658",
-    totalProductos: 12,
-    valorInventario: 14400000,
-  },
-  {
-    categoria: "Mods",
-    stock: 95,
-    valor: "#ff7300",
-    totalProductos: 8,
-    valorInventario: 14250000,
-  },
-  {
-    categoria: "Accesorios",
-    stock: 275,
-    valor: "#0088fe",
-    totalProductos: 15,
-    valorInventario: 5500000,
-  },
-];
-
-// Datos de productos más comprados por mes
-const productosCompradosPorMes = {
-  "2024-01": [
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 450,
-      costo: 16875000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 320,
-      costo: 4800000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 180,
-      costo: 10800000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Bobina de repuesto",
-      cantidad: 270,
-      costo: 2700000,
-      proveedor: "Parts Inc.",
-      categoria: "Accesorios",
-      costoPorUnidad: 10000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      cantidad: 95,
-      costo: 11400000,
-      proveedor: "ModTech",
-      categoria: "Mods",
-      costoPorUnidad: 120000,
-    },
-  ],
-  "2024-02": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 380,
-      costo: 5700000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 420,
-      costo: 15750000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 200,
-      costo: 12000000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Cargador USB-C",
-      cantidad: 150,
-      costo: 2250000,
-      proveedor: "Accessories Co.",
-      categoria: "Accesorios",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      cantidad: 310,
-      costo: 7750000,
-      proveedor: "FlavorTech",
-      categoria: "Líquidos",
-      costoPorUnidad: 25000,
-    },
-  ],
-  "2024-03": [
-    {
-      nombre: "Pod System Premium",
-      cantidad: 250,
-      costo: 15000000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 390,
-      costo: 14625000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 340,
-      costo: 5100000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      cantidad: 120,
-      costo: 14400000,
-      proveedor: "ModTech",
-      categoria: "Mods",
-      costoPorUnidad: 120000,
-    },
-    {
-      nombre: "Estuche de transporte",
-      cantidad: 85,
-      costo: 1275000,
-      proveedor: "Cases Plus",
-      categoria: "Accesorios",
-      costoPorUnidad: 15000,
-    },
-  ],
-  "2024-04": [
-    {
-      nombre: "Líquido Frutal 30ml",
-      cantidad: 480,
-      costo: 12000000,
-      proveedor: "FlavorTech",
-      categoria: "Líquidos",
-      costoPorUnidad: 25000,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 360,
-      costo: 5400000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 220,
-      costo: 13200000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Bobina de repuesto",
-      cantidad: 290,
-      costo: 2900000,
-      proveedor: "Parts Inc.",
-      categoria: "Accesorios",
-      costoPorUnidad: 10000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 350,
-      costo: 13125000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-  ],
-  "2024-05": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 420,
-      costo: 6300000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 380,
-      costo: 14250000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      cantidad: 140,
-      costo: 16800000,
-      proveedor: "ModTech",
-      categoria: "Mods",
-      costoPorUnidad: 120000,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 190,
-      costo: 11400000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Kit de limpieza",
-      cantidad: 200,
-      costo: 2000000,
-      proveedor: "CleanTech",
-      categoria: "Accesorios",
-      costoPorUnidad: 10000,
-    },
-  ],
-  "2024-06": [
-    {
-      nombre: "Pod System Premium",
-      cantidad: 280,
-      costo: 16800000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      cantidad: 520,
-      costo: 13000000,
-      proveedor: "FlavorTech",
-      categoria: "Líquidos",
-      costoPorUnidad: 25000,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 450,
-      costo: 6750000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 400,
-      costo: 15000000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Cargador inalámbrico",
-      cantidad: 180,
-      costo: 5400000,
-      proveedor: "WirelessTech",
-      categoria: "Accesorios",
-      costoPorUnidad: 30000,
-    },
-  ],
-  "2024-07": [
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 440,
-      costo: 16500000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 480,
-      costo: 7200000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Mod Premium 80W",
-      cantidad: 160,
-      costo: 19200000,
-      proveedor: "ModTech",
-      categoria: "Mods",
-      costoPorUnidad: 120000,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 240,
-      costo: 14400000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      cantidad: 350,
-      costo: 8750000,
-      proveedor: "FlavorTech",
-      categoria: "Líquidos",
-      costoPorUnidad: 25000,
-    },
-  ],
-  "2024-08": [
-    {
-      nombre: "Vape Desechable 2000 puffs",
-      cantidad: 500,
-      costo: 7500000,
-      proveedor: "DisposableMax",
-      categoria: "Desechables",
-      costoPorUnidad: 15000,
-    },
-    {
-      nombre: "Pod System Premium",
-      cantidad: 300,
-      costo: 18000000,
-      proveedor: "TechVape",
-      categoria: "Pods",
-      costoPorUnidad: 60000,
-    },
-    {
-      nombre: "Líquido Premium 60ml",
-      cantidad: 460,
-      costo: 17250000,
-      proveedor: "VapeCorp",
-      categoria: "Líquidos",
-      costoPorUnidad: 37500,
-    },
-    {
-      nombre: "Líquido Frutal 30ml",
-      cantidad: 390,
-      costo: 9750000,
-      proveedor: "FlavorTech",
-      categoria: "Líquidos",
-      costoPorUnidad: 25000,
-    },
-    {
-      nombre: "Estuche premium",
-      cantidad: 120,
-      costo: 3600000,
-      proveedor: "Luxury Cases",
-      categoria: "Accesorios",
-      costoPorUnidad: 30000,
-    },
-  ],
-};
 
 const COLORS = [
   "#8884d8",
@@ -914,16 +87,107 @@ export const Dashboard: React.FC<DashboardProps> = ({
   activeAdminView,
 }) => {
   const { user } = useAuth();
+  // Generar opciones de meses dinámicamente (últimos 12 meses)
+  const getMesesOpciones = () => {
+    const opciones = [];
+    const fechaActual = new Date();
+    const meses = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
+      const mesNum = (d.getMonth() + 1).toString().padStart(2, '0');
+      const anio = d.getFullYear();
+      opciones.push({
+        valor: `${anio}-${mesNum}`,
+        etiqueta: `${meses[d.getMonth()]} ${anio}`
+      });
+    }
+    return opciones;
+  };
+
+  const mesesOpciones = getMesesOpciones();
+  const mesActualStr = mesesOpciones[0].valor;
+
   const [activeView, setActiveView] = useState("dashboard");
   const [fechaFiltro, setFechaFiltro] = useState("");
   const [periodoVentas, setPeriodoVentas] = useState(
     "ultimas2semanas",
   );
-  const [mesComprasFiltro, setMesComprasFiltro] =
-    useState("2024-08"); // Mes actual por defecto
-  const [mesVentasFiltro, setMesVentasFiltro] =
-    useState("2024-08"); // Mes actual por defecto para ventas
+  const [mesComprasFiltro, setMesComprasFiltro] = useState(mesActualStr);
+  const [mesVentasFiltro, setMesVentasFiltro] = useState(mesActualStr);
   const [dashboardPage, setDashboardPage] = useState(1); // Estado para paginación del dashboard
+
+  // Estados para datos reales
+  const [realPedidos, setRealPedidos] = useState<VentaPedidoDto[]>([]);
+  const [realCompras, setRealCompras] = useState<CompraDto[]>([]);
+  const [realProductos, setRealProductos] = useState<Producto[]>([]);
+  const [realCategorias, setRealCategorias] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [pedidosData, comprasData, productosData, categoriasData, detallesData] = await Promise.all([
+          getVentaPedidos(),
+          getCompras(),
+          getProductos(),
+          getCategorias(),
+          getDetalleVentaPedidos()
+        ]);
+
+        // Unir detalles con pedidos
+        const pedidosConDetalles = pedidosData.map(pedido => ({
+          ...pedido,
+          detalleVenta_Pedido: detallesData.filter((d: any) => d.ventaPedidoId === pedido.id)
+        }));
+
+        setRealPedidos(pedidosConDetalles);
+        setRealCompras(comprasData);
+        setRealProductos(productosData);
+        setRealCategorias(categoriasData);
+      } catch (error) {
+        console.error("Error cargando datos del dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Auto-ajustar el mes inicial basado en los datos disponibles
+  useEffect(() => {
+    if (!loading && realPedidos.length > 0) {
+      // Si el mes actual no tiene ventas, buscamos el mes más reciente con datos
+      const tieneDatosMesActual = realPedidos.some(p => {
+        if (!p.fechaCreacion) return false;
+        const d = new Date(p.fechaCreacion);
+        const mesVal = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        return mesVal === mesVentasFiltro;
+      });
+
+      if (!tieneDatosMesActual) {
+        // Encontrar el mes más reciente en los pedidos
+        const mesesConDatos = realPedidos
+          .filter(p => p.fechaCreacion)
+          .map(p => {
+            const d = new Date(p.fechaCreacion!);
+            return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+          })
+          .sort((a, b) => b.localeCompare(a));
+
+        if (mesesConDatos.length > 0) {
+          const mejorMes = mesesConDatos[0];
+          setMesVentasFiltro(mejorMes);
+          setMesComprasFiltro(mejorMes);
+        }
+      }
+    }
+  }, [loading, realPedidos.length]);
 
   // Estados para manejar navegación a detalles
   const [detailView, setDetailView] = useState<{
@@ -1042,29 +306,142 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  // Función para obtener datos de ventas filtrados por fecha
+  // --- FUNCIONES DE PROCESAMIENTO DE DATOS REALES ---
+
   const getVentasFiltradas = () => {
-    const todasLasVentas = [...ventasDiariaCompleta].sort(
-      (a, b) =>
-        new Date(a.fecha).getTime() -
-        new Date(b.fecha).getTime(),
-    );
+    const ventasPorDia: { [key: string]: number } = {};
+
+    realPedidos.forEach(pedido => {
+      if (pedido.fechaCreacion && (pedido.estadoId === 1 || pedido.estadoId === 5)) {
+        const fecha = pedido.fechaCreacion.split('T')[0];
+        ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + pedido.total;
+      }
+    });
+
+    const todasLasVentas = Object.entries(ventasPorDia).map(([fecha, total]) => {
+      const d = new Date(fecha);
+      return {
+        dia: d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        ventas: total,
+        fecha: fecha
+      };
+    }).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
     if (fechaFiltro) {
-      const fechaBuscada = new Date(fechaFiltro);
-      const fechaStr = fechaBuscada.toISOString().split("T")[0];
-      return todasLasVentas.filter(
-        (venta) => venta.fecha === fechaStr,
-      );
-    } else if (periodoVentas === "ultimas2semanas") {
-      return ventasDiariaData;
-    } else {
-      return todasLasVentas.slice(-7); // Última semana por defecto
+      return todasLasVentas.filter(venta => venta.fecha === fechaFiltro);
     }
+
+    return todasLasVentas.slice(-14);
   };
 
-  // Calcular estadísticas dinámicas
+  const getStockCategoriasReal = () => {
+    const stockMap: { [key: number]: { stock: number, valor: number, count: number } } = {};
+
+    realProductos.forEach(p => {
+      const catId = p.categoriaId;
+      if (!stockMap[catId]) {
+        stockMap[catId] = { stock: 0, valor: 0, count: 0 };
+      }
+      stockMap[catId].stock += p.stock;
+      stockMap[catId].valor += p.stock * p.precio;
+      stockMap[catId].count += 1;
+    });
+
+    return realCategorias.map((cat, index) => ({
+      categoria: cat.nombreCategoria,
+      stock: stockMap[cat.id]?.stock || 0,
+      valor: COLORS[index % COLORS.length],
+      totalProductos: stockMap[cat.id]?.count || 0,
+      valorInventario: stockMap[cat.id]?.valor || 0
+    })).filter(c => c.stock > 0);
+  };
+
+  const getProductosVendidosFiltrados = () => {
+    const productSales: { [key: number]: { nombre: string, ventas: number, ingresos: number, categoria: string } } = {};
+    const [yearFiltro, monthFiltro] = mesVentasFiltro.split("-");
+
+    realPedidos.forEach(pedido => {
+      if (pedido.fechaCreacion && (pedido.estadoId === 1 || pedido.estadoId === 5)) {
+        const d = new Date(pedido.fechaCreacion);
+        const pedidoYear = d.getFullYear().toString();
+        const pedidoMonth = (d.getMonth() + 1).toString().padStart(2, '0');
+
+        if (pedidoYear === yearFiltro && pedidoMonth === monthFiltro) {
+          pedido.detalleVenta_Pedido?.forEach(detalle => {
+            const prodId = detalle.productoId;
+            if (!productSales[prodId]) {
+              const pInfo = realProductos.find(p => p.id === prodId);
+              productSales[prodId] = {
+                nombre: pInfo?.nombreProducto || `Producto ${prodId}`,
+                ventas: 0,
+                ingresos: 0,
+                categoria: realCategorias.find(c => c.id === pInfo?.categoriaId)?.nombreCategoria || "Sin categoría"
+              };
+            }
+            productSales[prodId].ventas += detalle.cantidad;
+            productSales[prodId].ingresos += detalle.subtotal;
+          });
+        }
+      }
+    });
+
+    return Object.values(productSales)
+      .sort((a, b) => b.ventas - a.ventas)
+      .slice(0, 5);
+  };
+
+  const getComprasFiltradas = () => {
+    const productPurchases: { [key: number]: { nombre: string, cantidad: number, costo: number, categoria: string, proveedor: string } } = {};
+    const [yearFiltro, monthFiltro] = mesComprasFiltro.split("-");
+
+    realCompras.forEach(compra => {
+      if (compra.fechaCompra && compra.estado === 1) {
+        const d = new Date(compra.fechaCompra);
+        const compraYear = d.getFullYear().toString();
+        const compraMonth = (d.getMonth() + 1).toString().padStart(2, '0');
+
+        if (compraYear === yearFiltro && compraMonth === monthFiltro) {
+          compra.detalleCompras?.forEach(detalle => {
+            const prodId = detalle.productoId;
+            if (!productPurchases[prodId]) {
+              const pInfo = realProductos.find(p => p.id === prodId);
+              productPurchases[prodId] = {
+                nombre: pInfo?.nombreProducto || `Producto ${prodId}`,
+                cantidad: 0,
+                costo: 0,
+                categoria: realCategorias.find(c => c.id === pInfo?.categoriaId)?.nombreCategoria || "Sin categoría",
+                proveedor: "Proveedor"
+              };
+            }
+            productPurchases[prodId].cantidad += detalle.cantidad;
+            productPurchases[prodId].costo += detalle.subtotal;
+          });
+        }
+      }
+    });
+
+    return Object.values(productPurchases)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 5);
+  };
+
+  const getNombreMes = (fechaMes: string) => {
+    const meses = {
+      "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
+      "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
+      "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre",
+    };
+    const [year, month] = fechaMes.split("-");
+    const mesNombre = meses[month as keyof typeof meses];
+    return `${mesNombre || month} ${year}`;
+  };
+
+  // --- CÁLCULOS PARA LA UI ---
   const ventasParaGrafica = getVentasFiltradas();
+  const stockCategoriasData = getStockCategoriasReal();
+  const ventasProductosParaGrafica = getProductosVendidosFiltrados();
+  const comprasParaGrafica = getComprasFiltradas();
+
   const promedioVentas =
     ventasParaGrafica.length > 0
       ? ventasParaGrafica.reduce(
@@ -1072,6 +449,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         0,
       ) / ventasParaGrafica.length
       : 0;
+
   const mejorDia =
     ventasParaGrafica.length > 0
       ? ventasParaGrafica.reduce((prev, current) =>
@@ -1079,65 +457,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )
       : null;
 
-  // Función para obtener datos de compras filtrados por mes
-  const getComprasFiltradas = () => {
-    return (
-      productosCompradosPorMes[
-      mesComprasFiltro as keyof typeof productosCompradosPorMes
-      ] || []
-    );
-  };
+  const totalCompras = realCompras.reduce((sum, item) => item.estado === 1 ? sum + item.total : sum, 0);
+  const productosComprados = realCompras.reduce((sum, item) => item.estado === 1 ? sum + (item.detalleCompras?.reduce((s, d) => s + d.cantidad, 0) || 0) : sum, 0);
 
-  // Función para obtener datos de productos vendidos filtrados por mes
-  const getProductosVendidosFiltrados = () => {
-    return (
-      productosVendidosPorMes[
-      mesVentasFiltro as keyof typeof productosVendidosPorMes
-      ] || []
-    );
-  };
-
-  // Función para obtener el nombre del mes en español
-  const getNombreMes = (fechaMes: string) => {
-    const meses = {
-      "01": "Enero",
-      "02": "Febrero",
-      "03": "Marzo",
-      "04": "Abril",
-      "05": "Mayo",
-      "06": "Junio",
-      "07": "Julio",
-      "08": "Agosto",
-      "09": "Septiembre",
-      "10": "Octubre",
-      "11": "Noviembre",
-      "12": "Diciembre",
-    };
-    const [year, month] = fechaMes.split("-");
-    return `${meses[month as keyof typeof meses]} ${year}`;
-  };
-
-  // Calcular estadísticas de compras
-  const comprasParaGrafica = getComprasFiltradas();
-  const totalCompras = comprasParaGrafica.reduce(
-    (sum, item) => sum + item.costo,
-    0,
-  );
-  const productosComprados = comprasParaGrafica.reduce(
-    (sum, item) => sum + item.cantidad,
-    0,
-  );
-
-  // Calcular estadísticas de ventas filtradas
-  const ventasProductosParaGrafica = getProductosVendidosFiltrados();
-  const totalVentas = ventasProductosParaGrafica.reduce(
-    (sum, item) => sum + item.ingresos,
-    0,
-  );
-  const productosVendidosTotal = ventasProductosParaGrafica.reduce(
-    (sum, item) => sum + item.ventas,
-    0,
-  );
+  const totalVentas = realPedidos.reduce((sum, item) => (item.estadoId === 1 || item.estadoId === 5) ? sum + item.total : sum, 0);
+  const productosVendidosTotal = realPedidos.reduce((sum, item) => (item.estadoId === 1 || item.estadoId === 5) ? sum + (item.detalleVenta_Pedido?.reduce((s, d) => s + d.cantidad, 0) || 0) : sum, 0);
 
   // Función para manejar navegación interna y notificar al padre
   const handleViewChange = (view: string) => {
@@ -1595,30 +919,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <SelectValue placeholder="Mes" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="2024-01">
-                                  Enero 2024
-                                </SelectItem>
-                                <SelectItem value="2024-02">
-                                  Febrero 2024
-                                </SelectItem>
-                                <SelectItem value="2024-03">
-                                  Marzo 2024
-                                </SelectItem>
-                                <SelectItem value="2024-04">
-                                  Abril 2024
-                                </SelectItem>
-                                <SelectItem value="2024-05">
-                                  Mayo 2024
-                                </SelectItem>
-                                <SelectItem value="2024-06">
-                                  Junio 2024
-                                </SelectItem>
-                                <SelectItem value="2024-07">
-                                  Julio 2024
-                                </SelectItem>
-                                <SelectItem value="2024-08">
-                                  Agosto 2024
-                                </SelectItem>
+                                {mesesOpciones.map((opcion) => (
+                                  <SelectItem key={opcion.valor} value={opcion.valor}>
+                                    {opcion.etiqueta}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1702,30 +1007,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <SelectValue placeholder="Mes" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="2024-01">
-                                  Enero 2024
-                                </SelectItem>
-                                <SelectItem value="2024-02">
-                                  Febrero 2024
-                                </SelectItem>
-                                <SelectItem value="2024-03">
-                                  Marzo 2024
-                                </SelectItem>
-                                <SelectItem value="2024-04">
-                                  Abril 2024
-                                </SelectItem>
-                                <SelectItem value="2024-05">
-                                  Mayo 2024
-                                </SelectItem>
-                                <SelectItem value="2024-06">
-                                  Junio 2024
-                                </SelectItem>
-                                <SelectItem value="2024-07">
-                                  Julio 2024
-                                </SelectItem>
-                                <SelectItem value="2024-08">
-                                  Agosto 2024
-                                </SelectItem>
+                                {mesesOpciones.map((opcion) => (
+                                  <SelectItem key={opcion.valor} value={opcion.valor}>
+                                    {opcion.etiqueta}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1960,10 +1246,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Contenido principal basado en la vista activa */}
-        {renderContent()}
+        {loading && activeView === "dashboard" ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg border shadow-sm">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-muted-foreground animate-pulse">Cargando datos reales...</p>
+          </div>
+        ) : (
+          renderContent()
+        )}
       </main>
     </div>
   );

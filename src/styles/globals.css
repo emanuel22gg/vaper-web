@@ -385,3 +385,12 @@ html {
 .dark .scrollbar-thin {
   scrollbar-color: #6b7280 #374151;
 }
+
+/* Ocultar barra de scroll universal */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}

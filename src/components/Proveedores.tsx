@@ -481,7 +481,7 @@ export const Proveedores: React.FC = () => {
                   Nuevo Proveedor
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto no-scrollbar">
                 <DialogHeader>
                   <DialogTitle>
                     Registrar Nuevo Proveedor
@@ -748,13 +748,13 @@ export const Proveedores: React.FC = () => {
                           })
                         }
                         placeholder="Notas adicionales sobre el proveedor..."
-                        rows={3}
+                        rows={2}
                       />
                     </div>
                   </div>
                 </div>
 
-                <DialogFooter className="mt-6">
+                <DialogFooter>
                   <Button
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
@@ -850,8 +850,7 @@ export const Proveedores: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm flex items-center">
-                        <Mail className="h-3 w-3 mr-1 text-gray-400" />
+                      <div className="text-sm">
                         {proveedor.email}
                       </div>
                     </TableCell>
@@ -1080,8 +1079,7 @@ export const Proveedores: React.FC = () => {
                     <Label className="text-sm font-medium text-gray-600">
                       Email
                     </Label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Mail className="h-3 w-3 text-gray-400" />
+                    <p className="text-sm">
                       {selectedProveedor.email}
                     </p>
                   </div>

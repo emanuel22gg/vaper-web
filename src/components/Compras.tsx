@@ -57,7 +57,7 @@ import {
   PaginationPrevious,
 } from "./ui/pagination";
 import { toast } from "sonner";
-import { getCompras, createCompra, updateCompra, getProductos, getProveedores } from "../services/api";
+import { getCompras, createCompra, updateCompra, getProductos, getProveedores, updateProducto } from "../services/api";
 import { CompraDto, DetalleCompraDto, Producto, Proveedor } from "../types";
 import {
   Plus,
@@ -217,7 +217,27 @@ export const Compras: React.FC = () => {
           estado: 3,
           observaciones: `${ordenToAnular.observaciones || ""}\nAnulada: ${razonAnulacion}`.trim()
         });
-        toast.success("Orden de compra anulada exitosamente");
+
+        // Revertir stock de productos (restar lo que se había sumado al comprar)
+        if (ordenToAnular.detalleCompras) {
+          for (const detalle of ordenToAnular.detalleCompras) {
+            const productoOriginal = productos.find(p => p.id === detalle.productoId);
+            if (productoOriginal) {
+              await updateProducto(productoOriginal.id, {
+                id: productoOriginal.id,
+                nombreProducto: productoOriginal.nombreProducto,
+                precio: productoOriginal.precio,
+                stock: Math.max(0, productoOriginal.stock - detalle.cantidad),
+                categoriaId: productoOriginal.categoriaId,
+                descripcion: productoOriginal.descripcion,
+                idImagen: productoOriginal.idImagen,
+                estado: productoOriginal.estado
+              });
+            }
+          }
+        }
+
+        toast.success("Orden de compra anulada y stock revertido");
         fetchData();
         setIsAnularDialogOpen(false);
         setOrdenToAnular(null);
@@ -401,8 +421,26 @@ export const Compras: React.FC = () => {
       };
 
       await createCompra(nuevaCompra);
-      toast.success("Orden de compra creada exitosamente");
-      fetchData(); // Recargar datos de la API
+
+      // Actualizar stock de productos (sumar cantidades compradas)
+      for (const p of productosValidos) {
+        const productoOriginal = productos.find(prod => prod.id === p.id);
+        if (productoOriginal) {
+          await updateProducto(productoOriginal.id, {
+            id: productoOriginal.id,
+            nombreProducto: productoOriginal.nombreProducto,
+            precio: productoOriginal.precio,
+            stock: productoOriginal.stock + p.cantidad,
+            categoriaId: productoOriginal.categoriaId,
+            descripcion: productoOriginal.descripcion,
+            idImagen: productoOriginal.idImagen,
+            estado: productoOriginal.estado
+          });
+        }
+      }
+
+      toast.success("Orden de compra creada y stock actualizado");
+      fetchData(); // Recargar datos de la API (incluyendo el nuevo stock)
       setNewOrden({
         proveedorId: 0,
         productos: [
@@ -487,7 +525,7 @@ export const Compras: React.FC = () => {
     }
   };
 
-  const updateProducto = (
+  const updateFormProducto = (
     index: number,
     field: string,
     value: string | number,
@@ -660,7 +698,7 @@ export const Compras: React.FC = () => {
                                     producto.cantidad || ""
                                   }
                                   onChange={(e) =>
-                                    updateProducto(
+                                    updateFormProducto(
                                       index,
                                       "cantidad",
                                       parseInt(
@@ -679,7 +717,7 @@ export const Compras: React.FC = () => {
                                   type="number"
                                   value={producto.precioCompra || ""}
                                   onChange={(e) =>
-                                    updateProducto(
+                                    updateFormProducto(
                                       index,
                                       "precioCompra",
                                       parseInt(
@@ -698,7 +736,7 @@ export const Compras: React.FC = () => {
                                   type="number"
                                   value={producto.precioVenta || ""}
                                   onChange={(e) =>
-                                    updateProducto(
+                                    updateFormProducto(
                                       index,
                                       "precioVenta",
                                       parseInt(
@@ -815,6 +853,7 @@ export const Compras: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[120px]">N° Orden</TableHead>
                   <TableHead>Proveedor</TableHead>
                   <TableHead>Fecha Ingreso</TableHead>
                   <TableHead>Total</TableHead>
@@ -826,7 +865,7 @@ export const Compras: React.FC = () => {
                 {paginatedOrdenes.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-center py-8"
                     >
                       <div className="flex flex-col items-center space-y-2">
@@ -842,6 +881,9 @@ export const Compras: React.FC = () => {
                 ) : (
                   paginatedOrdenes.map((orden) => (
                     <TableRow key={orden.id}>
+                      <TableCell className="font-medium text-xs">
+                        {orden.numeroCompra || "N/A"}
+                      </TableCell>
                       <TableCell>
                         {proveedores.find(p => p.id === orden.proveedorId)?.nombreCompletoORazonSocial || "Cargando..."}
                       </TableCell>
