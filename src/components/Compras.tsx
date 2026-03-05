@@ -1096,14 +1096,13 @@ export const Compras: React.FC = () => {
                           ID: {detalle.productoId}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          {detalle.cantidad} × $
-                          {detalle.precioUnitario.toLocaleString()}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          $
-                          {detalle.subtotal.toLocaleString()}
+                      <div className="text-right space-y-1">
+                        <div className="flex flex-col text-xs text-muted-foreground">
+                          <span>Cantidad: {detalle.cantidad}</span>
+                          <span>Precio Unit: ${detalle.precioUnitario.toLocaleString()}</span>
+                        </div>
+                        <p className="font-semibold text-sm">
+                          Subtotal: ${detalle.subtotal.toLocaleString()}
                         </p>
                       </div>
                     </div>

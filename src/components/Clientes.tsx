@@ -934,139 +934,117 @@ export const Clientes: React.FC = () => {
 
           {selectedCliente && (
             <Tabs defaultValue="basic" className="mt-4">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Información Básica</TabsTrigger>
-                <TabsTrigger value="contact">Contacto</TabsTrigger>
-                <TabsTrigger value="commercial">Comercial</TabsTrigger>
-                <TabsTrigger value="history">Historial</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Información General</TabsTrigger>
+                <TabsTrigger value="contact">Contacto y Ubicación</TabsTrigger>
+                <TabsTrigger value="history">Historial Comercial</TabsTrigger>
               </TabsList>
 
               {/* Pestaña Información Básica */}
-              <TabsContent value="basic" className="space-y-6 mt-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Identificación</h3>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(selectedCliente.estadoUsuario)}
-                      <Badge className={getTypeColor(selectedCliente.tipoCliente || 'Minorista')}>
-                        {selectedCliente.tipoCliente || 'Minorista'}
-                      </Badge>
+              <TabsContent value="basic" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-center items-center text-center">
+                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                      <User className="h-6 w-6 text-blue-600" />
                     </div>
+                    <h3 className="font-bold text-slate-900">{selectedCliente.nombres} {selectedCliente.apellidos}</h3>
+                    <p className="text-xs text-slate-500">Cliente {selectedCliente.tipoCliente || 'Minorista'}</p>
+                    <Badge variant="outline" className={cn("mt-2 uppercase text-[10px]", selectedCliente.estadoUsuario ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
+                      {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
+                    </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Estado</Label>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(selectedCliente.estadoUsuario)}
-                        <span className={`font-semibold ${selectedCliente.estadoUsuario ? 'text-green-600' : 'text-gray-500'}`}>
-                          {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
+                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-white border rounded-xl shadow-sm">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Identificación</Label>
+                      <p className="text-sm font-semibold text-slate-700">{selectedCliente.tipoDocumento} {selectedCliente.numeroDocumento}</p>
                     </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Nombre Completo</Label>
-                    <p className="font-semibold">{selectedCliente.nombres} {selectedCliente.apellidos}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Tipo de Documento</Label>
-                    <p>{selectedCliente.tipoDocumento === 'CC' ? 'Cédula de Ciudadanía' :
-                      selectedCliente.tipoDocumento === 'CE' ? 'Cédula de Extranjería' :
-                        selectedCliente.tipoDocumento === 'NIT' ? 'NIT' :
-                          selectedCliente.tipoDocumento === 'PP' ? 'Pasaporte' :
-                            selectedCliente.tipoDocumento}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Número de Documento</Label>
-                    <p className="font-mono">{selectedCliente.numeroDocumento}</p>
-                  </div>
-                </div>
-
-                {selectedCliente.fechaNacimiento && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Fecha de Nacimiento</Label>
-                    <p>{new Date(selectedCliente.fechaNacimiento).toLocaleDateString('es-CO', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Pestaña Contacto */}
-              <TabsContent value="contact" className="space-y-6 mt-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Información de Contacto</h3>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <Mail className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Email</Label>
-                        <p className="font-semibold">{selectedCliente.correo}</p>
-                      </div>
+                    <div className="p-3 bg-white border rounded-xl shadow-sm">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Tipo Cliente</Label>
+                      <p className="text-sm font-semibold text-slate-700">{selectedCliente.tipoCliente || 'Minorista'}</p>
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-5 w-5 text-green-500" />
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
-                        <p className="font-semibold">{selectedCliente.telefono}</p>
-                      </div>
+                    <div className="p-3 bg-white border rounded-xl shadow-sm">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Fecha Nacimiento</Label>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {selectedCliente.fechaNacimiento ? new Date(selectedCliente.fechaNacimiento).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No especificada'}
+                      </p>
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="h-5 w-5 text-purple-500" />
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Barrio</Label>
-                        <p className="font-semibold">{selectedCliente.barrio}</p>
-                      </div>
+                    <div className="p-3 bg-white border rounded-xl shadow-sm">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">ID Sistema</Label>
+                      <p className="text-sm font-semibold text-slate-700">#{selectedCliente.id}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    <MapPin className="h-5 w-5 mr-2 text-green-600" />
-                    Dirección
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Dirección Completa</Label>
-                      <p className="font-semibold">{selectedCliente.direccion}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Ciudad</Label>
-                        <p>{selectedCliente.ciudad}</p>
-                      </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase">Compras</p>
+                    <p className="text-xl font-black text-blue-700">{pedidosCliente.length}</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-100 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <p className="text-[10px] font-bold text-green-600 uppercase">Total Invertido</p>
+                    <p className="text-xl font-black text-green-700">${pedidosCliente.reduce((sum, p) => sum + p.total, 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase">Devoluciones</p>
+                    <p className="text-xl font-black text-orange-700">{devolucionesCliente.length}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Estado</p>
+                    <div className="flex items-center gap-1">
+                      <div className={cn("h-2 w-2 rounded-full", selectedCliente.estadoUsuario ? "bg-green-500" : "bg-slate-400")}></div>
+                      <p className="text-sm font-bold text-slate-700">{selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}</p>
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              {/* Pestaña Comercial */}
-              <TabsContent value="commercial" className="space-y-6 mt-6">
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Información Comercial</h3>
+              <TabsContent value="contact" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-white border rounded-xl shadow-sm space-y-3">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
+                      <Phone className="h-3 w-3" /> Canales de Contacto
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                        <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Correo Electrónico</p>
+                          <p className="text-sm font-semibold text-slate-700">{selectedCliente.correo}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                        <div className="h-8 w-8 bg-green-50 rounded-full flex items-center justify-center">
+                          <Phone className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Línea Telefónica</p>
+                          <p className="text-sm font-semibold text-slate-700">{selectedCliente.telefono}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Tipo de Cliente</Label>
-                      <div className="mt-1">
-                        <Badge className={`${getTypeColor(selectedCliente.tipoCliente || 'Minorista')} text-sm px-3 py-1`}>
-                          {selectedCliente.tipoCliente || 'Minorista'}
-                        </Badge>
+                  <div className="p-4 bg-white border rounded-xl shadow-sm space-y-3">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
+                      <MapPin className="h-3 w-3" /> Ubicación
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Dirección</p>
+                        <p className="text-sm font-semibold text-slate-700">{selectedCliente.direccion}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Barrio</p>
+                          <p className="text-sm text-slate-600">{selectedCliente.barrio || 'No especificado'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Ciudad</p>
+                          <p className="text-sm text-slate-600">{selectedCliente.ciudad}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
