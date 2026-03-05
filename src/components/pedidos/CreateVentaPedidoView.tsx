@@ -37,7 +37,7 @@ import {
     Calendar,
     ArrowLeft
 } from "lucide-react";
-import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido } from "../../services/api";
+import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados } from "../../services/api";
 import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, DetalleVentaPedidoDto } from "../../types";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
@@ -88,6 +88,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     const [costoEnvio, setCostoEnvio] = useState(0);
     const [observaciones, setObservaciones] = useState("");
     const [guardando, setGuardando] = useState(false);
+    const [plazoAbono, setPlazoAbono] = useState<number>(1);
 
     // Estados para Geografía (API Colombia)
     const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
@@ -105,6 +106,18 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     });
 
     const [vigenciaDevolucion, setVigenciaDevolucion] = useState<number>(1);
+
+    const getEstadoAbonosId = async () => {
+        try {
+            const estados = await getEstados();
+            const estadoAbonos = estados.find((e: any) => e.nombreEstado.toLowerCase().includes('abonos'));
+            return estadoAbonos ? estadoAbonos.id : 2; // Fallback a Pendiente si no se encuentra
+        } catch (error) {
+            console.error("Error al obtener ID del estado Abonos:", error);
+            return 2;
+        }
+    };
+
     const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
     useEffect(() => {
@@ -194,6 +207,8 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                 setDireccionEntrega(cliente.direccion || "");
                 setCiudadEntrega(cliente.ciudad || "");
                 setBarrio(cliente.barrio || "");
+                setDepartamentoEntrega(cliente.departamento || "");
+                setSelectedDepartment(cliente.departamento || "");
                 toast.success("Cliente localizado");
             } else {
                 setClienteEncontrado(null);
@@ -258,15 +273,16 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
 
         try {
             setGuardando(true);
-            const nuevoPedido: VentaPedidoDto = {
+            const pedidoData: VentaPedidoDto = {
                 usuarioId: clienteEncontrado.id,
-                estadoId: 2, // 2 = Pendiente
-                metodoPago: metodoPago,
-                direccionEntrega: direccionEntrega,
-                ciudadEntrega: ciudadEntrega,
-                departamentoEntrega: departamentoEntrega,
-                barrio: barrio,
-                observaciones: observaciones,
+                estadoId: metodoPago === "Abonos" ? (await getEstadoAbonosId()) : 2, // 2 = Pendiente por defecto
+                metodoPago,
+                direccionEntrega,
+                ciudadEntrega,
+                departamentoEntrega,
+                barrio,
+                observaciones,
+                plazoAbono: metodoPago === "Abonos" ? plazoAbono : undefined,
                 subtotal: calcularSubtotal(),
                 envio: Number(costoEnvio),
                 total: calcularTotal(),
@@ -274,7 +290,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                 tipoVenta: "Pedido"
             };
 
-            const response: any = await createVentaPedido(nuevoPedido);
+            const response: any = await createVentaPedido(pedidoData);
             const createdOrderId = response.id || response.Id || response.ID || (response.data && (response.data.id || response.data.Id));
 
             if (!createdOrderId) {
@@ -315,7 +331,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         : [];
 
     return (
-        <Card className="shadow-lg border-none">
+        <Card className="shadow-lg border-none" translate="no">
             <CardHeader className="p-4 border-b">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -403,6 +419,10 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                 </p>
                                             </div>
                                             <div className="space-y-0.5">
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Documento</span>
+                                                <p className="text-sm font-bold text-gray-900">{clienteEncontrado.tipoDocumento} {clienteEncontrado.numeroDocumento}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
                                                 <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Correo</span>
                                                 <p className="text-sm font-bold text-gray-900">{clienteEncontrado.correo}</p>
                                             </div>
@@ -421,6 +441,10 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                             <div className="space-y-0.5">
                                                 <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Ciudad</span>
                                                 <p className="text-sm font-bold text-gray-900">{clienteEncontrado.ciudad || "No registrada"}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Departamento</span>
+                                                <p className="text-sm font-bold text-gray-900">{clienteEncontrado.departamento || "No registrado"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -480,7 +504,9 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                             >
                                                                 <div className="flex items-center gap-3 min-w-0 pr-2 py-1">
                                                                     <div className="min-w-0">
-                                                                        <p className="font-bold text-[10.5px] text-gray-800 uppercase truncate group-hover:text-black">{p.nombreProducto}</p>
+                                                                        <p className="font-bold text-[10.5px] text-gray-800 uppercase truncate group-hover:text-black">
+                                                                            <span>{p.nombreProducto}</span>
+                                                                        </p>
                                                                         <div className="flex items-center gap-2">
                                                                             <span className="text-[10px] font-black text-gray-900">${p.precio.toLocaleString()}</span>
                                                                             <span className={cn(
@@ -523,7 +549,9 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                             <div className="flex justify-between items-start gap-3">
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center justify-between gap-2 mb-1">
-                                                                        <p className="font-bold text-[10.5px] text-gray-800 uppercase truncate leading-tight flex-1">{item.producto.nombreProducto}</p>
+                                                                        <p className="font-bold text-[10.5px] text-gray-800 uppercase truncate leading-tight flex-1">
+                                                                            <span>{item.producto.nombreProducto}</span>
+                                                                        </p>
                                                                         <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-gray-200 shrink-0">
                                                                             <button onClick={() => actualizarCantidad(item.producto.id, -1)} className="h-5 w-5 flex items-center justify-center hover:bg-white rounded transition-colors text-gray-600"><Minus className="h-2.5 w-2.5" /></button>
                                                                             <span className="w-6 text-center text-[10.5px] font-black text-gray-900">{item.cantidad}</span>
@@ -543,10 +571,6 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                         </ScrollArea>
 
                                         <div className="p-3 bg-white border-t space-y-2 mt-auto shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
-                                            <div className="flex justify-between items-center px-1">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</span>
-                                                <span className="text-sm font-bold text-gray-800">${calcularSubtotal().toLocaleString()}</span>
-                                            </div>
                                             <div className="bg-gray-100 p-3 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
                                                 <div className="flex flex-col">
                                                     <span className="text-[9px] font-black text-gray-500 uppercase leading-none mb-1">Total a Pagar</span>
@@ -714,6 +738,21 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+
+                                            {metodoPago === "Abonos" && (
+                                                <div className="space-y-1 animate-in zoom-in-95 duration-200">
+                                                    <Label className="text-[10px] uppercase text-indigo-500 font-bold">Plazo (Meses)</Label>
+                                                    <Select value={plazoAbono.toString()} onValueChange={(v: string) => setPlazoAbono(parseInt(v))}>
+                                                        <SelectTrigger className="h-10 text-xs font-bold rounded-xl border-indigo-200 bg-indigo-50/30">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            <SelectItem value="1" className="text-xs font-bold">1 Mes</SelectItem>
+                                                            <SelectItem value="2" className="text-xs font-bold">2 Meses</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase text-gray-500 font-bold">Envío ($)</Label>

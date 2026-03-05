@@ -22,7 +22,8 @@ import {
   CalendarCheck,
   ChevronRight,
   UserCheck,
-  XCircle
+  XCircle,
+  Receipt
 } from 'lucide-react';
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
@@ -106,6 +107,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
     const s = status.toLowerCase();
     if (s.includes('completa') || s.includes('entrega')) return { color: 'bg-emerald-600', iconName: 'calendar-check', bg: 'bg-emerald-100', text: 'text-emerald-800 border-emerald-200' };
     if (s.includes('pendien')) return { color: 'bg-amber-500', iconName: 'clock', bg: 'bg-amber-100', text: 'text-amber-800 border-amber-200' };
+    if (s.includes('abono')) return { color: 'bg-indigo-600', iconName: 'receipt', bg: 'bg-indigo-100', text: 'text-indigo-800 border-indigo-200' };
     if (s.includes('anula') || s.includes('cancel')) return { color: 'bg-rose-600', iconName: 'x-circle', bg: 'bg-rose-100', text: 'text-rose-800 border-rose-200' };
     return { color: 'bg-slate-500', iconName: 'clock', bg: 'bg-slate-100', text: 'text-slate-800 border-slate-200' };
   };
@@ -116,6 +118,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
     switch (name) {
       case 'calendar-check': return <CalendarCheck key="icon-check" className="h-4 w-4" />;
       case 'clock': return <Clock key="icon-clock" className="h-4 w-4" />;
+      case 'receipt': return <Receipt key="icon-receipt" className="h-4 w-4" />;
       case 'x-circle': return <XCircle key="icon-x" className="h-4 w-4" />;
       default: return <Clock key="icon-default" className="h-4 w-4" />;
     }
@@ -204,7 +207,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 animate-in fade-in duration-300">
       {/* Header Simplificado */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border shadow-sm">
         <div className="flex items-center gap-4">
@@ -254,9 +257,9 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Card 1: Información del Cliente */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white h-full">
           <CardHeader className="p-5 border-b bg-gray-50/50">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
               <UserCheck className="h-5 w-5 text-blue-600" />
@@ -270,23 +273,26 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                 <div className="h-4 bg-gray-100 rounded w-1/4" />
               </div>
             ) : cliente ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Nombre Completo</p>
-                    <p className="text-lg font-bold text-gray-900">{cliente.nombres} {cliente.apellidos}</p>
+                    <p className="text-base font-bold text-gray-900 capitalize">{cliente.nombres} {cliente.apellidos}</p>
                   </div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Documento</p>
+                    <p className="text-base font-bold text-gray-900">{cliente.tipoDocumento} {cliente.numeroDocumento}</p>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
                     <Mail className="h-4 w-4 text-gray-400" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[9px] font-bold text-gray-400 uppercase">E-mail</p>
                       <p className="text-sm font-medium text-gray-700 truncate">{cliente.correo}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
@@ -294,28 +300,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                       <p className="text-sm font-medium text-gray-700">{cliente.telefono}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">Documento</p>
-                      <p className="text-sm font-medium text-gray-700">{cliente.numeroDocumento}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border col-span-2">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">Barrio</p>
-                      <p className="text-sm font-medium text-gray-700">{cliente.barrio || '---'}</p>
-                    </div>
-                  </div>
                 </div>
-
-                {pedido.observaciones && (
-                  <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
-                    <p className="text-sm text-amber-900 font-medium leading-relaxed italic">"{pedido.observaciones}"</p>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-xl border-gray-100 italic text-gray-400">
@@ -325,144 +310,151 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
           </CardContent>
         </Card>
 
-        {/* Card 2: Productos y Artículos */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardHeader className="p-5 border-b bg-gray-50/50">
-            <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
-              <ShoppingBag className="h-5 w-5 text-indigo-600" />
-              2. Artículos del Pedido
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Producto</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Cantidad</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic text-sm">
-                        Cargando productos...
-                      </td>
-                    </tr>
-                  ) : (pedido.detalleVenta_Pedido || []).length > 0 ? (
-                    (pedido.detalleVenta_Pedido || []).map((detalle: any, idx: number) => {
-                      const prod = getProducto(detalle.productoId);
-                      return (
-                        <tr key={`item-${detalle.productoId}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-gray-900">{prod ? prod.nombreProducto : `Producto ID: ${detalle.productoId}`}</p>
-                            <p className="text-[10px] text-gray-400 font-medium tracking-tight">Ref: {detalle.productoId}</p>
-                          </td>
-                          <td className="px-6 py-4 text-right text-sm text-gray-600">
-                            {formatCurrency(detalle.precioUnitario || detalle.precio)}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="inline-flex bg-gray-100 px-3 py-1 rounded-full font-bold text-gray-700 text-xs">
-                              {detalle.cantidad}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="text-sm font-bold text-gray-900">{formatCurrency(detalle.subtotal || ((detalle.precioUnitario || 0) * (detalle.cantidad || 0)))}</span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 font-medium text-sm">
-                        No hay artículos registrados.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="bg-gray-50/50 p-6 border-t flex flex-col items-end gap-1">
-              <div className="flex justify-between w-64 text-sm text-gray-500">
-                <span>Productos Subtotal:</span>
-                <span className="font-medium">{formatCurrency(pedido.subtotal)}</span>
-              </div>
-              <div className="flex justify-between w-64 text-sm text-gray-500">
-                <span>Costo de Envío:</span>
-                <span className="font-medium">{formatCurrency(pedido.envio)}</span>
-              </div>
-              <div className="flex justify-between w-64 text-base font-bold text-gray-900 mt-2 pt-2 border-t border-gray-200">
-                <span>TOTAL PEDIDO:</span>
-                <span className="text-blue-600">{formatCurrency(pedido.total)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 3: Logística y Resumen Final */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        {/* Card 2: Logística y Pago */}
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white h-full">
           <CardHeader className="p-5 border-b bg-gray-50/50">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
               <Truck className="h-5 w-5 text-emerald-600" />
-              3. Entrega y Pago
+              2. Entrega y Pago
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-blue-500 mt-1" />
+            <div className="space-y-6">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-blue-500 mt-1" />
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Dirección de Envío</p>
+                  <p className="text-base font-bold text-gray-900 leading-snug">
+                    {pedido.direccionEntrega || (cliente ? cliente.direccion : '---')}
+                  </p>
+                  <p className="text-xs text-gray-600 font-bold mt-2">
+                    Barrio: <span className="text-gray-900">{pedido.barrio || (cliente ? cliente.barrio : '---')}</span>
+                  </p>
+                  <p className="text-xs text-gray-600 font-bold mt-1">
+                    Ciudad: <span className="text-gray-900 capitalize">{((pedido.ciudadEntrega || (cliente ? cliente.ciudad : '')) || '---').toLowerCase()}</span>
+                  </p>
+                  <p className="text-xs text-gray-600 font-bold mt-1">
+                    Departamento: <span className="text-gray-900 capitalize">{((pedido.departamentoEntrega || (cliente ? cliente.departamento : '') || '---')).toLowerCase()}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border">
+                  <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                    <CreditCard className="h-3.5 w-3.5" />
+                  </div>
                   <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Dirección de Envío</p>
-                    <p className="text-base font-bold text-gray-900 leading-snug">
-                      {pedido.direccionEntrega || (cliente ? cliente.direccion : '---')}
-                    </p>
-                    <p className="text-xs text-gray-600 font-bold mt-1">
-                      Barrio: <span className="text-gray-900">{pedido.barrio || (cliente ? cliente.barrio : '---')}</span>
-                    </p>
-                    <p className="text-xs text-gray-500 font-bold mt-0.5 capitalize">
-                      {((pedido.ciudadEntrega || (cliente ? cliente.ciudad : '')) || '---').toLowerCase()},
-                      {((pedido.departamentoEntrega || '---')).toLowerCase()}
-                    </p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Método</p>
+                    <p className="text-sm font-bold text-gray-900 leading-none">{pedido.metodoPago}</p>
+                    {pedido.metodoPago === 'Abonos' && (pedido as any).plazoAbono && (
+                      <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">Plazo: {(pedido as any).plazoAbono} {(pedido as any).plazoAbono === 1 ? 'Mes' : 'Meses'}</p>
+                    )}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-                      <CreditCard className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Método de Pago</p>
-                      <p className="text-sm font-bold text-gray-900 leading-none">{pedido.metodoPago}</p>
-                    </div>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border">
+                  <div className="p-1.5 bg-orange-100 rounded-lg text-orange-600">
+                    <ShoppingBag className="h-3.5 w-3.5" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
-                      <ShoppingBag className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Costo Envío</p>
-                      <p className="text-sm font-bold text-gray-900 leading-none">{formatCurrency(pedido.envio)}</p>
-                    </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Envío</p>
+                    <p className="text-sm font-bold text-gray-900 leading-none">{formatCurrency(pedido.envio)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col justify-center items-end border-l pl-8">
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Neto a Pagar</p>
-                <p className="text-4xl font-black text-gray-900 tracking-tighter">
-                  {formatCurrency(pedido.total)}
-                </p>
-                <p className="text-[10px] text-blue-600 font-bold mt-1">Total Comprobante generado correctamente</p>
-              </div>
+              {pedido.observaciones && (
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl mt-4">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
+                  <p className="text-sm text-amber-900 font-medium leading-relaxed italic">"{pedido.observaciones}"</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Card 3: Productos y Artículos */}
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <CardHeader className="p-5 border-b bg-gray-50/50">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+            <ShoppingBag className="h-5 w-5 text-indigo-600" />
+            3. Artículos del Pedido
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Producto</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Cantidad</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic text-sm">
+                      Cargando productos...
+                    </td>
+                  </tr>
+                ) : (pedido.detalleVenta_Pedido || []).length > 0 ? (
+                  (pedido.detalleVenta_Pedido || []).map((detalle: any, idx: number) => {
+                    const prod = getProducto(detalle.productoId);
+                    return (
+                      <tr key={`item-${detalle.productoId}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-gray-900">{prod ? prod.nombreProducto : `Producto ID: ${detalle.productoId}`}</p>
+                          {/*<p className="text-[10px] text-gray-400 font-medium tracking-tight">Ref: {detalle.productoId}</p>*/}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-600">
+                          {formatCurrency(detalle.precioUnitario || detalle.precio)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex bg-gray-100 px-3 py-1 rounded-full font-bold text-gray-700 text-xs">
+                            {detalle.cantidad}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(detalle.subtotal || ((detalle.precioUnitario || 0) * (detalle.cantidad || 0)))}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 font-medium text-sm">
+                      No hay artículos registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-gray-50/50 p-6 border-t flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="hidden md:block">
+              <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Resumen de Totales</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 w-full md:w-auto">
+              <div className="flex justify-between w-full md:w-64 text-sm text-gray-500">
+                <span>Subtotal:</span>
+                <span className="font-medium">{formatCurrency(pedido.subtotal)}</span>
+              </div>
+              <div className="flex justify-between w-full md:w-64 text-sm text-gray-500">
+                <span>Costo Envío:</span>
+                <span className="font-medium">{formatCurrency(pedido.envio)}</span>
+              </div>
+              <div className="flex justify-between w-full md:w-64 text-base font-bold text-gray-900 mt-2 pt-2 border-t border-gray-200">
+                <span className="text-lg">TOTAL:</span>
+                <span className="text-2xl font-black text-blue-600 tracking-tighter">{formatCurrency(pedido.total)}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Footer Acciones */}
       <div className="flex justify-center pt-4">

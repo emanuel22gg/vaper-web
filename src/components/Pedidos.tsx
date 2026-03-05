@@ -174,6 +174,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "text-green-600";
     if (s.includes('pendien')) return "text-amber-600";
+    if (s.includes('abono')) return "text-indigo-600";
     if (s.includes('anula') || s.includes('cancel')) return "text-red-600";
     return "text-slate-600";
   };
@@ -182,6 +183,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return <CheckCircle className="h-3 w-3" />;
     if (s.includes('pendien')) return <Clock className="h-3 w-3" />;
+    if (s.includes('abono')) return <Receipt className="h-3 w-3" />;
     if (s.includes('anula') || s.includes('cancel')) return <XCircle className="h-3 w-3" />;
     return <Clock className="h-3 w-3" />;
   };
@@ -189,6 +191,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusVariant = (estado: string) => {
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "default" as const;
+    if (s.includes('abono')) return "outline" as const;
     if (s.includes('anula') || s.includes('cancel')) return "destructive" as const;
     return "secondary" as const;
   };
@@ -456,11 +459,17 @@ export const Pedidos: React.FC<PedidosProps> = ({
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
                   {Array.from(new Set(statuses
+                    .filter(s => {
+                      const name = s.nombreEstado.toLowerCase();
+                      return ['pendiente', 'entregado', 'anulada', 'anulado', 'cancelado', 'en abonos', 'abonos'].includes(name);
+                    })
                     .map(s => {
                       const name = s.nombreEstado.toLowerCase();
-                      return (name === 'anulada' || name === 'anulado') ? 'cancelado' : name;
+                      if (name === 'pendiente') return 'pendiente';
+                      if (name === 'entregado') return 'entregado';
+                      if (name.includes('abono')) return 'en abonos';
+                      return 'cancelado';
                     })
-                    .filter(name => name !== 'aceptada')
                   )).map(label => (
                     <SelectItem key={label} value={label} className="capitalize">{label}</SelectItem>
                   ))}
@@ -552,6 +561,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
                             size="sm"
                             onClick={() => handleVerAbonos(pedido)}
                             title="Ver abonos"
+                            disabled={pedido.metodoPago !== 'Abonos'}
+                            className={pedido.metodoPago === 'Abonos' ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
                           >
                             <Receipt className="h-4 w-4" />
                           </Button>
@@ -599,6 +610,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
                       let label = '';
                       if (name === 'pendiente') label = 'Pendiente';
                       else if (name === 'entregado') label = 'Entregado';
+                      else if (name.includes('abono')) label = 'En Abonos';
                       else if (name === 'anulada' || name === 'anulado' || name === 'cancelado') label = 'Cancelado';
 
                       if (label && !acc.find(item => item.label === label)) {

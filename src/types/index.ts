@@ -129,6 +129,7 @@ export interface UsuarioDto {
   ciudad: string;
   direccion: string;
   barrio: string;
+  departamento: string;
   fechaNacimiento: string;
   estadoUsuario: boolean;
   rolId: number;
@@ -215,6 +216,7 @@ export interface VentaPedidoDto {
   departamentoEntrega: string;
   barrio?: string;
   observaciones?: string;
+  plazoAbono?: number;
   subtotal: number;
   envio: number;
   total: number;

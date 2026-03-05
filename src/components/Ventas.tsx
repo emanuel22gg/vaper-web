@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
-import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos } from '../services/api';
+import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados } from '../services/api';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -83,10 +83,10 @@ import {
   TrendingUp,
   Users,
   Calculator,
-  ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Receipt
 } from 'lucide-react';
 
 // Función helper para formatear fechas
@@ -158,7 +158,7 @@ interface Venta {
   impuestos?: number;
   envio?: number;
   total: number;
-  estado: 'aceptada' | 'anulada'; // Cambiado: aceptada y anulada
+  estado: 'aceptada' | 'anulada' | 'en abonos'; // Cambiado: aceptada, anulada y en abonos
   metodoPago: string;
   tipoVenta: 'directa' | 'pedido'; // Nuevo campo
   pedidoId?: number; // Para ventas por pedido
@@ -359,8 +359,11 @@ export const Ventas: React.FC = () => {
       const prods = currentProds || productosDisponibles;
       const clients = currentClientes || clientesDisponibles;
 
+      const estados = await getEstados();
+      const idAbonos = estados.find((e: any) => e.nombreEstado.toLowerCase().includes('abono'))?.id || -1;
+
       const ventasMapeadas: Venta[] = ventasRaw
-        .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
+        .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || v.estadoId === idAbonos || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
         .map(v => {
           const cliente = clients.find(c => c.id === v.usuarioId);
           const detallesVenta = detallesRaw.filter(d => d.ventaPedidoId === v.id);
@@ -388,7 +391,7 @@ export const Ventas: React.FC = () => {
             descuento: Math.max(0, Math.round((v.subtotal + (v.envio || 0)) - v.total)),
             envio: v.envio || 0,
             total: v.total,
-            estado: v.estadoId === 1 ? 'aceptada' : 'anulada',
+            estado: v.estadoId === 1 ? 'aceptada' : (v.estadoId === idAbonos ? 'en abonos' : 'anulada'),
             metodoPago: v.metodoPago,
             tipoVenta: v.tipoVenta === 'Venta' ? 'directa' : 'pedido',
             pedidoId: v.id,
@@ -985,11 +988,12 @@ export const Ventas: React.FC = () => {
 
   const getEstadoBadge = (estado: string) => {
     const variants = {
-      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90' },
-      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700' }
+      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90', label: 'Aceptada' },
+      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700', label: 'Anulada' },
+      'en abonos': { variant: 'outline' as const, icon: <Receipt className="h-3 w-3" />, color: 'border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100', label: 'Saldo Pendiente' }
     };
 
-    const config = variants[estado as keyof typeof variants] || variants.aceptada;
+    const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
 
     return (
       <Badge
@@ -997,7 +1001,7 @@ export const Ventas: React.FC = () => {
         className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
       >
         {config.icon}
-        {estado}
+        {config.label}
       </Badge>
     );
   };
