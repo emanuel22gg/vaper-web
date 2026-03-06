@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -35,6 +35,19 @@ import {
   SelectValue,
 } from "./ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "./ui/command";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -46,9 +59,11 @@ import {
 } from "./ui/alert-dialog";
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
+import { TablePagination } from "./ui/TablePagination";
 import { toast } from "sonner";
 import {
   Plus,
+  Minus,
   Search,
   Trash2,
   XCircle,
@@ -60,8 +75,14 @@ import {
   ChevronsRight,
   X,
   Download,
-  Minus,
+  CheckCircle,
+  Receipt,
+  Check,
+  ChevronsUpDown,
+  User,
+  FileText,
 } from "lucide-react";
+import { cn } from "./ui/utils";
 
 // Interfaces para tipado
 interface Cliente {
@@ -71,6 +92,26 @@ interface Cliente {
   email: string;
   telefono: string;
   empresa?: string;
+}
+
+interface Usuario {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  telefono: string;
+  numeroDocumento: string;
+}
+
+interface FormularioCotizacion {
+  clienteId: number | null;
+  productos: Array<{
+    productoId: number;
+    cantidad: number;
+  }>;
+  fechaVigencia: string;
+  condicionesPago: CondicionesPago;
+  descuentoPorcentaje: number;
 }
 
 interface ProductoDisponible {
@@ -140,640 +181,117 @@ interface Cotizacion {
   motivoAnulacion?: string;
 }
 
-// Datos simulados
-const clientesDisponibles: Cliente[] = [
-  {
-    id: 1,
-    nombre: "Juan Pérez",
-    documento: "1234567890",
-    email: "juan.perez@email.com",
-    telefono: "+57 300 123 4567",
-    empresa: "Distribuidora El Sol",
-  },
-  {
-    id: 2,
-    nombre: "María González",
-    documento: "9876543210",
-    email: "maria.gonzalez@email.com",
-    telefono: "+57 310 234 5678",
-    empresa: "Comercial Luna",
-  },
-  {
-    id: 3,
-    nombre: "Carlos Rodríguez",
-    documento: "5551234567",
-    email: "carlos.rodriguez@email.com",
-    telefono: "+57 320 345 6789",
-  },
-  {
-    id: 4,
-    nombre: "Ana Martínez",
-    documento: "7778889990",
-    email: "ana.martinez@email.com",
-    telefono: "+57 315 456 7890",
-    empresa: "Vapeadores Pro",
-  },
-  {
-    id: 5,
-    nombre: "Luis Hernández",
-    documento: "3334445556",
-    email: "luis.hernandez@email.com",
-    telefono: "+57 325 567 8901",
-  },
-];
 
-const productosDisponibles: ProductoDisponible[] = [
-  {
-    id: 1,
-    codigo: "VD001",
-    nombre: "Vape Desechable Cherry 2000 puffs",
-    descripcion:
-      "Vapeador desechable sabor cereza con 2000 inhalaciones aproximadas",
-    precio: 25000,
-    categoria: "Vapes Desechables",
-    stock: 50,
-  },
-  {
-    id: 2,
-    codigo: "PR001",
-    nombre: "Pod System Premium 80W",
-    descripcion:
-      "Sistema de pod recargable con batería de larga duración",
-    precio: 80000,
-    categoria: "Vapes Recargables",
-    stock: 20,
-  },
-  {
-    id: 3,
-    codigo: "VD002",
-    nombre: "Vape Desechable Mango 1500 puffs",
-    descripcion:
-      "Vapeador desechable sabor mango con 1500 inhalaciones aproximadas",
-    precio: 20000,
-    categoria: "Vapes Desechables",
-    stock: 75,
-  },
-  {
-    id: 4,
-    codigo: "AC001",
-    nombre: "Líquido Premium Vainilla 30ml",
-    descripcion:
-      "E-liquid premium sabor vainilla, concentración 3mg",
-    precio: 15000,
-    categoria: "Líquidos",
-    stock: 100,
-  },
-];
+import { getUsuarios, getProductos } from "../services/api";
 
-const cotizacionesIniciales: Cotizacion[] = [
-  {
-    id: 1,
-    fechaCotizacion: "2024-01-15T09:00:00",
-    fechaVigencia: "2024-01-22T23:59:59",
-    cliente: clientesDisponibles[0],
-    productos: [
-      {
-        id: 1,
-        codigo: "VD001",
-        nombre: "Vape Desechable Cherry 2000 puffs",
-        descripcion:
-          "Vapeador desechable sabor cereza con 2000 inhalaciones aproximadas",
-        precioUnitario: 25000,
-        cantidad: 10,
-        subtotal: 250000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-      {
-        id: 2,
-        codigo: "PR001",
-        nombre: "Pod System Premium 80W",
-        descripcion:
-          "Sistema de pod recargable con batería de larga duración",
-        precioUnitario: 80000,
-        cantidad: 2,
-        subtotal: 160000,
-        categoria: "Vapes Recargables",
-        disponible: true,
-      },
-    ],
-    subtotal: 410000,
-    descuento: 20500,
-    impuestos: 0,
-    total: 389500,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "credito",
-      plazoCredito: 30,
-      metodoPago: ["Transferencia bancaria", "Cheque"],
-      observaciones:
-        "Pago a 30 días con descuento por pronto pago",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 24,
-      penalizacion: 10,
-      condicionesEspeciales:
-        "Cancelación gratuita dentro de las primeras 24 horas",
-    },
-    observaciones:
-      "Cliente preferencial - aplicar descuento del 5%",
-    creadoPor: "María González",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2024-01-15T09:00:00",
-        estadoAnterior: "",
-        estadoNuevo: "pendiente",
-        motivo: "Cotización creada",
-        usuario: "María González",
-      },
-      {
-        id: 2,
-        fechaCambio: "2024-01-15T14:30:00",
-        estadoAnterior: "pendiente",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización aceptada por el cliente",
-        usuario: "María González",
-      },
-    ],
-    fechaCreacion: "2024-01-15T09:00:00",
-    fechaActualizacion: "2024-01-15T14:30:00",
-  },
-  {
-    id: 2,
-    fechaCotizacion: "2024-01-16T10:30:00",
-    fechaVigencia: "2024-01-30T23:59:59",
-    cliente: clientesDisponibles[1],
-    productos: [
-      {
-        id: 3,
-        codigo: "VD002",
-        nombre: "Vape Desechable Mango 1500 puffs",
-        descripcion:
-          "Vapeador desechable sabor mango con 1500 inhalaciones aproximadas",
-        precioUnitario: 20000,
-        cantidad: 15,
-        subtotal: 300000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-    ],
-    subtotal: 300000,
-    descuento: 15000,
-    impuestos: 0,
-    total: 285000,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "contado",
-      metodoPago: ["Efectivo", "Transferencia"],
-      observaciones: "Descuento del 5% por pago de contado",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 48,
-      penalizacion: 5,
-      condicionesEspeciales:
-        "Cancelación con penalización del 5% después de 48 horas",
-    },
-    observaciones:
-      "Cliente mayorista - precios especiales aplicados",
-    creadoPor: "Carlos Ruiz",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2024-01-16T10:30:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización creada y aceptada",
-        usuario: "Carlos Ruiz",
-      },
-    ],
-    fechaCreacion: "2024-01-16T10:30:00",
-    fechaActualizacion: "2024-01-16T10:30:00",
-  },
-  {
-    id: 3,
-    fechaCotizacion: "2024-01-20T16:30:00",
-    fechaVigencia: "2024-02-05T23:59:59",
-    cliente: clientesDisponibles[2],
-    productos: [
-      {
-        id: 1,
-        codigo: "VD001",
-        nombre: "Vape Desechable Cherry 2000 puffs",
-        descripcion:
-          "Vapeador desechable sabor cereza con 2000 inhalaciones aproximadas",
-        precioUnitario: 25000,
-        cantidad: 8,
-        subtotal: 200000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-    ],
-    subtotal: 200000,
-    descuento: 10000,
-    impuestos: 0,
-    total: 190000,
-    estado: "anulada",
-    motivoAnulacion: "Cliente cambió de proveedor",
-    condicionesPago: {
-      tipoPago: "contado",
-      metodoPago: ["Transferencia bancaria"],
-      observaciones: "Pago contra entrega",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 24,
-      penalizacion: 0,
-    },
-    observaciones:
-      "Cotización anulada por decisión del cliente",
-    creadoPor: "Patricia Moreno",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2024-01-20T16:30:00",
-        estadoAnterior: "",
-        estadoNuevo: "pendiente",
-        motivo: "Cotización creada",
-        usuario: "Patricia Moreno",
-      },
-      {
-        id: 2,
-        fechaCambio: "2024-01-22T10:15:00",
-        estadoAnterior: "pendiente",
-        estadoNuevo: "anulada",
-        motivo: "Cliente cambió de proveedor",
-        usuario: "Patricia Moreno",
-      },
-    ],
-    fechaCreacion: "2024-01-20T16:30:00",
-    fechaActualizacion: "2024-01-22T10:15:00",
-  },
-  {
-    id: 4,
-    fechaCotizacion: "2025-09-21T11:15:00",
-    fechaVigencia: "2025-09-28T23:59:59",
-    cliente: clientesDisponibles[2],
-    productos: [
-      {
-        id: 4,
-        codigo: "AC001",
-        nombre: "Líquido Premium Vainilla 30ml",
-        descripcion:
-          "E-liquid premium sabor vainilla, concentración 3mg",
-        precioUnitario: 15000,
-        cantidad: 20,
-        subtotal: 300000,
-        categoria: "Líquidos",
-        disponible: true,
-      },
-      {
-        id: 1,
-        codigo: "VD001",
-        nombre: "Vape Desechable Cherry 2000 puffs",
-        descripcion:
-          "Vapeador desechable sabor cereza con 2000 inhalaciones aproximadas",
-        precioUnitario: 25000,
-        cantidad: 5,
-        subtotal: 125000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-    ],
-    subtotal: 425000,
-    descuento: 0,
-    impuestos: 0,
-    total: 425000,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "contado",
-      metodoPago: ["Transferencia bancaria"],
-      observaciones: "Pago inmediato",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 24,
-      penalizacion: 0,
-    },
-    observaciones: "Pedido urgente - entrega rápida",
-    creadoPor: "Ana Martínez",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2025-09-21T11:15:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización creada y aceptada automáticamente",
-        usuario: "Ana Martínez",
-      },
-    ],
-    fechaCreacion: "2025-09-21T11:15:00",
-    fechaActualizacion: "2025-09-21T11:15:00",
-  },
-  {
-    id: 5,
-    fechaCotizacion: "2025-09-20T14:45:00",
-    fechaVigencia: "2025-10-04T23:59:59",
-    cliente: clientesDisponibles[3],
-    productos: [
-      {
-        id: 2,
-        codigo: "PR001",
-        nombre: "Pod System Premium 80W",
-        descripcion:
-          "Sistema de pod recargable con batería de larga duración",
-        precioUnitario: 80000,
-        cantidad: 12,
-        subtotal: 960000,
-        categoria: "Vapes Recargables",
-        disponible: true,
-      },
-    ],
-    subtotal: 960000,
-    descuento: 48000,
-    impuestos: 0,
-    total: 912000,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "credito",
-      plazoCredito: 15,
-      metodoPago: ["Transferencia bancaria"],
-      observaciones: "Descuento del 5% por volumen",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 48,
-      penalizacion: 5,
-    },
-    observaciones: "Cliente corporativo - volumen alto",
-    creadoPor: "Luis Hernández",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2025-09-20T14:45:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización aceptada por cliente corporativo",
-        usuario: "Luis Hernández",
-      },
-    ],
-    fechaCreacion: "2025-09-20T14:45:00",
-    fechaActualizacion: "2025-09-20T14:45:00",
-  },
-  {
-    id: 6,
-    fechaCotizacion: "2025-09-19T09:30:00",
-    fechaVigencia: "2025-09-26T23:59:59",
-    cliente: clientesDisponibles[4],
-    productos: [
-      {
-        id: 3,
-        codigo: "VD002",
-        nombre: "Vape Desechable Mango 1500 puffs",
-        descripcion:
-          "Vapeador desechable sabor mango con 1500 inhalaciones aproximadas",
-        precioUnitario: 20000,
-        cantidad: 30,
-        subtotal: 600000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-    ],
-    subtotal: 600000,
-    descuento: 30000,
-    impuestos: 0,
-    total: 570000,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "contado",
-      metodoPago: ["Efectivo"],
-      observaciones: "Pago al recibir mercancía",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 24,
-      penalizacion: 0,
-    },
-    observaciones: "Cliente mayorista regular",
-    creadoPor: "Carlos Ruiz",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2025-09-19T09:30:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización aceptada",
-        usuario: "Carlos Ruiz",
-      },
-    ],
-    fechaCreacion: "2025-09-19T09:30:00",
-    fechaActualizacion: "2025-09-19T09:30:00",
-  },
-  {
-    id: 7,
-    fechaCotizacion: "2025-09-18T16:20:00",
-    fechaVigencia: "2025-10-02T23:59:59",
-    cliente: clientesDisponibles[1],
-    productos: [
-      {
-        id: 4,
-        codigo: "AC001",
-        nombre: "Líquido Premium Vainilla 30ml",
-        descripcion:
-          "E-liquid premium sabor vainilla, concentración 3mg",
-        precioUnitario: 15000,
-        cantidad: 10,
-        subtotal: 150000,
-        categoria: "Líquidos",
-        disponible: true,
-      },
-      {
-        id: 3,
-        codigo: "VD002",
-        nombre: "Vape Desechable Mango 1500 puffs",
-        descripcion:
-          "Vapeador desechable sabor mango con 1500 inhalaciones aproximadas",
-        precioUnitario: 20000,
-        cantidad: 6,
-        subtotal: 120000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-    ],
-    subtotal: 270000,
-    descuento: 13500,
-    impuestos: 0,
-    total: 256500,
-    estado: "anulada",
-    motivoAnulacion: "Problemas de stock en el inventario",
-    condicionesPago: {
-      tipoPago: "contado",
-      metodoPago: ["Transferencia bancaria"],
-      observaciones: "Pago anticipado",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 24,
-      penalizacion: 0,
-    },
-    observaciones: "Cotización anulada por falta de inventario",
-    creadoPor: "Patricia Moreno",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2025-09-18T16:20:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo: "Cotización creada y aceptada",
-        usuario: "Patricia Moreno",
-      },
-      {
-        id: 2,
-        fechaCambio: "2025-09-19T08:45:00",
-        estadoAnterior: "aceptada",
-        estadoNuevo: "anulada",
-        motivo: "Problemas de stock en el inventario",
-        usuario: "Patricia Moreno",
-      },
-    ],
-    fechaCreacion: "2025-09-18T16:20:00",
-    fechaActualizacion: "2025-09-19T08:45:00",
-  },
-  {
-    id: 8,
-    fechaCotizacion: "2025-09-17T13:10:00",
-    fechaVigencia: "2025-09-24T23:59:59",
-    cliente: clientesDisponibles[0],
-    productos: [
-      {
-        id: 1,
-        codigo: "VD001",
-        nombre: "Vape Desechable Cherry 2000 puffs",
-        descripcion:
-          "Vapeador desechable sabor cereza con 2000 inhalaciones aproximadas",
-        precioUnitario: 25000,
-        cantidad: 25,
-        subtotal: 625000,
-        categoria: "Vapes Desechables",
-        disponible: true,
-      },
-      {
-        id: 2,
-        codigo: "PR001",
-        nombre: "Pod System Premium 80W",
-        descripcion:
-          "Sistema de pod recargable con batería de larga duración",
-        precioUnitario: 80000,
-        cantidad: 3,
-        subtotal: 240000,
-        categoria: "Vapes Recargables",
-        disponible: true,
-      },
-    ],
-    subtotal: 865000,
-    descuento: 43250,
-    impuestos: 0,
-    total: 821750,
-    estado: "aceptada",
-    condicionesPago: {
-      tipoPago: "credito",
-      plazoCredito: 45,
-      metodoPago: ["Transferencia bancaria", "Cheque"],
-      observaciones: "Cliente VIP - condiciones preferenciales",
-    },
-    politicasCancelacion: {
-      permiteCancelacion: true,
-      tiempoLimite: 72,
-      penalizacion: 3,
-    },
-    observaciones: "Cliente VIP con historial excelente",
-    creadoPor: "María González",
-    cambiosEstado: [
-      {
-        id: 1,
-        fechaCambio: "2025-09-17T13:10:00",
-        estadoAnterior: "",
-        estadoNuevo: "aceptada",
-        motivo:
-          "Cotización aceptada automáticamente para cliente VIP",
-        usuario: "María González",
-      },
-    ],
-    fechaCreacion: "2025-09-17T13:10:00",
-    fechaActualizacion: "2025-09-17T13:10:00",
-  },
-];
-
-// Formulario para nueva cotización
-interface FormularioCotizacion {
-  clienteId: number | null;
-  productos: Array<{
-    productoId: number;
-    cantidad: number;
-  }>;
-  fechaVigencia: string;
-  condicionesPago: CondicionesPago;
-  descuentoPorcentaje: number;
-}
+// ... (interfaces se mantienen igual)
 
 export const Cotizaciones: React.FC = () => {
-  const [cotizaciones, setCotizaciones] = useState<
-    Cotizacion[]
-  >(cotizacionesIniciales);
-  const [selectedCotizacion, setSelectedCotizacion] =
-    useState<Cotizacion | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] =
-    useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] =
-    useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] =
-    useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] =
-    useState(false);
-  const [cotizacionToDelete, setCotizacionToDelete] =
-    useState<Cotizacion | null>(null);
+  // Estados para API
+  const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
+  const [productosDisponibles, setProductosDisponibles] = useState<ProductoDisponible[]>([]);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  const [isLoadingProductos, setIsLoadingProductos] = useState(false);
+
+  // Inicializar cotizaciones desde localStorage o con array vacío
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => {
+    try {
+      const saved = localStorage.getItem('vaper_cotizaciones');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Error al cargar cotizaciones del localStorage:", e);
+    }
+    return [];
+  });
+
+  const [selectedCotizacion, setSelectedCotizacion] = useState<Cotizacion | null>(null);
+
+  // Guardar cotizaciones en localStorage cada vez que cambien
+  useEffect(() => {
+    try {
+      localStorage.setItem('vaper_cotizaciones', JSON.stringify(cotizaciones));
+    } catch (e) {
+      console.error("Error al guardar cotizaciones en localStorage:", e);
+    }
+  }, [cotizaciones]);
+
+  // Cargar datos de la API
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingClientes(true);
+      setIsLoadingProductos(true);
+      try {
+        const [usuariosData, productosData] = await Promise.all([
+          getUsuarios(),
+          getProductos()
+        ]);
+        setClientesDisponibles(usuariosData);
+        // Mapear productos al formato esperado por el componente si es necesario
+        setProductosDisponibles(productosData.map(p => ({
+          id: p.id,
+          codigo: p.nombreProducto.substring(0, 5).toUpperCase(),
+          nombre: p.nombreProducto,
+          descripcion: p.descripcion || p.nombreProducto,
+          precio: p.precio,
+          categoria: p.categoria?.nombreCategoria || "General",
+          stock: p.stock
+        })));
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+        toast.error("Error al cargar datos de la API");
+      } finally {
+        setIsLoadingClientes(false);
+        setIsLoadingProductos(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [cotizacionToDelete, setCotizacionToDelete] = useState<Cotizacion | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtroEstado, setFiltroEstado] =
-    useState<string>("todos");
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
 
   // Estados de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
   // Estados para el selector de productos temporal
-  const [selectedProductId, setSelectedProductId] =
-    useState<number>(0);
-  const [selectedQuantity, setSelectedQuantity] =
-    useState<number>(1);
+  const [selectedProductId, setSelectedProductId] = useState<number>(0);
+  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
 
   // Estado para búsqueda de cliente por documento
   const [busquedaDocumento, setBusquedaDocumento] = useState("");
   const [mostrarSugerenciasCliente, setMostrarSugerenciasCliente] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [openSelectorCliente, setOpenSelectorCliente] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [openSelectorProducto, setOpenSelectorProducto] = useState(false);
 
   // Formulario de nueva cotización
-  const [formData, setFormData] =
-    useState<FormularioCotizacion>(() => {
-      const fechaVigenciaDefault = new Date(
-        Date.now() + 7 * 24 * 60 * 60 * 1000,
-      )
-        .toISOString()
-        .split("T")[0];
+  const [formData, setFormData] = useState<FormularioCotizacion>(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const fechaVigenciaDefault = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-      return {
-        clienteId: null,
-        productos: [],
-        fechaVigencia: fechaVigenciaDefault,
-        condicionesPago: {
-          tipoPago: "contado",
-          metodoPago: ["Efectivo"],
-          observaciones: "",
-        },
-        descuentoPorcentaje: 0,
-      };
-    });
+    return {
+      clienteId: null,
+      productos: [],
+      fechaVigencia: fechaVigenciaDefault,
+      condicionesPago: {
+        tipoPago: "contado",
+        metodoPago: ["Efectivo"],
+        observaciones: "",
+      },
+      descuentoPorcentaje: 0,
+    };
+  });
 
 
 
@@ -798,21 +316,39 @@ export const Cotizaciones: React.FC = () => {
     return { subtotal, descuento, impuestos, total };
   };
 
-  // Filtrar clientes por documento
-  const clientesFiltradosPorDocumento = busquedaDocumento
-    ? clientesDisponibles.filter((cliente) =>
-        cliente.documento.includes(busquedaDocumento)
-      )
-    : [];
+  // Filtrar clientes por documento o nombre (para el buscador avanzado)
+  const clientesFiltradosParaBusqueda = useMemo(() => {
+    if (!clientSearchTerm || clientSearchTerm.trim() === "") return [];
+    const term = clientSearchTerm.toLowerCase();
+    return clientesDisponibles.filter(
+      (c) =>
+        (c.nombres?.toLowerCase() || "").includes(term) ||
+        (c.apellidos?.toLowerCase() || "").includes(term) ||
+        (c.numeroDocumento || "").includes(term)
+    );
+  }, [clientesDisponibles, clientSearchTerm]);
+
+  // Filtrar productos para búsqueda (por nombre o código)
+  const productosFiltrados = useMemo(() => {
+    if (!productSearchTerm || productSearchTerm.trim() === "") return [];
+    const term = productSearchTerm.toLowerCase();
+    return productosDisponibles.filter(
+      (pd) =>
+        (pd.nombre?.toLowerCase() || "").includes(term) ||
+        (pd.codigo?.toLowerCase() || "").includes(term)
+    );
+  }, [productosDisponibles, productSearchTerm]);
 
   // Seleccionar cliente desde las sugerencias
-  const seleccionarCliente = (cliente: Cliente) => {
+  const seleccionarCliente = (cliente: Usuario) => {
     setFormData((prev) => ({
       ...prev,
       clienteId: cliente.id,
     }));
-    setBusquedaDocumento(cliente.documento);
+    setBusquedaDocumento(cliente.numeroDocumento);
     setMostrarSugerenciasCliente(false);
+    setClientSearchTerm(`${cliente.nombres} ${cliente.apellidos}`);
+    setOpenSelectorCliente(false);
   };
 
   // Resetear paginación cuando cambien los filtros
@@ -821,18 +357,44 @@ export const Cotizaciones: React.FC = () => {
   }, [searchTerm, filtroEstado]);
 
   // Filtrar cotizaciones
-  const cotizacionesFiltradas = cotizaciones.filter(
-    (cotizacion) => {
-      const matchesSearch =
-        cotizacion.cliente.nombre
+  const cotizacionesFiltradas = useMemo(() => {
+    let result = [...cotizaciones];
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      const isNumeric = /^\d+$/.test(term);
+      const isCotId = term.startsWith('cot-');
+      const cotNum = isCotId ? term.replace('cot-', '') : '';
+      const isCotNumNumeric = cotNum && /^\d+$/.test(cotNum);
+
+      result = result.filter(cotizacion => {
+        // 1. Si es numérico buscar por ID exacto O padded ID
+        if (isNumeric) {
+          return cotizacion.id.toString() === term ||
+            String(cotizacion.id).padStart(3, '0') === term;
+        }
+
+        // 2. Si empieza por COT- buscar por ID exacto O padded ID (con el COT- removido)
+        if (isCotId && isCotNumNumeric) {
+          const idNumStr = parseInt(cotNum).toString();
+          return cotizacion.id.toString() === idNumStr ||
+            String(cotizacion.id).padStart(3, '0') === cotNum;
+        }
+
+        // 3. Fallback: buscar por nombre de cliente
+        return cotizacion.cliente.nombre
           .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-      const matchesEstado =
-        filtroEstado === "todos" ||
-        cotizacion.estado === filtroEstado;
-      return matchesSearch && matchesEstado;
-    },
-  );
+          .includes(term);
+      });
+    }
+
+    // Filtro por estado
+    if (filtroEstado !== "todos") {
+      result = result.filter(cotizacion => cotizacion.estado === filtroEstado);
+    }
+
+    return result;
+  }, [cotizaciones, searchTerm, filtroEstado]);
 
   // Paginación
   const totalPages = Math.ceil(
@@ -884,11 +446,11 @@ export const Cotizaciones: React.FC = () => {
 
   // Confirmar anulación
   const confirmarAnulacion = () => {
-    if (cotizacionToDelete && motivoAnulacion.trim()) {
+    if (cotizacionToDelete) {
       const cotizacionActualizada: Cotizacion = {
         ...cotizacionToDelete,
         estado: "anulada",
-        motivoAnulacion,
+        motivoAnulacion: motivoAnulacion || "Sin motivo especificado",
         fechaActualizacion: new Date().toISOString(),
         cambiosEstado: [
           ...cotizacionToDelete.cambiosEstado,
@@ -897,7 +459,7 @@ export const Cotizaciones: React.FC = () => {
             fechaCambio: new Date().toISOString(),
             estadoAnterior: cotizacionToDelete.estado,
             estadoNuevo: "anulada",
-            motivo: motivoAnulacion,
+            motivo: motivoAnulacion || "Anulación manual",
             usuario: "Usuario Actual",
           },
         ],
@@ -921,19 +483,62 @@ export const Cotizaciones: React.FC = () => {
   // Agregar producto usando el botón +
   const agregarProductoSeleccionado = () => {
     if (selectedProductId > 0 && selectedQuantity > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        productos: [
-          ...prev.productos,
-          {
-            productoId: selectedProductId,
-            cantidad: selectedQuantity,
-          },
-        ],
-      }));
+      const productoInfo = productosDisponibles.find(p => p.id === selectedProductId);
+      if (!productoInfo) return;
+
+      if (selectedQuantity > productoInfo.stock) {
+        toast.error(`Stock insuficiente. Solo hay ${productoInfo.stock} disponibles.`);
+        return;
+      }
+
+      setFormData((prev) => {
+        const indexExistente = prev.productos.findIndex(p => p.productoId === selectedProductId);
+
+        if (indexExistente >= 0) {
+          // El producto ya existe, mostrar alerta
+          toast.error("Este producto ya fue agregado");
+          return prev;
+        } else {
+          // Es un producto nuevo
+          return {
+            ...prev,
+            productos: [
+              ...prev.productos,
+              {
+                productoId: selectedProductId,
+                cantidad: selectedQuantity,
+              },
+            ],
+          };
+        }
+      });
       setSelectedProductId(0);
       setSelectedQuantity(1);
+      setProductSearchTerm(''); // Limpiar buscador al agregar
     }
+  };
+
+  // Función para cambiar cantidad desde la lista de seleccionados
+  const cambiarCantidad = (index: number, delta: number) => {
+    setFormData((prev) => {
+      const nuevosProductos = [...prev.productos];
+      const nuevaCantidad = nuevosProductos[index].cantidad + delta;
+      const productoInfo = productosDisponibles.find(p => p.id === nuevosProductos[index].productoId);
+
+      if (productoInfo && nuevaCantidad > productoInfo.stock) {
+        toast.error(`Stock insuficiente. Solo hay ${productoInfo.stock} disponibles.`);
+        return prev;
+      }
+
+      if (nuevaCantidad > 0) {
+        nuevosProductos[index] = {
+          ...nuevosProductos[index],
+          cantidad: nuevaCantidad
+        };
+      }
+
+      return { ...prev, productos: nuevosProductos };
+    });
   };
 
   // Remover producto del formulario
@@ -970,10 +575,21 @@ export const Cotizaciones: React.FC = () => {
       return;
     }
 
-    const cliente = clientesDisponibles.find(
-      (c) => c.id === formData.clienteId,
+    const clienteSeleccionado = clientesDisponibles.find(
+      (c) => c.id.toString() === formData.clienteId.toString(),
     );
-    if (!cliente) return;
+    if (!clienteSeleccionado) {
+      toast.error("No se encontró el cliente seleccionado.");
+      return;
+    }
+
+    const clienteParaCotizacion: Cliente = {
+      id: clienteSeleccionado.id,
+      nombre: `${clienteSeleccionado.nombres} ${clienteSeleccionado.apellidos}`,
+      documento: clienteSeleccionado.numeroDocumento,
+      email: clienteSeleccionado.correo,
+      telefono: clienteSeleccionado.telefono
+    };
 
     const productosConDetalles = formData.productos.map((p) => {
       const producto = productosDisponibles.find(
@@ -1007,12 +623,12 @@ export const Cotizaciones: React.FC = () => {
         .split("T")[0];
 
     const nuevaCotizacion: Cotizacion = {
-      id: Math.max(...cotizaciones.map((c) => c.id)) + 1,
+      id: cotizaciones.length > 0 ? Math.max(...cotizaciones.map((c) => c.id)) + 1 : 1,
       fechaCotizacion: new Date().toISOString(),
       fechaVigencia: new Date(
         fechaVigenciaAuto + "T23:59:59",
       ).toISOString(),
-      cliente,
+      cliente: clienteParaCotizacion,
       productos: productosConDetalles,
       subtotal,
       descuento,
@@ -1040,8 +656,7 @@ export const Cotizaciones: React.FC = () => {
       fechaCreacion: new Date().toISOString(),
       fechaActualizacion: new Date().toISOString(),
     };
-
-    setCotizaciones((prev) => [nuevaCotizacion, ...prev]);
+    setCotizaciones((prev) => [...prev, nuevaCotizacion]);
     toast.success("Cotización creada exitosamente");
     setIsCreateDialogOpen(false);
     resetFormData();
@@ -1049,6 +664,8 @@ export const Cotizaciones: React.FC = () => {
 
   // Resetear formulario
   const resetFormData = () => {
+    const hoy = new Date().toISOString().split("T")[0];
+
     const fechaVigenciaDefault = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000,
     )
@@ -1058,7 +675,7 @@ export const Cotizaciones: React.FC = () => {
     setFormData({
       clienteId: null,
       productos: [],
-      fechaVigencia: fechaVigenciaDefault,
+      fechaVigencia: hoy,
       condicionesPago: {
         tipoPago: "contado",
         metodoPago: ["Efectivo"],
@@ -1068,20 +685,28 @@ export const Cotizaciones: React.FC = () => {
     });
     setSelectedProductId(0);
     setSelectedQuantity(1);
-    setBusquedaDocumento("");
-    setMostrarSugerenciasCliente(false);
+    setClientSearchTerm("");
+    setOpenSelectorCliente(false);
   };
 
-  // Función para obtener el color del badge según el estado
-  const getEstadoBadgeColor = (estado: string) => {
-    switch (estado) {
-      case "aceptada":
-        return "bg-green-100 text-green-800";
-      case "anulada":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  // Función para obtener el badge del estado con el mismo estilo que Ventas
+  const getEstadoBadge = (estado: string) => {
+    const variants = {
+      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90', label: 'Aceptada' },
+      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700', label: 'Anulada' },
+    };
+
+    const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
+
+    return (
+      <Badge
+        variant={config.variant}
+        className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
+      >
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
   };
 
   // Función para generar y descargar PDF
@@ -1099,12 +724,12 @@ export const Cotizaciones: React.FC = () => {
 
       // Título principal
       doc.setFontSize(20);
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("COTIZACIÓN", 20, 30);
 
       // Fecha de generación
       doc.setFontSize(12);
-      doc.setTextColor(...grayColor);
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
       doc.text(
         `Fecha de generación: ${new Date().toLocaleDateString("es-ES")}`,
         20,
@@ -1112,16 +737,16 @@ export const Cotizaciones: React.FC = () => {
       );
 
       // Línea separadora
-      doc.setDrawColor(...grayColor);
+      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
       doc.line(20, 55, 190, 55);
 
       // Información del cliente
       doc.setFontSize(14);
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("INFORMACIÓN DEL CLIENTE", 20, 70);
 
       doc.setFontSize(10);
-      doc.setTextColor(...darkColor);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
       doc.text(`Cliente: ${cotizacion.cliente.nombre}`, 20, 85);
       if (cotizacion.cliente.empresa) {
         doc.text(
@@ -1139,40 +764,35 @@ export const Cotizaciones: React.FC = () => {
 
       // Información de la cotización
       doc.setFontSize(14);
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("INFORMACIÓN DE LA COTIZACIÓN", 20, 135);
 
       doc.setFontSize(10);
-      doc.setTextColor(...darkColor);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
       doc.text(
         `Fecha de cotización: ${new Date(cotizacion.fechaCotizacion).toLocaleDateString("es-ES")}`,
         20,
         150,
       );
       doc.text(
-        `Fecha de vigencia: ${new Date(cotizacion.fechaVigencia).toLocaleDateString("es-ES")}`,
+        `Estado: ${cotizacion.estado.toUpperCase()}`,
         20,
         160,
       );
-      doc.text(
-        `Estado: ${cotizacion.estado.toUpperCase()}`,
-        20,
-        170,
-      );
-      doc.text(`Creado por: ${cotizacion.creadoPor}`, 120, 150);
+
 
       // Productos
       doc.setFontSize(14);
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("PRODUCTOS", 20, 190);
 
       // Encabezados de tabla
       doc.setFontSize(9);
-      doc.setTextColor(...darkColor);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
       let yPos = 205;
 
       // Línea de encabezado
-      doc.setDrawColor(...grayColor);
+      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
       doc.line(20, yPos - 5, 190, yPos - 5);
 
       doc.text("Código", 20, yPos);
@@ -1212,20 +832,15 @@ export const Cotizaciones: React.FC = () => {
         yPos += 10;
       });
 
-      // Línea separadora antes de totales
+      // Totales
       yPos += 10;
-      doc.setDrawColor(...grayColor);
+      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
       doc.line(120, yPos, 190, yPos);
 
       // Totales
       yPos += 15;
       doc.setFontSize(10);
-      doc.text("Subtotal:", 140, yPos);
-      doc.text(
-        `$${cotizacion.subtotal.toLocaleString()}`,
-        170,
-        yPos,
-      );
+      yPos += 5;
 
       yPos += 10;
       doc.text("Descuento:", 140, yPos);
@@ -1300,7 +915,6 @@ export const Cotizaciones: React.FC = () => {
     <div className="space-y-6">
       {/* Header con título, filtros y botón - TODO EN UNO */}
       <div className="bg-white rounded-lg border p-6 space-y-4">
-        {/* Título y botón en la misma línea */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold mb-1 text-[13px] text-[14px]">Gestión de Cotizaciones</h1>
@@ -1308,13 +922,15 @@ export const Cotizaciones: React.FC = () => {
               Administra cotizaciones, seguimiento de estados y aprobaciones
             </p>
           </div>
-          <Button
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Cotización
-          </Button>
+          <div className="flex gap-2 w-full lg:w-auto">
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Cotización
+            </Button>
+          </div>
         </div>
 
         {/* Filtros de búsqueda */}
@@ -1360,308 +976,186 @@ export const Cotizaciones: React.FC = () => {
 
         {/* Tabla de cotizaciones */}
         <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">
-                    Acciones
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cotizacionesPaginadas.map((cotizacion) => (
-                  <TableRow key={cotizacion.id}>
-                    <TableCell>{cotizacion.cliente.nombre}</TableCell>
-                    <TableCell>
-                      {new Date(
-                        cotizacion.fechaCotizacion,
-                      ).toLocaleDateString('es-CO')}
-                    </TableCell>
-                    <TableCell>
-                      ${cotizacion.total.toLocaleString('es-CO')}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        className={
-                          cotizacion.estado === "aceptada"
-                            ? "bg-green-500 text-white hover:bg-green-600"
-                            : "bg-red-500 text-white hover:bg-red-600"
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cotizacionesPaginadas.map((cotizacion) => (
+                <TableRow key={cotizacion.id}>
+                  <TableCell className="font-medium text-black">
+                    {`COT-${String(cotizacion.id).padStart(3, '0')}`}
+                  </TableCell>
+                  <TableCell>{cotizacion.cliente.nombre}</TableCell>
+                  <TableCell>
+                    {new Date(
+                      cotizacion.fechaCotizacion,
+                    ).toLocaleDateString('es-CO')}
+                  </TableCell>
+                  <TableCell>
+                    ${cotizacion.total.toLocaleString('es-CO')}
+                  </TableCell>
+                  <TableCell>
+                    {getEstadoBadge(cotizacion.estado)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleViewDetail(cotizacion)
                         }
+                        title="Ver detalles"
                       >
-                        {cotizacion.estado === "aceptada" ? "Aceptada" : "Anulada"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleViewDetail(cotizacion)
-                          }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => generarPDF(cotizacion)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        {cotizacion.estado === "aceptada" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleAnular(cotizacion)
-                            }
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <XCircle className="text-red-600 hover:text-red-700 hover:bg-red-50" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generarPDF(cotizacion)}
+                        title="Descargar PDF"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleAnular(cotizacion)
+                        }
+                        disabled={cotizacion.estado === "anulada"}
+                        title="Anular cotización"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                Mostrando {startIndex + 1} a{" "}
-                {Math.min(
-                  endIndex,
-                  cotizacionesFiltradas.length,
-                )}{" "}
-                de {cotizacionesFiltradas.length} cotizaciones
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={cotizacionesFiltradas.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={goToPage}
+            itemName="cotizaciones"
+          />
+        )}
       </div>
 
       {/* Dialog de detalles */}
-      <Dialog
-        open={isDetailDialogOpen}
-        onOpenChange={setIsDetailDialogOpen}
-      >
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-[600px] lg:max-w-[700px] h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">Detalles de Cotización</DialogTitle>
-            <DialogDescription className="text-sm">
-              Información completa de la cotización seleccionada
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] modal-scroll">
+          <DialogHeader>
+            <DialogTitle>Detalles de Cotización</DialogTitle>
+            <DialogDescription>
+              Información completa de la cotización {`COT-${String(selectedCotizacion?.id).padStart(3, '0')}`}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
-            {selectedCotizacion && (
-              <div className="space-y-4 sm:space-y-5">
-                {/* Grid principal - responsive */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {/* Primera fila */}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Cliente
-                    </Label>
-                    <p className="mt-1 text-sm sm:text-base break-words">
-                      {selectedCotizacion.cliente.nombre}
-                    </p>
+          {selectedCotizacion && (
+            <ScrollArea className="max-h-[600px] pr-4">
+              <div className="space-y-6">
+                {/* Información general */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div><strong>Número:</strong> {`COT-${String(selectedCotizacion.id).padStart(3, '0')}`}</div>
+                    <div><strong>Fecha:</strong> {new Date(selectedCotizacion.fechaCotizacion).toLocaleDateString('es-CO')}</div>
+                    <div><strong>Cliente:</strong> {selectedCotizacion.cliente.nombre}</div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Fecha
-                    </Label>
-                    <p className="mt-1 text-sm sm:text-base">
-                      {new Date(
-                        selectedCotizacion.fechaCotizacion,
-                      ).toLocaleDateString('es-CO')}
-                    </p>
-                  </div>
-
-                  {/* Segunda fila */}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Estado
-                    </Label>
-                    <div className="mt-1">
-                      <Badge 
-                        className={
-                          selectedCotizacion.estado === "aceptada"
-                            ? "bg-green-500 text-white hover:bg-green-600"
-                            : "bg-red-500 text-white hover:bg-red-600"
-                        }
-                      >
-                        {selectedCotizacion.estado === "aceptada" ? "Aceptada" : "Anulada"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Fecha de Vigencia
-                    </Label>
-                    <p className="mt-1 text-sm sm:text-base">
-                      {new Date(
-                        selectedCotizacion.fechaVigencia,
-                      ).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  {/* Tercera fila - Estado ocupa ambas columnas */}
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Estado
-                    </Label>
-                    <div className="mt-1">
-                      <Badge
-                        className={getEstadoBadgeColor(
-                          selectedCotizacion.estado,
-                        )}
-                      >
-                        {selectedCotizacion.estado}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Sección Productos con scroll independiente */}
-                <div>
-                  <Label className="text-sm sm:text-base">Productos</Label>
-                  <div className="mt-3 max-h-[250px] sm:max-h-[300px] overflow-y-auto pr-2 space-y-2">
-                    {selectedCotizacion.productos.map(
-                      (producto, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col sm:grid sm:grid-cols-4 gap-2 text-sm p-2.5 sm:p-3 bg-muted/20 rounded-lg border"
-                        >
-                          <div className="sm:col-span-2">
-                            <p className="font-medium break-words">
-                              {producto.nombre}
-                            </p>
-                          </div>
-                          <div className="flex justify-between sm:block">
-                            <span className="text-muted-foreground sm:hidden">Cantidad:</span>
-                            <p className="sm:text-center">{producto.cantidad}</p>
-                          </div>
-                          <div className="flex justify-between sm:block">
-                            <span className="text-muted-foreground sm:hidden">Subtotal:</span>
-                            <p className="font-medium sm:text-right">
-                              ${producto.subtotal.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      ),
+                  <div className="space-y-2">
+                    <div><strong>Estado:</strong> {getEstadoBadge(selectedCotizacion.estado)}</div>
+                    {selectedCotizacion.motivoAnulacion && (
+                      <div><strong>Motivo Anulación:</strong> {selectedCotizacion.motivoAnulacion}</div>
                     )}
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Resumen de Pago */}
+                {/* Productos */}
                 <div>
-                  <Label className="text-sm sm:text-base">Resumen de Pago</Label>
-                  <div className="mt-3 space-y-2.5 bg-muted/20 p-3 sm:p-4 rounded-lg">
-                    <div className="flex justify-between text-sm sm:text-base">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-medium">
-                        ${selectedCotizacion.subtotal.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm sm:text-base text-red-600">
-                      <span>Descuento:</span>
-                      <span className="font-medium">
-                        -${selectedCotizacion.descuento.toLocaleString()}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-base sm:text-lg pt-1">
-                      <span className="font-semibold">Total:</span>
-                      <span className="font-bold text-primary">
-                        ${selectedCotizacion.total.toLocaleString()}
-                      </span>
-                    </div>
+                  <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wider">Productos</h4>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Producto</TableHead>
+                          <TableHead>Cantidad</TableHead>
+                          <TableHead>Precio Unitario</TableHead>
+                          <TableHead>Subtotal</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedCotizacion.productos.map((producto, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{producto.nombre}</TableCell>
+                            <TableCell>{producto.cantidad}</TableCell>
+                            <TableCell>${producto.precioUnitario.toLocaleString()}</TableCell>
+                            <TableCell>${producto.subtotal.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
 
-                {selectedCotizacion.motivoAnulacion && (
-                  <>
-                    <Separator />
-                    <div className="bg-red-50 p-3 sm:p-4 rounded-lg border border-red-200">
-                      <Label className="text-xs text-muted-foreground">
-                        Motivo de Anulación
-                      </Label>
-                      <p className="mt-1 text-sm sm:text-base text-red-600 break-words">
-                        {selectedCotizacion.motivoAnulacion}
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+                <Separator />
 
-          <div className="flex justify-end gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t shrink-0 bg-background">
+                {/* Resumen financiero */}
+                <div className="space-y-4">
+                  <div className="max-w-md ml-auto">
+                    <h4 className="border-b pb-2 mb-3 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Resumen de Pago</h4>
+                    <div className="space-y-2">
+                      {/* La línea de subtotal fue removida por diseño de Ventas */}
+                      {selectedCotizacion.descuento > 0 && (
+                        <div className="flex justify-between text-sm text-red-600">
+                          <span>Descuento:</span>
+                          <span>-${selectedCotizacion.descuento.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-lg pt-2 border-t text-black">
+                        <span>Total:</span>
+                        <span>${selectedCotizacion.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsDetailDialogOpen(false)}
-              className="w-full sm:w-auto"
             >
               Cerrar
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Dialog para crear/editar cotización */}
       <Dialog
         open={isCreateDialogOpen || isEditDialogOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) {
             setIsCreateDialogOpen(false);
             setIsEditDialogOpen(false);
@@ -1688,98 +1182,118 @@ export const Cotizaciones: React.FC = () => {
             <div className="space-y-4 sm:space-y-6 py-2 px-1">
               {/* Grid de campos principales */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                {/* Fecha de Vigencia */}
-                <div>
-                  <Label htmlFor="fechaVigencia">Fecha</Label>
+                {/* Fecha (No editable) */}
+                <div className="space-y-2">
+                  <Label htmlFor="fechaCotizacion">Fecha de Cotización</Label>
                   <Input
-                    id="fechaVigencia"
+                    id="fechaCotizacion"
                     type="date"
-                    value={formData.fechaVigencia}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        fechaVigencia: e.target.value,
-                      }))
-                    }
-                    className="bg-input-background"
+                    value={new Date().toISOString().split('T')[0]}
+                    readOnly
+                    className="bg-muted cursor-not-allowed opacity-70"
                   />
                 </div>
 
-                {/* Cliente - Búsqueda por documento */}
+                {/* Cliente - Buscador Directo */}
                 <div className="relative">
-                  <Label htmlFor="cliente">Cliente (Buscar por documento)</Label>
-                  <div className="relative">
-                    <Input
-                      id="cliente"
-                      type="text"
-                      placeholder="Ingrese número de documento"
-                      value={busquedaDocumento}
-                      onChange={(e) => {
-                        setBusquedaDocumento(e.target.value);
-                        setMostrarSugerenciasCliente(true);
-                        if (e.target.value === "") {
-                          setFormData((prev) => ({
-                            ...prev,
-                            clienteId: null,
-                          }));
-                        }
-                      }}
-                      onFocus={() => setMostrarSugerenciasCliente(true)}
-                      className="bg-input-background"
-                    />
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  </div>
-                  
-                  {/* Sugerencias de clientes */}
-                  {mostrarSugerenciasCliente && busquedaDocumento && clientesFiltradosPorDocumento.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {clientesFiltradosPorDocumento.map((cliente) => (
-                        <button
-                          key={cliente.id}
-                          type="button"
-                          className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b last:border-b-0"
-                          onClick={() => seleccionarCliente(cliente)}
-                        >
-                          <div className="font-medium">{cliente.nombre}</div>
-                          <div className="text-sm text-gray-600">
-                            Doc: {cliente.documento}
-                            {cliente.empresa && ` - ${cliente.empresa}`}
+                  <Label htmlFor="cliente">Cliente (Buscar por nombre o documento)</Label>
+                  <Popover open={openSelectorCliente && clientSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorCliente}>
+                    <PopoverTrigger asChild>
+                      <div className="relative mt-1">
+                        <Input
+                          placeholder="Escribe el nombre o documento..."
+                          value={clientSearchTerm}
+                          onChange={(e) => {
+                            setClientSearchTerm(e.target.value);
+                            if (!openSelectorCliente) setOpenSelectorCliente(true);
+                            if (e.target.value === "") setFormData(prev => ({ ...prev, clienteId: "" }));
+                          }}
+                          className="bg-input-background pr-10"
+                        />
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[300px] p-0"
+                      align="start"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-2xl">
+                        <div className="p-2 border-b bg-muted/30">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                            Resultados de búsqueda
+                          </span>
+                        </div>
+                        <Command className="border-none">
+                          <div className="hidden">
+                            <CommandInput value={clientSearchTerm} onValueChange={setClientSearchTerm} />
                           </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Cliente seleccionado */}
-                  {formData.clienteId && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                      <span className="text-green-800 font-medium">
-                        Cliente seleccionado: {clientesDisponibles.find(c => c.id === formData.clienteId)?.nombre}
-                      </span>
-                    </div>
-                  )}
+                          <CommandList className="max-h-60 custom-scrollbar">
+                            <CommandEmpty>No se encontraron clientes.</CommandEmpty>
+                            <CommandGroup className="p-1">
+                              {clientesFiltradosParaBusqueda.map((cliente) => (
+                                <CommandItem
+                                  key={cliente.id}
+                                  value={`${cliente.nombres} ${cliente.apellidos} ${cliente.numeroDocumento}`}
+                                  onSelect={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      clienteId: cliente.id.toString(),
+                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
+                                    }));
+                                    setClientSearchTerm(`${cliente.nombres} ${cliente.apellidos}`);
+                                    setOpenSelectorCliente(false);
+                                  }}
+                                  className="flex items-center gap-3 py-2.5 px-3 hover:bg-primary/5 rounded-md cursor-pointer transition-all group"
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                                    <User className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors italic">
+                                        {cliente.nombres} {cliente.apellidos}
+                                      </span>
+                                      {formData.clienteId === cliente.id.toString() && (
+                                        <Check className="h-3 w-3 text-primary shrink-0" />
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                      <span className="text-[11px] font-medium bg-muted px-1.5 rounded leading-tight border border-border/50">
+                                        Doc: {cliente.numeroDocumento}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Descuento */}
-                <div>
-                  <Label htmlFor="descuento">Descuento</Label>
-                  <Input
-                    id="descuento"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={formData.descuentoPorcentaje}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        descuentoPorcentaje:
-                          parseFloat(e.target.value) || 0,
-                      }))
-                    }
-                    placeholder="0"
-                    className="bg-input-background"
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="descuento" className="text-sm">Descuento (%)</Label>
+                  <div className="relative">
+                    <Input
+                      id="descuento"
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.descuentoPorcentaje === 0 ? '' : formData.descuentoPorcentaje.toString()}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
+                          setFormData(prev => ({ ...prev, descuentoPorcentaje: val === '' ? 0 : parseFloat(val) }));
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-full pr-8 bg-input-background"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
                 </div>
 
               </div>
@@ -1788,83 +1302,119 @@ export const Cotizaciones: React.FC = () => {
               <div className="space-y-3 pt-2 border-t">
                 <Label>Agregar Productos</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Producto */}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Producto</Label>
-                    <Select
-                      value={selectedProductId.toString()}
-                      onValueChange={(value) =>
-                        setSelectedProductId(parseInt(value))
-                      }
-                    >
-                      <SelectTrigger className="bg-input-background">
-                        <SelectValue placeholder="Seleccionar producto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0" disabled>
-                          Seleccionar producto
-                        </SelectItem>
-                        {productosDisponibles.map((prod) => (
-                          <SelectItem
-                            key={prod.id}
-                            value={prod.id.toString()}
-                          >
-                            {prod.codigo} - {prod.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Producto - Buscador Directo */}
+                  <div className="relative">
+                    <Label className="text-xs text-muted-foreground">Producto (Nombre o Código)</Label>
+                    <Popover open={openSelectorProducto && productSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorProducto}>
+                      <PopoverTrigger asChild>
+                        <div className="relative mt-1">
+                          <Input
+                            placeholder="Escribe el nombre o código..."
+                            value={productSearchTerm}
+                            onChange={(e) => {
+                              setProductSearchTerm(e.target.value);
+                              if (!openSelectorProducto) setOpenSelectorProducto(true);
+                              // No reseteamos el ID aquí para permitir escribir y luego seleccionar
+                            }}
+                            className="bg-input-background pr-10 h-10"
+                          />
+                          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[300px] p-0"
+                        align="start"
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-2xl">
+                          <div className="p-2 border-b bg-muted/30 text-center">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                              Productos Disponibles
+                            </span>
+                          </div>
+                          <Command className="border-none">
+                            <div className="hidden">
+                              <CommandInput value={productSearchTerm} onValueChange={setProductSearchTerm} />
+                            </div>
+                            <CommandList className="max-h-60 custom-scrollbar">
+                              <CommandEmpty>No se encontraron productos.</CommandEmpty>
+                              <CommandGroup className="p-1">
+                                {productosFiltrados.map((prod) => (
+                                  <CommandItem
+                                    key={prod.id}
+                                    value={`${prod.codigo} ${prod.nombre}`}
+                                    onSelect={() => {
+                                      setSelectedProductId(prod.id);
+                                      setProductSearchTerm(`${prod.codigo} - ${prod.nombre}`);
+                                      setOpenSelectorProducto(false);
+                                    }}
+                                    disabled={prod.stock <= 0}
+                                    className={cn(
+                                      "flex items-center gap-3 py-2.5 px-3 rounded-md cursor-pointer transition-all group",
+                                      prod.stock <= 0 ? "opacity-50 cursor-not-allowed bg-muted/20" : "hover:bg-primary/5"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "h-8 w-8 rounded-md flex items-center justify-center shrink-0 transition-colors",
+                                      prod.stock <= 0 ? "bg-muted" : "bg-primary/10 group-hover:bg-primary/20"
+                                    )}>
+                                      <FileText className={cn("h-4 w-4", prod.stock <= 0 ? "text-muted-foreground" : "text-primary")} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className={cn(
+                                          "font-semibold text-sm truncate transition-colors italic",
+                                          prod.stock > 0 && "group-hover:text-primary"
+                                        )}>
+                                          {prod.nombre}
+                                        </span>
+                                        <span className="font-bold text-xs text-primary shrink-0">
+                                          ${prod.precio.toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <Badge
+                                          variant={prod.stock > 5 ? "secondary" : "destructive"}
+                                          className="text-[8px] px-1 py-0 h-4 min-h-0 flex items-center"
+                                        >
+                                          {prod.stock} disp.
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
-                  {/* Cantidad */}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Cantidad</Label>
-                    <div className="flex space-x-2">
-                      <div className="flex items-center border rounded-md flex-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 p-0 rounded-r-none border-r"
-                          onClick={() => {
-                            setSelectedQuantity(Math.max(1, selectedQuantity - 1));
-                          }}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={selectedQuantity}
-                          onChange={(e) =>
-                            setSelectedQuantity(
-                              parseInt(e.target.value) || 1,
-                            )
-                          }
-                          placeholder="1"
-                          className="border-0 text-center h-9 focus-visible:ring-0 focus-visible:ring-offset-0 bg-input-background"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 p-0 rounded-l-none border-l"
-                          onClick={() => {
-                            setSelectedQuantity(selectedQuantity + 1);
-                          }}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={agregarProductoSeleccionado}
-                        disabled={selectedProductId === 0}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label className="text-sm">Cantidad</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={selectedQuantity}
+                        onChange={(e) =>
+                          setSelectedQuantity(
+                            parseInt(e.target.value) || 1,
+                          )
+                        }
+                        className="w-full"
+                      />
                     </div>
+                    <Button
+                      type="button"
+                      onClick={agregarProductoSeleccionado}
+                      disabled={selectedProductId === 0}
+                      className="bg-gray-600 hover:bg-gray-700 w-full sm:w-auto px-6 h-10"
+                    >
+                      <Plus className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Agregar</span>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1873,7 +1423,7 @@ export const Cotizaciones: React.FC = () => {
               {formData.productos.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <Label>Productos Seleccionados</Label>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                  <div className="space-y-2 pr-2">
                     {formData.productos.map(
                       (producto, index) => {
                         const productoInfo =
@@ -1891,11 +1441,35 @@ export const Cotizaciones: React.FC = () => {
                               <div className="font-medium truncate">
                                 {productoInfo.nombre}
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                {producto.cantidad} x ${productoInfo.precio.toLocaleString()}
-                                <span className="ml-2 font-medium text-foreground">
-                                  = ${(producto.cantidad * productoInfo.precio).toLocaleString()}
-                                </span>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1.5">
+                                <div className="flex items-center border rounded-md bg-background h-7">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => cambiarCantidad(index, -1)}
+                                    className="h-6 w-6 rounded-r-none border-r hover:bg-muted"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="px-2.5 text-xs font-semibold min-w-[2rem] text-center">
+                                    {producto.cantidad}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => cambiarCantidad(index, 1)}
+                                    className="h-6 w-6 rounded-l-none border-l hover:bg-muted"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <span>Precio: ${productoInfo.precio.toLocaleString()}</span>
+                                  <span className="mx-2 font-bold opacity-30">•</span>
+                                  <span className="font-semibold text-foreground">
+                                    Subtotal: ${(producto.cantidad * productoInfo.precio).toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                             <Button
@@ -1919,40 +1493,35 @@ export const Cotizaciones: React.FC = () => {
 
               {/* Resumen de totales */}
               {formData.productos.length > 0 && (
-                <div className="space-y-3 pt-4 border-t bg-muted/20 p-4 rounded-lg">
-                  {(() => {
-                    const {
-                      subtotal,
-                      descuento,
-                      impuestos,
-                      total,
-                    } = calcularTotales(
-                      formData.productos,
-                      formData.descuentoPorcentaje,
-                    );
-                    return (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Subtotal:</span>
-                          <span className="font-medium">
-                            ${subtotal.toLocaleString()}
-                          </span>
-                        </div>
-                        {descuento > 0 && (
-                          <div className="flex justify-between text-sm text-red-600">
-                            <span>Descuento:</span>
-                            <span className="font-medium">
-                              -${descuento.toLocaleString()}
-                            </span>
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="space-y-2 bg-muted/20 p-3 sm:p-4 rounded-lg">
+                    {(() => {
+                      const {
+                        subtotal,
+                        descuento,
+                        total,
+                      } = calcularTotales(
+                        formData.productos,
+                        formData.descuentoPorcentaje,
+                      );
+                      return (
+                        <>
+                          {descuento > 0 && (
+                            <div className="flex justify-between text-sm sm:text-base text-red-600">
+                              <span>Descuento ({formData.descuentoPorcentaje}%):</span>
+                              <span className="font-medium">
+                                -${descuento.toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-base sm:text-lg pt-1">
+                            <span className="font-semibold">Total:</span>
+                            <span className="font-bold text-primary">${total.toLocaleString()}</span>
                           </div>
-                        )}
-                        <div className="flex justify-between font-medium text-base sm:text-lg border-t pt-2">
-                          <span>Total:</span>
-                          <span className="text-primary">${total.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
@@ -2003,10 +1572,10 @@ export const Cotizaciones: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="motivoAnulacion">
-                Motivo de anulación *
+              <Label htmlFor="motivoAnulacion" className="mb-2 block font-medium">
+                Motivo de anulación
               </Label>
               <Textarea
                 id="motivoAnulacion"
@@ -2031,7 +1600,6 @@ export const Cotizaciones: React.FC = () => {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmarAnulacion}
-              disabled={!motivoAnulacion.trim()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Anular Cotización

@@ -1202,7 +1202,7 @@ export const Ventas: React.FC = () => {
               Administra y controla todas las ventas del sistema
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-black hover:bg-gray-800 text-white border-none w-full lg:w-auto">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nueva Venta
           </Button>
