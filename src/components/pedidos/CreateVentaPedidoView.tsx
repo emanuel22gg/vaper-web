@@ -37,7 +37,7 @@ import {
     Calendar,
     ArrowLeft
 } from "lucide-react";
-import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados } from "../../services/api";
+import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados, updateVentaPedido } from "../../services/api";
 import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, DetalleVentaPedidoDto } from "../../types";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
@@ -88,7 +88,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     const [costoEnvio, setCostoEnvio] = useState(0);
     const [observaciones, setObservaciones] = useState("");
     const [guardando, setGuardando] = useState(false);
-    const [plazoAbono, setPlazoAbono] = useState<number>(1);
+    const [plazoAbonos, setPlazoAbonos] = useState<number>(1);
 
     // Estados para Geografía (API Colombia)
     const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
@@ -110,8 +110,10 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     const getEstadoAbonosId = async () => {
         try {
             const estados = await getEstados();
-            const estadoAbonos = estados.find((e: any) => e.nombreEstado.toLowerCase().includes('abonos'));
-            return estadoAbonos ? estadoAbonos.id : 2; // Fallback a Pendiente si no se encuentra
+            const estadoAbonos = estados.find((e: any) => e.nombreEstado.toLowerCase().includes('abono'));
+            console.log("Estados encontrados:", estados);
+            console.log("Estado Abono identificado:", estadoAbonos);
+            return estadoAbonos ? estadoAbonos.id : 6; // Fallback forzado a 6 si no se encuentra pero es abono
         } catch (error) {
             console.error("Error al obtener ID del estado Abonos:", error);
             return 2;
@@ -273,48 +275,55 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
 
         try {
             setGuardando(true);
+
+            // Determinar estado basado en el método de pago (6 = En Abonos, 2 = Pendiente)
+            const estadoFinal = metodoPago === "Abonos" ? 6 : 2;
+
             const pedidoData: VentaPedidoDto = {
                 usuarioId: clienteEncontrado.id,
-                estadoId: metodoPago === "Abonos" ? (await getEstadoAbonosId()) : 2, // 2 = Pendiente por defecto
-                metodoPago,
+                estadoId: estadoFinal,
+                metodoPago: metodoPago === "Abonos" ? "Otro" : metodoPago,
                 direccionEntrega,
                 ciudadEntrega,
                 departamentoEntrega,
-                barrio,
+                //barrio,
                 observaciones,
-                plazoAbono: metodoPago === "Abonos" ? plazoAbono : undefined,
+                plazoAbonos: metodoPago === "Abonos" ? Number(plazoAbonos) : null,
                 subtotal: calcularSubtotal(),
                 envio: Number(costoEnvio),
                 total: calcularTotal(),
                 vigenciaDevolucion: vigenciaDevolucion,
-                tipoVenta: "Pedido"
+                tipoVenta: "Pedido",
+                detalleVenta_Pedido: carrito.map(item => ({
+                    productoId: item.producto.id,
+                    cantidad: item.cantidad,
+                    precioUnitario: item.producto.precio,
+                    subtotal: item.producto.precio * item.cantidad
+                }))
             };
 
-            const response: any = await createVentaPedido(pedidoData);
-            const createdOrderId = response.id || response.Id || response.ID || (response.data && (response.data.id || response.data.Id));
+            const response = await createVentaPedido(pedidoData);
+            const createdOrderId = response.id || response.Id || (response.data && response.data.id);
 
             if (!createdOrderId) {
-                throw new Error("El servidor no devolvió el ID del pedido");
+                throw new Error("No se pudo obtener el ID del pedido creado");
             }
 
+            // Save order details (products) individually since the backend doesn't process them in the main request
             for (const item of carrito) {
-                const prod = item.producto;
-                const nuevoDetalle: DetalleVentaPedidoDto = {
+                const detalleData = {
                     ventaPedidoId: createdOrderId,
-                    productoId: prod.id,
+                    productoId: item.producto.id,
                     cantidad: item.cantidad,
-                    precioUnitario: prod.precio,
-                    subtotal: prod.precio * item.cantidad
+                    precioUnitario: item.producto.precio,
+                    subtotal: item.producto.precio * item.cantidad
                 };
-
-                try {
-                    await createDetalleVentaPedido(nuevoDetalle);
-                } catch (detError) {
-                    console.error(`Error al crear detalle para producto ${prod.id}:`, detError);
-                }
+                await createDetalleVentaPedido(detalleData);
             }
 
-            toast.success("Pedido creado y detalles registrados");
+            toast.success("Pedido registrado con éxito", {
+                description: `ID del pedido: ${createdOrderId}`
+            });
             onSuccess();
         } catch (error) {
             console.error("Error creating order:", error);
@@ -361,7 +370,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                 2. Productos
                             </TabsTrigger>
                             <TabsTrigger value="vigencia" className="data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-sm rounded-md transition-all px-3 py-1 text-xs font-semibold">
-                                3. Devolución
+                                3. Garantía
                             </TabsTrigger>
                             <TabsTrigger value="entrega" className="data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-sm rounded-md transition-all px-3 py-1 text-xs font-semibold">
                                 4. Entrega & Pago
@@ -618,6 +627,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                             </div>
                         </TabsContent>
 
+
                         <TabsContent value="entrega" className="mt-0">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
                                 <div className="space-y-4">
@@ -738,22 +748,21 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-
                                             {metodoPago === "Abonos" && (
                                                 <div className="space-y-1 animate-in zoom-in-95 duration-200">
                                                     <Label className="text-[10px] uppercase text-indigo-500 font-bold">Plazo (Meses)</Label>
-                                                    <Select value={plazoAbono.toString()} onValueChange={(v: string) => setPlazoAbono(parseInt(v))}>
+                                                    <Select value={plazoAbonos.toString()} onValueChange={(v: string) => setPlazoAbonos(parseInt(v))}>
                                                         <SelectTrigger className="h-10 text-xs font-bold rounded-xl border-indigo-200 bg-indigo-50/30">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent className="rounded-xl">
                                                             <SelectItem value="1" className="text-xs font-bold">1 Mes</SelectItem>
                                                             <SelectItem value="2" className="text-xs font-bold">2 Meses</SelectItem>
+                                                            <SelectItem value="3" className="text-xs font-bold">3 Meses</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
                                             )}
-
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase text-gray-500 font-bold">Envío ($)</Label>
                                                 <div className="relative">

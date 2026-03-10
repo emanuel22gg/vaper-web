@@ -64,17 +64,30 @@ import {
   FileText,
   Ban,
   XCircle,
+  Clock,
+  ChevronRight,
+  ChevronLeft,
+  ArrowRightCircle,
+  ShieldCheck,
+  History,
+  Receipt,
+  CheckCircle,
+  Check
 } from "lucide-react";
+import { cn } from "./ui/utils";
+import { Separator } from "./ui/separator";
 import {
   getDevoluciones,
   getDetalleDevoluciones,
-  getVentaPedidos,
-  getProductos,
-  getUsuarios,
   createDevolucion,
-  createDetalleDevolucion,
   updateDevolucion,
-  getVentaPedidoById
+  createDetalleDevolucion,
+  getUsuarios,
+  getProductos,
+  getVentaPedidos,
+  getVentaPedidoById,
+  updateProducto,
+  getDetalleVentaPedidos
 } from "../services/api";
 import {
   DevolucionDto,
@@ -113,6 +126,7 @@ export const Devoluciones: React.FC = () => {
   const [formData, setFormData] = useState({
     ventaPedidoId: 0,
     motivo: "",
+    fechaDevolucion: new Date().toISOString().split('T')[0], // Fecha default hoy
     productosSeleccionados: [] as { productoId: number; cantidad: number; motivo: string }[],
   });
 
@@ -129,14 +143,25 @@ export const Devoluciones: React.FC = () => {
         getProductos(),
         getVentaPedidos()
       ]);
-      setDevoluciones(devs || []);
+
+      // Mapear nombres de clientes para facilitar filtrado
+      const devsWithClient = (devs || []).map(d => {
+        const venta = vts.find(v => v.id === d.ventaPedidoId);
+        const cliente = venta ? usr.find(u => u.id === venta.usuarioId) : null;
+        return {
+          ...d,
+          clienteNombre: cliente ? `${cliente.nombres} ${cliente.apellidos}` : "Desconocido"
+        };
+      });
+
+      setDevoluciones(devsWithClient);
       setDetallesDevolucion(dets || []);
       setUsuarios(usr || []);
       setProductos(prods || []);
       setVentas(vts || []);
     } catch (error) {
       console.error("Error sincronizando devoluciones:", error);
-      toast.error("Error al conectar con el servidor central");
+      toast.error("Error al cargar datos de devoluciones");
     } finally {
       setLoading(false);
     }
@@ -151,6 +176,7 @@ export const Devoluciones: React.FC = () => {
     setFormData({
       ventaPedidoId: 0,
       motivo: "",
+      fechaDevolucion: new Date().toISOString().split('T')[0],
       productosSeleccionados: [],
     });
     setVentaEncontrada(null);
@@ -162,17 +188,26 @@ export const Devoluciones: React.FC = () => {
     setBuscandoVenta(true);
 
     try {
-      // Intentamos obtener el detalle completo directamente de la API para asegurar los sub-niveles (detalles)
       const venda = await getVentaPedidoById(parseInt(query));
 
       if (venda) {
-        setVentaEncontrada(venda);
+        // Traer detalles de la venta desde el endpoint correspondiente
+        const todosLosDetalles = await getDetalleVentaPedidos();
+        const detallesVenta = todosLosDetalles.filter((d: any) => d.ventaPedidoId === venda.id);
+
+        const vendaConDetalles = {
+          ...venda,
+          detalleVenta_Pedido: detallesVenta
+        };
+
+        setVentaEncontrada(vendaConDetalles);
         setFormData(prev => ({ ...prev, ventaPedidoId: venda.id || 0 }));
 
-        // Calcular vigencia
+        // Calcular vigencia real (ahora usando el nuevo campo)
         if (venda.fechaCreacion) {
           const fechaVenta = new Date(venda.fechaCreacion);
           const hoy = new Date();
+          // Usar vigenciaDevolucion del backend o por defecto 1 mes
           const mesesVigencia = venda.vigenciaDevolucion || 1;
 
           const fechaLimite = new Date(fechaVenta);
@@ -184,27 +219,23 @@ export const Devoluciones: React.FC = () => {
           if (diffTime > 0) {
             setSaleValidity({
               isValid: true,
-              message: `Vigente por ${diffDays} días más`,
+              message: `¡Garantía Vigente! (${diffDays} días restantes)`,
               daysLeft: diffDays
             });
+            toast.success("Venta dentro de periodo de garantía");
           } else {
             setSaleValidity({
               isValid: false,
-              message: `Garantía expirada (Venció el ${fechaLimite.toLocaleDateString()})`
+              message: `Garantía Expirada (${fechaLimite.toLocaleDateString()})`,
+              daysLeft: 0
             });
-            toast.warning("Venta fuera de vigencia", {
-              description: "El periodo de garantía para esta venta ha expirado."
-            });
+            toast.error("Periodo de garantía finalizado");
           }
-        } else {
-          setSaleValidity({ isValid: true, message: "Sin restricción de fecha detectada" });
         }
       }
     } catch (error) {
       console.error("Error al buscar venta:", error);
-      toast.error("Venta no localizada", {
-        description: "Verifique que el ID de venta sea correcto y exista en la base de datos."
-      });
+      toast.error("Referencia de venta no encontrada");
       setVentaEncontrada(null);
       setSaleValidity(null);
     } finally {
@@ -235,9 +266,10 @@ export const Devoluciones: React.FC = () => {
     try {
       const nuevaDev: DevolucionDto = {
         ventaPedidoId: ventaEncontrada.id!,
-        fechaDevolucion: new Date().toISOString(),
+        fechaDevolucion: new Date(formData.fechaDevolucion).toISOString(),
         motivo: formData.motivo,
-        estadoId: 5, // Status Aceptada (Basado en lógica previa)
+        descripcion: formData.motivo, // Mapeo solicitado por el usuario
+        estadoId: 5, // Status Aceptada
         montoTotal: formData.productosSeleccionados.reduce((acc, p) => {
           const prod = productos.find(pr => pr.id === p.productoId);
           return acc + (prod?.precio || 0) * p.cantidad;
@@ -248,17 +280,28 @@ export const Devoluciones: React.FC = () => {
       const devId = response.id || response.Id;
 
       if (devId) {
-        // Enviar detalles
+        // Enviar detalles y actualizar stock
         for (const p of formData.productosSeleccionados) {
+          // 1. Guardar detalle
           await createDetalleDevolucion({
             devolucionId: devId,
             productoId: p.productoId,
             cantidad: p.cantidad,
             motivo: p.motivo
           });
+
+          // 2. Incrementar stock del producto (ya que vuelve a la tienda)
+          const prodOriginal = productos.find(pr => pr.id === p.productoId);
+          if (prodOriginal) {
+            await updateProducto(p.productoId, {
+              ...prodOriginal,
+              stock: prodOriginal.stock + p.cantidad
+            });
+          }
         }
+
         toast.success("Devolución Guardada", {
-          description: "Los registros se han actualizado correctamente."
+          description: "Los registros y el stock se han actualizado correctamente."
         });
         setIsNewDialogOpen(false);
         loadInitialData(); // Sincronizar UI
@@ -305,8 +348,21 @@ export const Devoluciones: React.FC = () => {
         ...dev,
         estadoId: 3 // Anulado
       });
+
+      // Revertir stock (DISMINUIR stock ya que el producto "no volvió" realmente)
+      const detallesTicket = detallesDevolucion.filter(det => det.devolucionId === dev.id);
+      for (const det of detallesTicket) {
+        const prod = productos.find(p => p.id === det.productoId);
+        if (prod) {
+          await updateProducto(det.productoId, {
+            ...prod,
+            stock: Math.max(0, prod.stock - det.cantidad)
+          });
+        }
+      }
+
       toast.success("Devolución Anulada", {
-        description: `El ticket #DEV-${dev.id} ha sido marcado como anulado.`
+        description: `Ticket #DEV-${dev.id} invalidado y stock revertido.`
       });
       loadInitialData();
     } catch (error) {
@@ -373,311 +429,426 @@ export const Devoluciones: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Card principal con todo integrado */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>Gestión de Devoluciones</CardTitle>
-              <CardDescription>
-                Administra los retornos y garantías de ventas procesadas
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={loadInitialData} variant="outline" size="icon" className="bg-white border-slate-200">
-                <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Dialog open={isNewDialogOpen} onOpenChange={(open: boolean) => {
-                setIsNewDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nueva Devolución
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-xl bg-white rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
-                  {/* ... Contenido del diálogo (se mantiene igual) ... */}
-                  <div className="p-6 border-b bg-slate-50/50">
-                    <DialogTitle className="text-xl font-bold text-slate-900">Registrar Garantía / Retorno</DialogTitle>
-                    <DialogDescription>Inicie el trámite vinculando una venta autorizada.</DialogDescription>
-                  </div>
-                  <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="venta-search" className="text-xs font-bold text-slate-500 uppercase">Referencia de venta o pedido</Label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input
-                            id="venta-search"
-                            placeholder="Ingrese ID de Pedido (ej: 14)..."
-                            className="pl-9 h-11 bg-white border-slate-200 focus:ring-2 focus:ring-blue-500/20"
-                            onKeyPress={(e) => e.key === 'Enter' && handleBuscarVenta((e.target as HTMLInputElement).value)}
-                          />
-                        </div>
-                        <Button className="h-11 px-6 bg-slate-900" onClick={() => {
-                          const el = document.getElementById('venta-search') as HTMLInputElement;
-                          handleBuscarVenta(el.value);
-                        }}>
-                          {buscandoVenta ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Buscar"}
-                        </Button>
-                      </div>
-                    </div>
-                    {ventaEncontrada && (
-                      <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-slate-900 rounded-xl p-4 text-white shadow-lg shadow-slate-200">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Cliente Titular</p>
-                            <p className="text-sm font-semibold truncate">{getClienteInfo(ventaEncontrada.usuarioId)}</p>
-                            <p className="text-[10px] text-slate-500 mt-1">ID Usuario: {ventaEncontrada.usuarioId}</p>
-                          </div>
-                          <div className={`rounded-xl p-4 shadow-lg flex flex-col justify-center ${saleValidity?.isValid ? 'bg-blue-600 text-white shadow-blue-100' : 'bg-red-50 text-red-700 border border-red-100 shadow-red-50'}`}>
-                            <p className="text-[10px] opacity-80 font-bold uppercase mb-0.5 text-center">Estado de Vigencia</p>
-                            <p className="text-xs font-bold text-center">{saleValidity?.message}</p>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex justify-between items-center">
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Fecha de Venta</p>
-                            <p className="text-sm font-semibold text-slate-700">{ventaEncontrada.fechaCreacion ? new Date(ventaEncontrada.fechaCreacion).toLocaleDateString() : "No registrada"}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Total Venta</p>
-                            <p className="text-sm font-bold text-slate-900">${ventaEncontrada.total.toLocaleString()}</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-500 uppercase">Seleccionar producto de la compra</Label>
-                          <Select onValueChange={(val: string) => handleAgregarProducto(parseInt(val), 1, "Devolución por garantía")}>
-                            <SelectTrigger className="h-11 bg-white">
-                              <SelectValue placeholder="Busque productos adquiridos en esta venta..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white">
-                              {ventaEncontrada.detalleVenta_Pedido && ventaEncontrada.detalleVenta_Pedido.length > 0 ? (
-                                ventaEncontrada.detalleVenta_Pedido.map(d => (
-                                  <SelectItem key={d.productoId} value={d.productoId.toString()}>
-                                    {getProductoNombre(d.productoId)} (Adquirido: {d.cantidad} ud)
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="p-2 text-xs text-slate-500 italic text-center">
-                                  No se detectaron ítems en el detalle de esta venta.
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[10px] text-slate-400 italic font-medium px-1">
-                            * Solo se muestran los productos que el cliente llevó en esta compra.
-                          </p>
-                        </div>
-
-                        {formData.productosSeleccionados.length > 0 && (
-                          <div className="rounded-lg border border-slate-200 divide-y overflow-hidden shadow-sm">
-                            {formData.productosSeleccionados.map(p => (
-                              <div key={p.productoId} className="flex justify-between items-center p-3 bg-white">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-md bg-blue-50 flex items-center justify-center text-blue-500">
-                                    <Package className="h-4 w-4" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-bold text-slate-900">{getProductoNombre(p.productoId)}</p>
-                                    <p className="text-[10px] text-slate-500">Cantidad a devolver: {p.cantidad}</p>
-                                  </div>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-200 hover:text-red-500 hover:bg-red-50" onClick={() => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    productosSeleccionados: prev.productosSeleccionados.filter(ps => ps.productoId !== p.productoId)
-                                  }));
-                                }}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">Motivo de la devolución</Label>
-                      <Textarea
-                        placeholder="Escriba aquí la razón del retorno o desperfecto reportado..."
-                        className="min-h-[100px] bg-white border-slate-200"
-                        value={formData.motivo}
-                        onChange={(e) => setFormData(prev => ({ ...prev, motivo: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="p-6 bg-slate-50 border-t flex justify-end gap-3">
-                    <Button variant="ghost" className="font-medium text-slate-500" onClick={() => setIsNewDialogOpen(false)}>Cancelar</Button>
-                    <Button
-                      disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid}
-                      className={`px-8 rounded-lg shadow-lg ${!saleValidity?.isValid ? 'bg-slate-300' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}
-                      onClick={handleGuardarDevolucion}
-                    >
-                      Confirmar Proceso
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+    <div className="space-y-6">
+      {/* Header con título, filtros y botón - TODO EN UNO */}
+      <div className="bg-white rounded-lg border p-6 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold mb-1">Gestión de Devoluciones</h1>
+            <p className="text-muted-foreground text-sm">
+              Administre retornos, garantías y devoluciones de productos
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {/* Filtros y búsqueda */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por ID de Ticket o Nombre..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div className="w-full md:w-64">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Estado de garantía" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">Ver todos los casos</SelectItem>
-                  <SelectItem value="Aprobado">Aprobado</SelectItem>
-                  <SelectItem value="Anulado">Anulado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex gap-2 w-full lg:w-auto">
+            <Button
+              onClick={() => setIsNewDialogOpen(true)}
+              className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Devolución
+            </Button>
           </div>
+        </div>
 
-          {/* Tabla de devoluciones */}
-          {(searchTerm !== "" || filterStatus !== "all") && paginatedDevoluciones.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No se encontraron devoluciones</h3>
-              <p className="text-muted-foreground mb-4">No hay registros que coincidan con los filtros aplicados</p>
-              <Button onClick={() => { setSearchTerm(""); setFilterStatus("all"); }}>
-                Limpiar filtros
-              </Button>
-            </div>
-          ) : (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead className="w-[120px]">ID Devolución</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Venta/Pedido</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                        Cargando devoluciones...
-                      </TableCell>
-                    </TableRow>
-                  ) : paginatedDevoluciones.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                        No hay devoluciones registradas.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedDevoluciones.map((dev) => (
-                      <TableRow key={dev.id}>
-                        <TableCell className="font-mono text-xs font-bold text-slate-500">
-                          #DEV-{dev.id}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-black">
-                            {getClienteInfo(dev.ventaPedidoId)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-600 font-mono text-xs">
-                          VNT-{dev.ventaPedidoId}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getStatusColor(dev.estadoId)} text-white border-none py-1 rounded-full text-[10px] font-bold uppercase`}>
-                            {getStatusText(dev.estadoId)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleVerDetalle(dev)}
-                              title="Ver detalle"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExportPDF(dev)}
-                              title="Exportar PDF"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={dev.estadoId === 3}
-                                  className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-100"
-                                  title="Anular devolución"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-white">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Está seguro de anular esta devolución?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción marcará la devolución #DEV-{dev.id} como anulada. Esta acción no se puede deshacer.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleAnularDevolucion(dev)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Confirmar Anulación
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={filteredDevoluciones.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                itemName="devoluciones"
+        {/* Filtros de búsqueda */}
+        <div className="flex flex-col lg:flex-row gap-4 items-end pt-2">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar por cliente o ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+
+          <div className="w-full lg:w-48">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="Aprobado">Aprobado</SelectItem>
+                <SelectItem value="Anulado">Anulado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Separador */}
+        <Separator className="my-4" />
+
+        {/* Tabla de devoluciones */}
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Número</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Venta</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : paginatedDevoluciones.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    No se encontraron devoluciones
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedDevoluciones.map((dev) => {
+                  const userVenta = ventas.find(v => v.id === dev.ventaPedidoId);
+                  const usuario = userVenta ? usuarios.find(u => u.id === userVenta.usuarioId) : null;
+
+                  return (
+                    <TableRow key={dev.id} className="hover:bg-gray-50/50">
+                      <TableCell className="font-medium text-black">
+                        {`DEV-${String(dev.id).padStart(3, '0')}`}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm">
+                            {usuario ? `${usuario.nombres} ${usuario.apellidos}` : "N/A"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {usuario?.correo || "N/A"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                          {`VEN-${String(dev.ventaPedidoId).padStart(3, '0')}`}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(dev.fechaDevolucion).toLocaleDateString('es-CO')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "flex items-center gap-1 w-fit capitalize text-white border-none",
+                          dev.estadoId === 5 ? "bg-black hover:bg-black/90" :
+                            (dev.estadoId === 3 || dev.estadoId === 4) ? "bg-red-600 hover:bg-red-700" : "bg-amber-500"
+                        )}>
+                          {dev.estadoId === 5 ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {getStatusText(dev.estadoId)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVerDetalle(dev)}
+                            title="Ver Detalle"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExportPDF(dev)}
+                            disabled={dev.estadoId !== 5}
+                            title="Descargar PDF"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAnularDevolucion(dev)}
+                            disabled={dev.estadoId === 3 || dev.estadoId === 4}
+                            title="Anular Devolución"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredDevoluciones.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemName="devoluciones"
+          />
+        )}
+      </div>
+
+      <Dialog open={isNewDialogOpen} onOpenChange={(open: boolean) => {
+        if (!open) resetForm();
+        setIsNewDialogOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[780px] max-h-[92vh] overflow-hidden p-0 border shadow-2xl rounded-2xl bg-white flex flex-col">
+          <DialogHeader className="p-5 pb-3 shrink-0 border-b bg-slate-50/50">
+            <DialogTitle className="text-xl font-black text-slate-900">Registrar Nueva Devolución</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium tracking-tight">
+              Siga los pasos para localizar la venta y detallar los productos a devolver.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="venta" className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-6 mt-3 shrink-0">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-0.5 h-9">
+                <TabsTrigger value="venta" className="font-bold text-xs">1. Localizar Venta</TabsTrigger>
+                <TabsTrigger value="devolucion" disabled={!ventaEncontrada} className="font-bold text-xs">2. Detalle de Devolución</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 modal-scroll">
+              <TabsContent value="venta" className="mt-0 space-y-6 animate-in fade-in duration-300">
+                {/* Buscador */}
+                <div className="max-w-md mx-auto space-y-2 pt-2">
+                  <Label htmlFor="venta-id" className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Referencia (ID Venta)</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 group">
+                      <Search className="h-3.5 w-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        id="venta-search-input"
+                        placeholder="ID de venta"
+                        className="h-10 pl-10 rounded-xl border-slate-200 focus-visible:ring-blue-600/20 font-bold text-sm"
+                        onKeyPress={(e) => e.key === 'Enter' && handleBuscarVenta((e.target as HTMLInputElement).value)}
+                      />
+                    </div>
+                    <Button
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-6 h-10 font-black text-xs shadow-md transition-all active:scale-95"
+                      onClick={() => {
+                        const el = document.getElementById('venta-search-input') as HTMLInputElement;
+                        handleBuscarVenta(el.value);
+                      }}
+                      disabled={buscandoVenta}
+                    >
+                      {buscandoVenta ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Localizar"}
+                    </Button>
+                  </div>
+                </div>
+
+                {ventaEncontrada && (
+                  <div className="space-y-4 animate-in zoom-in-95 duration-300 pt-2 border-t mt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900">{getClienteInfo(ventaEncontrada.usuarioId)}</h3>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Resumen del Cliente</p>
+                      </div>
+                      <Badge className="ml-auto bg-blue-50 text-blue-700 border-blue-100 font-black text-[10px]">
+                        VENTA #{ventaEncontrada.id}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {(() => {
+                        const u = usuarios.find(usr => usr.id === ventaEncontrada.usuarioId);
+                        return (
+                          <>
+                            <div className="p-2.5 bg-white border rounded-lg shadow-sm">
+                              <Label className="text-[9px] uppercase font-bold text-slate-400 leading-none">Identificación</Label>
+                              <p className="text-xs font-semibold text-slate-700 mt-1">{u?.tipoDocumento} {u?.numeroDocumento}</p>
+                            </div>
+                            <div className="p-2.5 bg-white border rounded-lg shadow-sm">
+                              <Label className="text-[9px] uppercase font-bold text-slate-400 leading-none">Fecha Pedido</Label>
+                              <p className="text-xs font-semibold text-slate-700 mt-1">{new Date(ventaEncontrada.fechaCreacion!).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                            <div className="p-2.5 bg-white border rounded-lg shadow-sm">
+                              <Label className="text-[9px] uppercase font-bold text-slate-400 leading-none">Tipo Operación</Label>
+                              <p className="text-xs font-semibold text-slate-700 mt-1">{ventaEncontrada.tipoVenta || 'Venta'}</p>
+                            </div>
+                            <div className="p-2.5 bg-white border rounded-lg shadow-sm">
+                              <Label className="text-[9px] uppercase font-bold text-slate-400 leading-none">Total Venta</Label>
+                              <p className="text-xs font-black text-blue-600 mt-1">${ventaEncontrada.total?.toLocaleString()}</p>
+                            </div>
+                            <div className="p-2.5 bg-white border rounded-lg shadow-sm md:col-span-4 flex justify-between items-center">
+                              <Label className="text-[9px] uppercase font-bold text-slate-400">Vigencia garantía</Label>
+                              <p className="text-xs font-semibold text-slate-700">{ventaEncontrada.vigenciaDevolucion ? `${ventaEncontrada.vigenciaDevolucion} días registrados` : 'No especificado'}</p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="devolucion" className="mt-0 space-y-5 animate-in fade-in duration-300">
+                {ventaEncontrada && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className={cn(
+                        "p-3 rounded-xl border flex items-center gap-3",
+                        saleValidity?.isValid ? "bg-emerald-50 border-emerald-100 text-emerald-900" : "bg-red-50 border-red-100 text-red-900"
+                      )}>
+                        <div className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                          saleValidity?.isValid ? "bg-emerald-100" : "bg-red-100"
+                        )}>
+                          {saleValidity?.isValid ? <ShieldCheck className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Garantía</p>
+                          <p className="text-xs font-black line-clamp-1">{saleValidity?.message}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-white border rounded-xl shadow-sm space-y-1">
+                        <Label className="text-[9px] uppercase font-bold text-slate-400">Fecha Devolución</Label>
+                        <Input
+                          type="date"
+                          value={formData.fechaDevolucion}
+                          onChange={(e) => setFormData(p => ({ ...p, fechaDevolucion: e.target.value }))}
+                          className="h-8 rounded-lg border-slate-200 font-bold text-xs bg-slate-50/50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Artículos a Devolver</Label>
+                      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                        <Table>
+                          <TableHeader className="bg-slate-50">
+                            <TableRow className="h-8">
+                              <TableHead className="w-[40px]"></TableHead>
+                              <TableHead className="text-[9px] font-bold uppercase py-1">Producto</TableHead>
+                              <TableHead className="text-center text-[9px] font-bold uppercase py-1">Stock Original</TableHead>
+                              <TableHead className="text-center text-[9px] font-bold uppercase py-1 w-[120px]">Devolver</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(ventaEncontrada.detalleVenta_Pedido || []).map((p) => {
+                              const selectedItem = formData.productosSeleccionados.find(ps => ps.productoId === p.productoId);
+                              const isSelected = !!selectedItem;
+
+                              return (
+                                <TableRow key={p.productoId} className={cn("h-12 transition-colors", isSelected ? "bg-blue-50/30" : "")}>
+                                  <TableCell className="text-center py-1">
+                                    <div
+                                      className={cn(
+                                        "h-4 w-4 mx-auto rounded border flex items-center justify-center cursor-pointer transition-all",
+                                        isSelected ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-300"
+                                      )}
+                                      onClick={() => {
+                                        if (isSelected) {
+                                          setFormData(prev => ({
+                                            ...prev,
+                                            productosSeleccionados: prev.productosSeleccionados.filter(ps => ps.productoId !== p.productoId)
+                                          }));
+                                        } else {
+                                          handleAgregarProducto(p.productoId, p.cantidad, "Garantía");
+                                        }
+                                      }}
+                                    >
+                                      {isSelected && <Check className="h-2.5 w-2.5" />}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-1">
+                                    <p className="font-bold text-slate-700 text-xs">{getProductoNombre(p.productoId)}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">${p.precioUnitario.toLocaleString()}</p>
+                                  </TableCell>
+                                  <TableCell className="text-center font-bold text-slate-400 text-xs py-1">{p.cantidad}</TableCell>
+                                  <TableCell className="text-center py-1">
+                                    {isSelected ? (
+                                      <div className="flex items-center justify-center bg-white rounded-lg border border-slate-200 p-0.5">
+                                        <button
+                                          className="h-6 w-6 flex items-center justify-center rounded hover:bg-slate-50 text-slate-500"
+                                          onClick={() => {
+                                            const newVal = Math.max(1, (selectedItem?.cantidad || 1) - 1);
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              productosSeleccionados: prev.productosSeleccionados.map(ps =>
+                                                ps.productoId === p.productoId ? { ...ps, cantidad: newVal } : ps
+                                              )
+                                            }));
+                                          }}
+                                        >
+                                          <ChevronLeft className="h-3 w-3" />
+                                        </button>
+                                        <span className="w-6 text-center font-black text-blue-600 text-xs">
+                                          {selectedItem?.cantidad}
+                                        </span>
+                                        <button
+                                          className="h-6 w-6 flex items-center justify-center rounded hover:bg-slate-50 text-slate-500"
+                                          onClick={() => {
+                                            const newVal = Math.min(p.cantidad, (selectedItem?.cantidad || 1) + 1);
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              productosSeleccionados: prev.productosSeleccionados.map(ps =>
+                                                ps.productoId === p.productoId ? { ...ps, cantidad: newVal } : ps
+                                              )
+                                            }));
+                                          }}
+                                        >
+                                          <ChevronRight className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[9px] font-bold text-slate-300 uppercase italic">Pendiente</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="motivo" className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Motivo / Justificación</Label>
+                      <Textarea
+                        id="motivo"
+                        placeholder="Motivo detallado..."
+                        value={formData.motivo}
+                        onChange={(e) => setFormData(prev => ({ ...prev, motivo: e.target.value }))}
+                        className="min-h-[60px] rounded-xl border-slate-200 focus-visible:ring-blue-600/20 text-xs font-medium"
+                      />
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+            </div>
+          </Tabs>
+
+          <DialogFooter className="p-5 border-t shrink-0 flex flex-row items-center justify-between">
+            <Button
+              variant="outline"
+              className="font-bold border-slate-200 text-xs h-9"
+              onClick={() => setIsNewDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-black text-white hover:bg-slate-800 px-8 h-10 font-black rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-30 text-xs"
+              onClick={handleGuardarDevolucion}
+              disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-2" />
+              Finalizar Devolución
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

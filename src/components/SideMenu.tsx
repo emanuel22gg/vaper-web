@@ -303,6 +303,19 @@ export function SideMenu({
                       </div>
                     </Button>
                   )}
+                  {hasPermission('Gestionar Pedidos') && (
+                    <Button
+                      variant={activeAdminView === 'cartera' ? 'default' : 'ghost'}
+                      className="w-full h-9 px-3 justify-start whitespace-normal overflow-hidden flex-shrink-0"
+                      style={{ fontSize: '12.5px' }}
+                      onClick={() => handleAdminNavigation('cartera')}
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <CreditCard className="h-4 w-4 mr-2.5 flex-shrink-0" />
+                        <span className="truncate">Cartera</span>
+                      </div>
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="space-y-4 py-4 border-t border-gray-100 mt-2 flex flex-col items-center">
@@ -350,6 +363,11 @@ export function SideMenu({
                   {hasPermission('Gestionar Devoluciones') && (
                     <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('devoluciones')} title="Devoluciones">
                       <RotateCcw className="h-6 w-6" />
+                    </Button>
+                  )}
+                  {hasPermission('Gestionar Pedidos') && (
+                    <Button variant="ghost" className="w-full justify-center px-0 h-9" onClick={() => handleAdminNavigation('cartera')} title="Cartera">
+                      <CreditCard className="h-6 w-6" />
                     </Button>
                   )}
                 </div>

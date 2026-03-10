@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DetalleVentaPedidoDto, DevolucionDto, DetalleDevolucionDto, DepartmentColombian, CityColombian, Proveedor, CompraDto } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DetalleVentaPedidoDto, DevolucionDto, DetalleDevolucionDto, DepartmentColombian, CityColombian, Proveedor, CompraDto, VentaAbonoDto } from '../types';
 
 const API_URL = '/api';
 
@@ -212,9 +212,14 @@ export const getDetalleVentaPedidos = async (): Promise<any[]> => {
 
 export const createVentaPedido = async (ventaPedido: VentaPedidoDto): Promise<any> => {
     console.log("POST /VentaPedidos Payload:", JSON.stringify(ventaPedido));
-    const response = await api.post('/VentaPedidos', ventaPedido);
-    console.log("POST /VentaPedidos Response:", response.data);
-    return response.data;
+    try {
+        const response = await api.post('/VentaPedidos', ventaPedido);
+        console.log("POST /VentaPedidos Response:", response.data);
+        return response.data;
+    } catch (error: any) {
+        console.error("DEBUG AXIOS ERROR DATA =>", error.response?.data);
+        throw error;
+    }
 };
 
 export const createDetalleVentaPedido = async (detalle: DetalleVentaPedidoDto): Promise<any> => {
@@ -335,4 +340,34 @@ export const updateCompra = async (id: number, compra: CompraDto): Promise<Compr
 
 export const deleteCompra = async (id: number): Promise<void> => {
     await api.delete(`/Compras/${id}`);
+};
+
+// Abonos Service
+export const getAbonos = async (): Promise<VentaAbonoDto[]> => {
+    const response = await api.get('/Abonoes');
+    return response.data;
+};
+
+export const createAbono = async (abono: Omit<VentaAbonoDto, 'id'> & { saldoRestante: number }): Promise<VentaAbonoDto> => {
+    // Map frontend fields to match AbonoDto in backend controller
+    const payload = {
+        ventaPedidoId: abono.ventaPedidoId,
+        fecha: new Date().toISOString(),
+        monto: abono.monto,
+        saldoRestante: abono.saldoRestante,
+        metodoPago: abono.metodoPago,
+        estado: true // true = Registrado
+    };
+
+    console.log("POST /Abonoes Payload:", JSON.stringify(payload));
+    const response = await api.post('/Abonoes', payload);
+    return response.data;
+};
+
+export const updateAbono = async (id: number, abono: VentaAbonoDto): Promise<VentaAbonoDto> => {
+    const response = await api.put(`/Abonoes/${id}`, {
+        ...abono,
+        id
+    });
+    return response.data;
 };

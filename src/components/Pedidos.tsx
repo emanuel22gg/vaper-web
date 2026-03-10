@@ -561,8 +561,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
                             size="sm"
                             onClick={() => handleVerAbonos(pedido)}
                             title="Ver abonos"
-                            disabled={pedido.metodoPago !== 'Abonos'}
-                            className={pedido.metodoPago === 'Abonos' ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
+                            disabled={pedido.estadoId !== 6}
+                            className={pedido.estadoId === 6 ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
                           >
                             <Receipt className="h-4 w-4" />
                           </Button>

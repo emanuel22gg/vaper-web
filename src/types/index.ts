@@ -204,6 +204,15 @@ export interface DetalleVentaPedidoDto {
   subtotal: number;
 }
 
+export interface VentaAbonoDto {
+  id: number;
+  ventaPedidoId: number;
+  monto: number;
+  fecha: string;
+  metodoPago: string;
+  estado: boolean;
+}
+
 export interface VentaPedidoDto {
   id?: number;
   usuarioId: number;
@@ -214,13 +223,13 @@ export interface VentaPedidoDto {
   direccionEntrega: string;
   ciudadEntrega: string;
   departamentoEntrega: string;
-  barrio?: string;
+  //barrio?: string;
   observaciones?: string;
-  plazoAbono?: number;
+  plazoAbonos: number | null;
   subtotal: number;
   envio: number;
   total: number;
-  vigenciaDevolucion?: number; // Meses de vigencia (1-4)
+  vigenciaDevolucion?: number;
   tipoVenta: string; // "Pedido" o "Venta"
   detalleVenta_Pedido?: DetalleVentaPedidoDto[]; // Conexión con la tabla detalleVenta_Pedido
 }
@@ -230,6 +239,7 @@ export interface DevolucionDto {
   ventaPedidoId: number;
   fechaDevolucion: string;
   motivo?: string;
+  descripcion?: string; // Mapeo para la base de datos
   estadoId: number; // 5 = Aceptada, 3/4 = Anulada/Cancelada
   montoTotal: number;
 }

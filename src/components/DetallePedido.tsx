@@ -328,7 +328,7 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                     {pedido.direccionEntrega || (cliente ? cliente.direccion : '---')}
                   </p>
                   <p className="text-xs text-gray-600 font-bold mt-2">
-                    Barrio: <span className="text-gray-900">{pedido.barrio || (cliente ? cliente.barrio : '---')}</span>
+                    Barrio: <span className="text-gray-900">{(pedido as any).barrio || (cliente ? cliente.barrio : '---')}</span>
                   </p>
                   <p className="text-xs text-gray-600 font-bold mt-1">
                     Ciudad: <span className="text-gray-900 capitalize">{((pedido.ciudadEntrega || (cliente ? cliente.ciudad : '')) || '---').toLowerCase()}</span>
@@ -347,8 +347,8 @@ export const DetallePedido: React.FC<DetallePedidoProps> = ({ pedido: pedidoProp
                   <div>
                     <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Método</p>
                     <p className="text-sm font-bold text-gray-900 leading-none">{pedido.metodoPago}</p>
-                    {pedido.metodoPago === 'Abonos' && (pedido as any).plazoAbono && (
-                      <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">Plazo: {(pedido as any).plazoAbono} {(pedido as any).plazoAbono === 1 ? 'Mes' : 'Meses'}</p>
+                    {pedido.estadoId === 6 && pedido.plazoAbonos && (
+                      <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">Plazo: {pedido.plazoAbonos} {pedido.plazoAbonos === 1 ? 'Mes' : 'Meses'}</p>
                     )}
                   </div>
                 </div>

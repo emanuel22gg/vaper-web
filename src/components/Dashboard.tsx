@@ -30,6 +30,8 @@ import { Productos } from "./Productos";
 import { Categorias } from "./Categorias";
 import { Cotizaciones } from "./CotizacionesMejoradas";
 import { Devoluciones } from "./devoluciones";
+import { Cartera } from "./Cartera";
+import { AbonosIndividuales } from "./AbonosIndividuales";
 import { getVentaPedidos, getCompras, getProductos, getCategorias, getDetalleVentaPedidos } from "../services/api";
 import { VentaPedidoDto, CompraDto, Producto, Categoria } from "../types";
 
@@ -195,6 +197,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     id: string;
   } | null>(null);
 
+  // Estado para sub-vistas (ej. cobrar desde cartera)
+  const [subViewPedido, setSubViewPedido] = useState<VentaPedidoDto | null>(null);
+
   // Establecer la vista inicial basada en permisos o usar el prop activeAdminView
   useEffect(() => {
     if (activeAdminView) {
@@ -301,6 +306,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return "Tienda Online";
       case "profile":
         return "Mi Perfil";
+      case "cartera":
+        return subViewPedido ? `Abonos del Pedido #${subViewPedido.id}` : "Cartera de Clientes";
       default:
         return "Dashboard";
     }
@@ -467,6 +474,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleViewChange = (view: string) => {
     setActiveView(view);
     setDetailView(null); // Limpiar vista de detalle cuando cambia la vista principal
+    setSubViewPedido(null); // Limpiar sub-vistas
     if (onAdminNavigate) {
       onAdminNavigate(view);
     }
@@ -605,6 +613,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case "devoluciones":
         return hasPermission("Gestionar Devoluciones") ? (
           <Devoluciones />
+        ) : (
+          <div>Sin permisos</div>
+        );
+      case "cartera":
+        return hasPermission("Gestionar Pedidos") ? (
+          subViewPedido ? (
+            <AbonosIndividuales
+              pedido={subViewPedido}
+              onBack={() => setSubViewPedido(null)}
+            />
+          ) : (
+            <Cartera onVerAbonos={(p) => setSubViewPedido(p)} />
+          )
         ) : (
           <div>Sin permisos</div>
         );
