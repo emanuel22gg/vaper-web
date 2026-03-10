@@ -4,11 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
-import { 
-  Mail, 
-  Shield, 
-  Clock, 
-  CheckCircle, 
+import {
+  Mail,
+  Shield,
+  Clock,
+  CheckCircle,
   ExternalLink,
   Lock,
   User,
@@ -28,10 +28,10 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
   onClose
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   // Generar token simulado y fecha de expiración
   const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const expirationTime = new Date(Date.now() + 60 * 60 * 1000); // 1 hora desde ahora
+  const expirationTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos desde ahora
   const currentTime = new Date();
 
   return (
@@ -86,13 +86,13 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
                   {currentTime.toLocaleString('es-ES')}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-300">Para:</span>
                 <span className="font-medium text-gray-900 dark:text-white">{userEmail}</span>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-300">Asunto:</span>
                 <span className="font-medium text-gray-900 dark:text-white">
@@ -127,8 +127,8 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
                   Hola,
                 </p>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Hemos recibido una solicitud para restablecer la contraseña de tu cuenta asociada 
-                  con este correo electrónico. Si fuiste tú quien hizo esta solicitud, haz clic en 
+                  Hemos recibido una solicitud para restablecer la contraseña de tu cuenta asociada
+                  con este correo electrónico. Si fuiste tú quien hizo esta solicitud, haz clic en
                   el botón de abajo para continuar con el proceso.
                 </p>
                 <p className="text-gray-600 dark:text-gray-300">
@@ -149,7 +149,7 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
                   <ExternalLink className={`h-4 w-4 ml-2 transition-transform duration-200 ${isHovered ? 'translate-x-1' : ''}`} />
                 </Button>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Este enlace te llevará al formulario de cambio de contraseña
+                  Este código te permitirá cambiar tu contraseña en el formulario
                 </p>
               </div>
 
@@ -165,10 +165,10 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
                       <div className="text-sm space-y-1">
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3" />
-                          <span>Este enlace expira el {expirationTime.toLocaleString('es-ES')}</span>
+                          <span>Este código expira el {expirationTime.toLocaleString('es-ES')}</span>
                         </div>
                         <div>• Solo funciona una vez - después se invalidará automáticamente</div>
-                        <div>• El enlace es único y personal, no lo compartas con nadie</div>
+                        <div>• El código es único y personal, no lo compartas con nadie</div>
                         <div>• Si no fuiste tú, cambia tu contraseña inmediatamente</div>
                       </div>
                     </div>
@@ -191,14 +191,14 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
               {/* Footer del email */}
               <div className="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
                 <p>
-                  Este correo fue enviado desde una dirección de solo envío. 
+                  Este correo fue enviado desde una dirección de solo envío.
                   Por favor no respondas a este mensaje.
                 </p>
                 <p>
                   © 2024 Vaper One Medellín - Sistema de Gestión Empresarial
                 </p>
                 <p className="text-xs">
-                  Si tienes problemas con el botón, también puedes copiar y pegar este enlace en tu navegador:
+                  Si tienes problemas, asegúrate de ingresar el código correctamente en el formulario:
                 </p>
                 <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono break-all">
                   https://sistema.vaperonemed.com/reset-password?token={resetToken.substring(0, 20)}...
@@ -232,8 +232,8 @@ export const PasswordRecoveryEmail: React.FC<PasswordRecoveryEmailProps> = ({
             <div className="flex items-start gap-2">
               <span>💡</span>
               <div>
-                <strong>Esto es una simulación educativa.</strong> En un entorno real, 
-                este email llegaría a tu bandeja de entrada y el enlace te redirigiría 
+                <strong>Esto es una simulación educativa.</strong> En un entorno real,
+                este email llegaría a tu bandeja de entrada y el código te permitiría
                 al sitio web oficial de la empresa para cambiar tu contraseña de forma segura.
               </div>
             </div>

@@ -13,6 +13,8 @@ import { Switch } from './ui/switch';
 import { Textarea } from './ui/textarea';
 import { Separator } from './ui/separator';
 import { TablePagination } from './ui/TablePagination';
+import { ClientEditDialog } from "./ClientEditDialog";
+import { ClientDetailDialog } from "./ClientDetailDialog";
 import { toast } from "sonner";
 import { cn } from "./ui/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -80,8 +82,6 @@ export const Clientes: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
   const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
-  const [isEditDeptPopoverOpen, setIsEditDeptPopoverOpen] = useState(false);
-  const [isEditCityPopoverOpen, setIsEditCityPopoverOpen] = useState(false);
 
   // Estados para Dirección Estructurada (Creación)
   const [addrParts, setAddrParts] = useState({
@@ -91,20 +91,9 @@ export const Clientes: React.FC = () => {
     placa: ''
   });
 
-  // Estados para Dirección Estructurada (Edición)
-  const [editAddrParts, setEditAddrParts] = useState({
-    tipoVia: '',
-    viaPrincipal: '',
-    viaSecundaria: '',
-    placa: ''
-  });
-
   // Tipos de Vía Estándar
   const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
-  const [pedidosCliente, setPedidosCliente] = useState<VentaPedidoDto[]>([]);
-  const [devolucionesCliente, setDevolucionesCliente] = useState<DevolucionDto[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const [newCliente, setNewCliente] = useState<Partial<UsuarioDto>>({
     nombres: '',
@@ -167,15 +156,6 @@ export const Clientes: React.FC = () => {
       setNewCliente(prev => ({ ...prev, direccion: fullAddr }));
     }
   }, [addrParts]);
-
-  // Efecto para concatenar dirección de edición
-  useEffect(() => {
-    const { tipoVia, viaPrincipal, viaSecundaria, placa } = editAddrParts;
-    if (tipoVia && viaPrincipal && viaSecundaria && placa) {
-      const fullAddr = `${tipoVia} ${viaPrincipal} # ${viaSecundaria}-${placa}`;
-      setEditingCliente(prev => prev ? ({ ...prev, direccion: fullAddr }) : null);
-    }
-  }, [editAddrParts]);
 
   // Validación de documento en tiempo real (Creación)
   useEffect(() => {
@@ -342,67 +322,14 @@ export const Clientes: React.FC = () => {
     }
   };
 
-  const handleViewCliente = async (cliente: UsuarioDto) => {
+  const handleViewCliente = (cliente: UsuarioDto) => {
     setSelectedCliente(cliente);
     setIsViewDialogOpen(true);
-    try {
-      setLoadingHistory(true);
-      const [allVentas, allDevoluciones] = await Promise.all([
-        getVentaPedidos(),
-        getDevoluciones()
-      ]);
-      setPedidosCliente(allVentas.filter(v => v.usuarioId === cliente.id));
-      setDevolucionesCliente(allDevoluciones.filter(d => {
-        return allVentas.some(v => v.id === d.ventaPedidoId && v.usuarioId === cliente.id);
-      }));
-    } catch (error) {
-      console.error("Error loading client history:", error);
-    } finally {
-      setLoadingHistory(false);
-    }
   };
 
   const handleEditCliente = (cliente: UsuarioDto) => {
     setEditingCliente(cliente);
-    // Intentar parsear la dirección si cumple el formato estándar
-    const addrRegex = /^([A-Za-z]+)\s+([0-9]+)\s+#\s+([0-9]+)-([0-9]+)$/;
-    const match = (cliente.direccion || '').match(addrRegex);
-    if (match) {
-      setEditAddrParts({
-        tipoVia: match[1],
-        viaPrincipal: match[2],
-        viaSecundaria: match[3],
-        placa: match[4]
-      });
-    } else {
-      setEditAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
-    }
     setIsEditDialogOpen(true);
-  };
-
-  const handleUpdateCliente = async () => {
-    if (editingCliente) {
-      if (!validateCliente(editingCliente, true, editingCliente.id)) return;
-
-      try {
-        setLoading(true);
-        const dataToUpdate = {
-          ...editingCliente,
-          username: editingCliente.numeroDocumento,
-          contraseña: editingCliente.contraseña || editingCliente.numeroDocumento
-        };
-        await updateUsuario(editingCliente.id, dataToUpdate as UsuarioDto);
-        toast.success('Cliente actualizado correctamente. Recuerda que sus credenciales están ligadas a su número de documento.');
-        fetchData();
-        setIsEditDialogOpen(false);
-        setEditingCliente(null);
-      } catch (error) {
-        console.error("Error updating user:", error);
-        toast.error("Error al actualizar el cliente");
-      } finally {
-        setLoading(false);
-      }
-    }
   };
 
   const handleDeleteCliente = async () => {
@@ -922,542 +849,21 @@ export const Clientes: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Ver Detalles Completo */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto modal-scroll">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Detalles del Cliente</DialogTitle>
-            <DialogDescription>
-              Información completa y detallada del cliente
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedCliente && (
-            <Tabs defaultValue="basic" className="mt-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">Información General</TabsTrigger>
-                <TabsTrigger value="contact">Contacto y Ubicación</TabsTrigger>
-                <TabsTrigger value="history">Historial Comercial</TabsTrigger>
-              </TabsList>
-
-              {/* Pestaña Información Básica */}
-              <TabsContent value="basic" className="space-y-4 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-center items-center text-center">
-                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-                      <User className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-slate-900">{selectedCliente.nombres} {selectedCliente.apellidos}</h3>
-                    <p className="text-xs text-slate-500">Cliente {selectedCliente.tipoCliente || 'Minorista'}</p>
-                    <Badge variant="outline" className={cn("mt-2 uppercase text-[10px]", selectedCliente.estadoUsuario ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
-                      {selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                  </div>
-
-                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-white border rounded-xl shadow-sm">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Identificación</Label>
-                      <p className="text-sm font-semibold text-slate-700">{selectedCliente.tipoDocumento} {selectedCliente.numeroDocumento}</p>
-                    </div>
-                    <div className="p-3 bg-white border rounded-xl shadow-sm">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Tipo Cliente</Label>
-                      <p className="text-sm font-semibold text-slate-700">{selectedCliente.tipoCliente || 'Minorista'}</p>
-                    </div>
-                    <div className="p-3 bg-white border rounded-xl shadow-sm">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Fecha Nacimiento</Label>
-                      <p className="text-sm font-semibold text-slate-700">
-                        {selectedCliente.fechaNacimiento ? new Date(selectedCliente.fechaNacimiento).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No especificada'}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-white border rounded-xl shadow-sm">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">ID Sistema</Label>
-                      <p className="text-sm font-semibold text-slate-700">#{selectedCliente.id}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl flex flex-col items-center justify-center">
-                    <p className="text-[10px] font-bold text-blue-600 uppercase">Compras</p>
-                    <p className="text-xl font-black text-blue-700">{pedidosCliente.length}</p>
-                  </div>
-                  <div className="bg-green-50 border border-green-100 p-3 rounded-xl flex flex-col items-center justify-center">
-                    <p className="text-[10px] font-bold text-green-600 uppercase">Total Invertido</p>
-                    <p className="text-xl font-black text-green-700">${pedidosCliente.reduce((sum, p) => sum + p.total, 0).toLocaleString()}</p>
-                  </div>
-                  <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl flex flex-col items-center justify-center">
-                    <p className="text-[10px] font-bold text-orange-600 uppercase">Devoluciones</p>
-                    <p className="text-xl font-black text-orange-700">{devolucionesCliente.length}</p>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex flex-col items-center justify-center">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">Estado</p>
-                    <div className="flex items-center gap-1">
-                      <div className={cn("h-2 w-2 rounded-full", selectedCliente.estadoUsuario ? "bg-green-500" : "bg-slate-400")}></div>
-                      <p className="text-sm font-bold text-slate-700">{selectedCliente.estadoUsuario ? 'Activo' : 'Inactivo'}</p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="contact" className="space-y-4 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-white border rounded-xl shadow-sm space-y-3">
-                    <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
-                      <Phone className="h-3 w-3" /> Canales de Contacto
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
-                        <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center">
-                          <Mail className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Correo Electrónico</p>
-                          <p className="text-sm font-semibold text-slate-700">{selectedCliente.correo}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
-                        <div className="h-8 w-8 bg-green-50 rounded-full flex items-center justify-center">
-                          <Phone className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Línea Telefónica</p>
-                          <p className="text-sm font-semibold text-slate-700">{selectedCliente.telefono}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-white border rounded-xl shadow-sm space-y-3">
-                    <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
-                      <MapPin className="h-3 w-3" /> Ubicación
-                    </h4>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Dirección</p>
-                        <p className="text-sm font-semibold text-slate-700">{selectedCliente.direccion}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Barrio</p>
-                          <p className="text-sm text-slate-600">{selectedCliente.barrio || 'No especificado'}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Ciudad</p>
-                          <p className="text-sm text-slate-600">{selectedCliente.ciudad}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Pestaña Historial */}
-              <TabsContent value="history" className="space-y-6 mt-6">
-                {loadingHistory ? (
-                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    <p className="text-sm text-gray-500 font-medium">Cargando expediente comercial...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4">
-                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                        <ShoppingBag className="h-4 w-4 text-blue-600" />
-                        Historial de Compras ({pedidosCliente.length})
-                      </h4>
-                      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                        <Table>
-                          <TableHeader className="bg-slate-50">
-                            <TableRow>
-                              <TableHead className="text-[10px] font-bold uppercase">Referencia</TableHead>
-                              <TableHead className="text-[10px] font-bold uppercase">Fecha</TableHead>
-                              <TableHead className="text-[10px] font-bold uppercase">Estado</TableHead>
-                              <TableHead className="text-right text-[10px] font-bold uppercase">Total</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {pedidosCliente.length > 0 ? (
-                              pedidosCliente.map((p) => (
-                                <TableRow key={p.id} className="text-xs hover:bg-slate-50 transition-colors">
-                                  <TableCell className="font-mono text-blue-600">VNT-{p.id}</TableCell>
-                                  <TableCell>{p.fechaCreacion ? new Date(p.fechaCreacion).toLocaleDateString() : 'N/A'}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 leading-tight">
-                                      {p.estadoId === 1 ? 'Entregado' : 'Pendiente'}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right font-bold">${p.total.toLocaleString()}</TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-gray-400 italic">
-                                  Sin registros de compras previos.
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4 text-orange-600" />
-                        Historial de Devoluciones ({devolucionesCliente.length})
-                      </h4>
-                      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                        <Table>
-                          <TableHeader className="bg-slate-50">
-                            <TableRow>
-                              <TableHead className="text-[10px] font-bold uppercase">ID Dev</TableHead>
-                              <TableHead className="text-[10px] font-bold uppercase">Fecha</TableHead>
-                              <TableHead className="text-[10px] font-bold uppercase">Motivo</TableHead>
-                              <TableHead className="text-right text-[10px] font-bold uppercase">Monto</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {devolucionesCliente.length > 0 ? (
-                              devolucionesCliente.map((d) => (
-                                <TableRow key={d.id} className="text-xs hover:bg-slate-50 transition-colors">
-                                  <TableCell className="font-mono text-orange-600">DEV-{d.id}</TableCell>
-                                  <TableCell>{new Date(d.fechaDevolucion).toLocaleDateString()}</TableCell>
-                                  <TableCell className="max-w-[150px] truncate">{d.motivo || 'N/A'}</TableCell>
-                                  <TableCell className="text-right font-bold text-red-600">-${d.montoTotal.toLocaleString()}</TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-gray-400 italic">
-                                  Sin registros de devoluciones.
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          )}
-
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Cerrar
-            </Button>
-            <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={() => {
-              setIsViewDialogOpen(false);
-              if (selectedCliente) {
-                handleEditCliente(selectedCliente);
-              }
-            }}>
-              Editar Cliente
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de Detalle */}
+      <ClientDetailDialog
+        isOpen={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        cliente={selectedCliente}
+        onEdit={handleEditCliente}
+      />
 
       {/* Modal de Edición */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-            <DialogDescription>
-              Modifica la información del cliente seleccionado.
-            </DialogDescription>
-          </DialogHeader>
-
-          {editingCliente && (
-            <Tabs defaultValue="basic" className="mt-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="contact">Contacto</TabsTrigger>
-                <TabsTrigger value="commercial">Comercial</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-nombre">Nombres *</Label>
-                    <Input
-                      id="edit-nombre"
-                      value={editingCliente.nombres || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, nombres: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-apellido">Apellidos *</Label>
-                    <Input
-                      id="edit-apellido"
-                      value={editingCliente.apellidos || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, apellidos: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-tipoDocumento">Tipo Documento</Label>
-                    <Select
-                      value={editingCliente.tipoDocumento || 'CC'}
-                      onValueChange={(value: string) => setEditingCliente({ ...editingCliente, tipoDocumento: value as any })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CC">Cédula</SelectItem>
-                        <SelectItem value="CE">Cédula Extranjería</SelectItem>
-                        <SelectItem value="NIT">NIT</SelectItem>
-                        <SelectItem value="PP">Pasaporte</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="edit-numeroDocumento">Número Documento *</Label>
-                    <Input
-                      id="edit-numeroDocumento"
-                      value={editingCliente.numeroDocumento || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, numeroDocumento: e.target.value })}
-                      className={cn(editNumDocError ? "border-red-500 focus-visible:ring-red-500" : "")}
-                    />
-                    {editNumDocError && (
-                      <p className="text-[10px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100 animate-in fade-in slide-in-from-top-1">
-                        {editNumDocError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-fechaNacimiento">Fecha Nacimiento</Label>
-                    <Input
-                      id="edit-fechaNacimiento"
-                      type="date"
-                      value={editingCliente.fechaNacimiento || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, fechaNacimiento: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="contact" className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-email">Email *</Label>
-                    <Input
-                      id="edit-email"
-                      type="email"
-                      value={editingCliente.correo || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, correo: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-telefono">Teléfono *</Label>
-                    <Input
-                      id="edit-telefono"
-                      value={editingCliente.telefono || ''}
-                      onChange={(e) => setEditingCliente({ ...editingCliente, telefono: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Departamento *</Label>
-                    <Popover open={isEditDeptPopoverOpen} onOpenChange={setIsEditDeptPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={isEditDeptPopoverOpen}
-                          className="w-full justify-between"
-                        >
-                          {selectedDepartment
-                            ? departments.find((dept) => dept.name === selectedDepartment)?.name
-                            : "Seleccionar Departamento"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar departamento..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró el departamento.</CommandEmpty>
-                            <CommandGroup>
-                              {departments.map((dept) => (
-                                <CommandItem
-                                  key={dept.id}
-                                  value={dept.name}
-                                  onSelect={() => {
-                                    setSelectedDepartment(dept.name);
-                                    setIsEditDeptPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedDepartment === dept.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {dept.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ciudad *</Label>
-                    <Popover open={isEditCityPopoverOpen} onOpenChange={setIsEditCityPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={isEditCityPopoverOpen}
-                          className="w-full justify-between"
-                          disabled={!selectedDepartment}
-                        >
-                          {editingCliente.ciudad
-                            ? cities.find((city) => city.name === editingCliente.ciudad)?.name
-                            : "Seleccionar Ciudad"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar ciudad..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró la ciudad.</CommandEmpty>
-                            <CommandGroup>
-                              {cities.map((city) => (
-                                <CommandItem
-                                  key={city.id}
-                                  value={city.name}
-                                  onSelect={() => {
-                                    setEditingCliente({ ...editingCliente, ciudad: city.name });
-                                    setIsEditCityPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      editingCliente.ciudad === city.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {city.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-barrio">Barrio</Label>
-                  <Input
-                    id="edit-barrio"
-                    value={editingCliente.barrio || ''}
-                    onChange={(e) => setEditingCliente({ ...editingCliente, barrio: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-blue-600 font-semibold">Dirección Estructural *</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Tipo Vía</Label>
-                      <Select
-                        value={editAddrParts.tipoVia}
-                        onValueChange={(val: string) => setEditAddrParts({ ...editAddrParts, tipoVia: val })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposVia.map(tipo => (
-                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">N° Principal</Label>
-                      <Input
-                        placeholder="67"
-                        value={editAddrParts.viaPrincipal}
-                        onChange={(e) => setEditAddrParts({ ...editAddrParts, viaPrincipal: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">N° Secundario</Label>
-                      <div className="flex items-center">
-                        <span className="mr-1 text-gray-500">#</span>
-                        <Input
-                          placeholder="102"
-                          value={editAddrParts.viaSecundaria}
-                          onChange={(e) => setEditAddrParts({ ...editAddrParts, viaSecundaria: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">N° Placa</Label>
-                      <div className="flex items-center">
-                        <span className="mr-1 text-gray-500">-</span>
-                        <Input
-                          placeholder="25"
-                          value={editAddrParts.placa}
-                          onChange={(e) => setEditAddrParts({ ...editAddrParts, placa: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded border text-sm italic text-gray-600">
-                    Vista previa: {editingCliente.direccion || 'Ingrese los campos de dirección'}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="commercial" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-tipo">Tipo Cliente *</Label>
-                  <Select
-                    value={editingCliente.tipoCliente || 'Minorista'}
-                    onValueChange={(val: 'Minorista' | 'Mayorista') => setEditingCliente({ ...editingCliente, tipoCliente: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Minorista">Minorista</SelectItem>
-                      <SelectItem value="Mayorista">Mayorista</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-              </TabsContent>
-            </Tabs>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleUpdateCliente} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Actualizar Cliente
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClientEditDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        cliente={editingCliente}
+        onSuccess={fetchData}
+      />
 
       {/* Modal de Eliminación */}
       <UniversalDeleteDialog

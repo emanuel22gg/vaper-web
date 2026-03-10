@@ -56,6 +56,7 @@ export interface User {
   ciudad: string;
   direccion: string;
   barrio: string;
+  departamento?: string;
   fechaNacimiento: string;
   tipoCliente?: 'Minorista' | 'Mayorista' | null;
   role: Role;

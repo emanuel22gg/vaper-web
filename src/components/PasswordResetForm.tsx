@@ -49,7 +49,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [timeLeft, setTimeLeft] = useState(3600); // 1 hora en segundos
+  const [timeLeft, setTimeLeft] = useState(900); // 15 minutos en segundos
 
   // Simulación del tiempo de expiración
   useEffect(() => {
@@ -141,7 +141,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({
 
     // Validaciones
     if (timeLeft <= 0) {
-      setError('El enlace de recuperación ha expirado. Solicita uno nuevo.');
+      setError('El código de recuperación ha expirado. Solicita uno nuevo.');
       return;
     }
 
@@ -216,7 +216,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({
               <AlertDescription className={isExpired ? 'text-red-800 dark:text-red-200' : 'text-amber-800 dark:text-amber-200'}>
                 <div className="flex items-center justify-between">
                   <span>
-                    {isExpired ? 'Enlace expirado' : 'Tiempo restante del código:'}
+                    {isExpired ? 'Código expirado' : 'Tiempo restante del código:'}
                   </span>
                   <span className="font-mono font-semibold">
                     {isExpired ? '00:00:00' : formatTime(timeLeft)}
@@ -224,7 +224,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({
                 </div>
                 {isExpired && (
                   <div className="mt-2 text-sm">
-                    Por seguridad, el código solo es válido por 1 hora.
+                    Por seguridad, el código solo es válido por 15 minutos.
                     <Button
                       variant="link"
                       className="p-0 h-auto text-red-600 dark:text-red-400 underline"

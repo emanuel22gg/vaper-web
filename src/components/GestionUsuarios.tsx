@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useUsers } from '../hooks/useUsers';
-import { User, UserRole } from '../types';
+import { User, Role, UserRole, Permission, UsuarioDto } from '../types';
+import { getDepartments } from '../services/api';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -9,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { ClientEditDialog } from './ClientEditDialog';
+import { ClientDetailDialog } from './ClientDetailDialog';
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { Switch } from './ui/switch';
@@ -25,7 +28,6 @@ import { ScrollArea } from './ui/scroll-area';
 import {
   Users,
   Shield,
-
   Eye,
   Edit,
   Trash2,
@@ -34,8 +36,13 @@ import {
   UserCircle,
   Search,
   Filter,
-  Plus
+  Plus,
+  MoreHorizontal,
+  UserPlus,
+  Info
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+
 export const GestionUsuarios: React.FC = () => {
   const {
     users,
@@ -43,7 +50,8 @@ export const GestionUsuarios: React.FC = () => {
     updateUser,
     deleteUser,
     createUser,
-    isLoading
+    isLoading,
+    fetchUsers // Added fetchUsers to refresh data after client edit
   } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +64,8 @@ export const GestionUsuarios: React.FC = () => {
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isClientDetailDialogOpen, setIsClientDetailDialogOpen] = useState(false);
+  const [selectedClientForDetail, setSelectedClientForDetail] = useState<UsuarioDto | null>(null);
 
   // Estados para el dialog de confirmación
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -72,8 +82,9 @@ export const GestionUsuarios: React.FC = () => {
     ciudad: '',
     direccion: '',
     barrio: '',
+    departamento: '',
     fechaNacimiento: '',
-    role: 'Cliente' as UserRole,
+    role: 'Empleado' as UserRole,
     isActive: true
   });
 
@@ -87,11 +98,16 @@ export const GestionUsuarios: React.FC = () => {
     ciudad: '',
     direccion: '',
     barrio: '',
+    departamento: '', // Campo requerido en UsuarioDto
     fechaNacimiento: '',
     tipoDocumento: 'C.C' as string,
-    role: 'Cliente' as UserRole,
+    role: 'Empleado' as UserRole,
     isActive: true
   });
+
+  // Estados para Modal de Cliente (Edición Especial)
+  const [isClientEditDialogOpen, setIsClientEditDialogOpen] = useState(false);
+  const [selectedClientForEdit, setSelectedClientForEdit] = useState<UsuarioDto | null>(null);
 
   const getRoleIcon = (roleName: string) => {
     switch (roleName) {
@@ -207,8 +223,9 @@ export const GestionUsuarios: React.FC = () => {
         ciudad: '',
         direccion: '',
         barrio: '',
+        departamento: '',
         fechaNacimiento: '',
-        role: 'Cliente',
+        role: 'Empleado',
         isActive: true
       });
 
@@ -222,6 +239,32 @@ export const GestionUsuarios: React.FC = () => {
   };
 
   const handleEditUser = (user: User) => {
+    if (user.role.name === 'Cliente') {
+      // Convertir User a UsuarioDto (formato que espera ClientEditDialog)
+      const clientDto: UsuarioDto = {
+        id: parseInt(user.id),
+        nombres: user.firstName,
+        apellidos: user.lastName,
+        correo: user.email,
+        tipoDocumento: user.tipoDocumento,
+        numeroDocumento: user.numeroDocumento,
+        telefono: user.telefono,
+        ciudad: user.ciudad,
+        direccion: user.direccion,
+        barrio: user.barrio,
+        departamento: '', // Dejar vacío, el componente lo manejará
+        fechaNacimiento: user.fechaNacimiento,
+        estadoUsuario: user.isActive,
+        rolId: roles.find(r => r.name === 'Cliente')?.id ? parseInt(roles.find(r => r.name === 'Cliente')!.id) : 3,
+        tipoCliente: user.tipoCliente,
+        username: user.username
+      };
+
+      setSelectedClientForEdit(clientDto);
+      setIsClientEditDialogOpen(true);
+      return;
+    }
+
     setEditingUser(user);
     setEditUserData({
       documento: user.numeroDocumento || user.username || '',
@@ -232,6 +275,7 @@ export const GestionUsuarios: React.FC = () => {
       ciudad: user.ciudad || '',
       direccion: user.direccion || '',
       barrio: user.barrio || '',
+      departamento: '', // Campo requerido en UsuarioDto
       fechaNacimiento: user.fechaNacimiento || '',
       tipoDocumento: user.tipoDocumento || 'C.C',
       role: user.role.name as UserRole,
@@ -316,9 +360,10 @@ export const GestionUsuarios: React.FC = () => {
       ciudad: '',
       direccion: '',
       barrio: '',
+      departamento: '',
       fechaNacimiento: '',
       tipoDocumento: 'C.C',
-      role: 'Cliente',
+      role: 'Empleado',
       isActive: true
     });
   };
@@ -364,9 +409,30 @@ export const GestionUsuarios: React.FC = () => {
     }
   };
 
-  const handleViewUserDetail = (user: User) => {
-    setSelectedUser(user);
-    setIsUserDetailDialogOpen(true);
+  const handleViewUser = (user: User) => {
+    if (user.role.name === 'Cliente') {
+      const clientDto: UsuarioDto = {
+        id: parseInt(user.id),
+        nombres: user.firstName,
+        apellidos: user.lastName,
+        correo: user.email,
+        telefono: user.telefono || '',
+        ciudad: user.ciudad || 'N/A',
+        direccion: user.direccion || '',
+        barrio: user.barrio || '',
+        departamento: user.departamento || '',
+        fechaNacimiento: user.fechaNacimiento || '',
+        numeroDocumento: user.numeroDocumento || '',
+        tipoDocumento: user.tipoDocumento || 'C.C',
+        estadoUsuario: user.isActive,
+        rolId: user.role.id ? parseInt(user.role.id) : 0
+      };
+      setSelectedClientForDetail(clientDto);
+      setIsClientDetailDialogOpen(true);
+    } else {
+      setSelectedUser(user);
+      setIsUserDetailDialogOpen(true);
+    }
   };
 
   // Manejar cambio de página
@@ -530,13 +596,16 @@ export const GestionUsuarios: React.FC = () => {
                           <SelectValue placeholder="Selecciona un rol" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.filter(role => role.isActive).map((role) => (
+                          {roles.filter(role => role.isActive && role.name !== 'Cliente').map((role) => (
                             <SelectItem key={role.id} value={role.name as UserRole}>
                               {role.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-[10px] text-gray-500 mt-1 px-1">
+                        * Los clientes se gestionan desde el módulo de Clientes.
+                      </p>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -631,9 +700,15 @@ export const GestionUsuarios: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={user.isActive ? "default" : "secondary"}>
-                          {user.isActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
+                        {user.isActive ? (
+                          <Badge className="bg-black text-white hover:bg-black">
+                            Activo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-gray-200 text-gray-700 hover:bg-gray-200">
+                            Inactivo
+                          </Badge>
+                        )}
                         <Switch
                           checked={user.isActive}
                           onCheckedChange={() => toggleUserStatus(user)}
@@ -645,31 +720,60 @@ export const GestionUsuarios: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewUserDetail(user)}
-                          title="Ver detalle"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                          title="Editar usuario"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user)}
-                          title={user.role.name === 'Super Administrador' ? 'No se puede eliminar un super administrador' : 'Eliminar usuario'}
-                          disabled={user.role.name === 'Super Administrador'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Ver detalle
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                disabled={user.role.name === 'Super Administrador'}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {user.role.name === 'Super Administrador'
+                                ? "No se puede editar un super administrador"
+                                : user.role.name === 'Cliente'
+                                  ? "Editar información detallada del cliente"
+                                  : "Editar usuario"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user)}
+                                disabled={user.role.name === 'Super Administrador'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {user.role.name === 'Super Administrador' ? 'No se puede eliminar un super administrador' : 'Eliminar usuario'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -859,7 +963,7 @@ export const GestionUsuarios: React.FC = () => {
                       <SelectValue placeholder="Selecciona un rol" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles.filter(role => role.isActive).map((role) => (
+                      {roles.filter(role => role.isActive && role.name !== 'Cliente').map((role) => (
                         <SelectItem key={role.id} value={role.name as UserRole}>
                           {role.name}
                         </SelectItem>
@@ -1034,6 +1138,24 @@ export const GestionUsuarios: React.FC = () => {
         itemType="usuario"
         isDisabled={isLoading || (userToDelete?.role.name === 'Super Administrador')}
         disableReason={userToDelete?.role.name === 'Super Administrador' ? "No se puede eliminar al Super Administrador" : undefined}
+      />
+
+      <ClientEditDialog
+        isOpen={isClientEditDialogOpen}
+        onOpenChange={setIsClientEditDialogOpen}
+        cliente={selectedClientForEdit}
+        onSuccess={fetchUsers}
+      />
+
+      {/* Client Detail Dialog */}
+      <ClientDetailDialog
+        isOpen={isClientDetailDialogOpen}
+        onOpenChange={setIsClientDetailDialogOpen}
+        cliente={selectedClientForDetail}
+        onEdit={(client) => {
+          setSelectedClientForEdit(client);
+          setIsClientEditDialogOpen(true);
+        }}
       />
     </div>
   );

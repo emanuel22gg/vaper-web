@@ -78,30 +78,38 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     }
 
     const emailTrimmed = recoveryData.email.trim();
+    const emailLowerCase = emailTrimmed.toLowerCase();
 
     try {
-      // Llamada real al servicio de recuperación de la API
+      // 1. Verificar si el correo está registrado en el sistema
+      const allUsers = await apiService.getUsuarios();
+      const userExists = allUsers.find(u => u.correo.toLowerCase() === emailLowerCase);
+
+      if (!userExists) {
+        setError('El correo no está registrado');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Si existe, llamar al servicio de recuperación
       await apiService.forgotPassword({ correo: emailTrimmed });
 
       // Ya no generamos un token falso. El usuario ingresará el que llega al correo.
       setResetToken('');
 
-      setSuccess('Se ha enviado un código de recuperación a tu correo. Por favor, ingrésalo a continuación.');
+      setSuccess('Correo verificado. Se ha enviado un código de recuperación a tu bandeja de entrada.');
       setSentEmail(emailTrimmed);
 
       // Saltamos la simulación del email y vamos directo al formulario de reset
       setShowPasswordReset(true);
 
       toast.success('Código enviado', {
-        description: 'Revisa tu bandeja de entrada (y la carpeta de spam).'
+        description: 'Revisa tu bandeja de entrada para obtener el código de restablecimiento.'
       });
     } catch (err: any) {
-      console.error('Error en forgotPassword:', err);
+      console.error('Error en el proceso de recuperación:', err);
       const errorMessage = err.response?.data?.message || err.response?.data || err.message || 'Error desconocido';
-      setError(`Error: ${errorMessage}. Verifica que el correo sea correcto e intenta de nuevo.`);
-      toast.error('Error', {
-        description: `No se pudo enviar la solicitud: ${typeof errorMessage === 'string' ? errorMessage : 'Error del servidor'}`
-      });
+      setError(`Error: ${errorMessage}. Intenta de nuevo más tarde.`);
     } finally {
       setIsLoading(false);
     }
@@ -271,8 +279,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
 
                 <div className="text-xs text-gray-400 bg-gray-800/50 p-3 rounded">
                   <div className="mb-1">📧 <strong>Proceso de recuperación:</strong></div>
-                  <div>• Recibirás un email con un enlace de recuperación</div>
-                  <div>• El enlace será válido por 1 hora</div>
+                  <div>• Recibirás un email con un código de recuperación</div>
+                  <div>• El código será válido por 15 minutos</div>
                   <div>• Revisa también tu carpeta de spam</div>
                 </div>
               </CardContent>

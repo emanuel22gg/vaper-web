@@ -72,6 +72,7 @@ export const useUsers = () => {
                     ciudad: u.ciudad,
                     direccion: u.direccion,
                     barrio: u.barrio,
+                    departamento: u.departamento,
                     fechaNacimiento: u.fechaNacimiento,
                     tipoCliente: u.tipoCliente,
                     role: userRole,
@@ -103,6 +104,7 @@ export const useUsers = () => {
         roles: availableRoles,
         permissions: availablePermissions,
         isLoading,
+        fetchUsers: () => loadData(false),
         updateUser: async (updatedUser: User) => {
             setIsLoading(true);
             try {
@@ -118,6 +120,7 @@ export const useUsers = () => {
                     ciudad: updatedUser.ciudad || 'N/A',
                     direccion: updatedUser.direccion || '',
                     barrio: updatedUser.barrio || '',
+                    departamento: '',
                     fechaNacimiento: updatedUser.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: updatedUser.isActive,
                     rolId: parseInt(updatedUser.role.id)
@@ -156,6 +159,7 @@ export const useUsers = () => {
                     ciudad: userData.ciudad || 'N/A',
                     direccion: userData.direccion || '',
                     barrio: userData.barrio || '',
+                    departamento: '',
                     fechaNacimiento: userData.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: userData.isActive,
                     rolId: parseInt(userData.role.id)
