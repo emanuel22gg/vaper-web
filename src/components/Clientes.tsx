@@ -55,6 +55,7 @@ import {
 
 export const Clientes: React.FC = () => {
   const [clientes, setClientes] = useState<UsuarioDto[]>([]);
+  const [ventas, setVentas] = useState<VentaPedidoDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -182,12 +183,15 @@ export const Clientes: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await getUsuarios();
-      // En la API, el rolId 3 suele ser cliente, pero por ahora mostramos todos
-      setClientes(data);
+      const [usuariosData, ventasData] = await Promise.all([
+        getUsuarios(),
+        getVentaPedidos()
+      ]);
+      setClientes(usuariosData);
+      setVentas(ventasData);
     } catch (error) {
-      console.error("Error fetching users:", error);
-      toast.error("Error al cargar los clientes");
+      console.error("Error fetching data:", error);
+      toast.error("Error al cargar los datos");
     } finally {
       setLoading(false);
     }
@@ -210,7 +214,7 @@ export const Clientes: React.FC = () => {
       (filterStatus === 'Activo' && cliente.estadoUsuario) ||
       (filterStatus === 'Inactivo' && !cliente.estadoUsuario);
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && cliente.rolId === 3;
   });
 
   // Calcular paginación
@@ -401,6 +405,10 @@ export const Clientes: React.FC = () => {
 
   const getStatusIcon = (estado: boolean) => {
     return estado ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-500" />;
+  };
+
+  const hasSales = (clienteId: number) => {
+    return ventas.some(v => v.usuarioId === clienteId);
   };
 
   return (
@@ -824,7 +832,15 @@ export const Clientes: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          title="Eliminar cliente"
+                          className={`${hasSales(cliente.id)
+                            ? "opacity-50 cursor-not-allowed"
+                            : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                            }`}
+                          title={
+                            hasSales(cliente.id)
+                              ? "No se puede eliminar un cliente con ventas asociadas"
+                              : "Eliminar cliente"
+                          }
                           onClick={() => openDeleteDialog(cliente)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -874,6 +890,8 @@ export const Clientes: React.FC = () => {
         description={`¿Estás seguro de que deseas eliminar al cliente "${clienteToDelete?.nombres} ${clienteToDelete?.apellidos}"? Esta acción no se puede deshacer.`}
         itemName={clienteToDelete ? `${clienteToDelete.nombres} ${clienteToDelete.apellidos}` : ''}
         itemType="Cliente"
+        isDisabled={clienteToDelete ? hasSales(clienteToDelete.id) : false}
+        disableReason="Este cliente tiene historial de ventas y no puede ser eliminado."
       />
     </div>
   );

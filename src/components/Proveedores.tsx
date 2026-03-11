@@ -56,8 +56,8 @@ import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 import { UniversalDeleteDialog } from "./UniversalDeleteDialog";
-import { getProveedores, createProveedor, updateProveedor, deleteProveedor } from "../services/api";
-import { Proveedor } from "../types";
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor, getCompras } from "../services/api";
+import { Proveedor, CompraDto } from "../types";
 import {
   Plus,
   Search,
@@ -83,6 +83,7 @@ import {
 
 export const Proveedores: React.FC = () => {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [compras, setCompras] = useState<CompraDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -192,12 +193,16 @@ export const Proveedores: React.FC = () => {
   const fetchProveedores = async () => {
     try {
       setIsLoading(true);
-      const data = await getProveedores();
-      setProveedores(data);
+      const [proveedoresData, comprasData] = await Promise.all([
+        getProveedores(),
+        getCompras(),
+      ]);
+      setProveedores(proveedoresData);
+      setCompras(comprasData);
     } catch (error) {
-      console.error("Error al cargar proveedores:", error);
+      console.error("Error al cargar proveedores y compras:", error);
       toast.error("Error", {
-        description: "No se pudieron cargar los proveedores.",
+        description: "No se pudieron cargar los proveedores o las compras.",
       });
     } finally {
       setIsLoading(false);
@@ -449,6 +454,10 @@ export const Proveedores: React.FC = () => {
     return proveedor.tipoPersona === "natural"
       ? `CC: ${proveedor.cedula || "No especificada"}`
       : `NIT: ${proveedor.nit || "No especificado"}`;
+  };
+
+  const hasPurchases = (proveedorId: number) => {
+    return compras.some((compra) => compra.proveedorId === proveedorId);
   };
 
   return (
@@ -906,8 +915,16 @@ export const Proveedores: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Eliminar proveedor"
+                          className={`${
+                            hasPurchases(proveedor.id)
+                              ? "opacity-50 cursor-not-allowed"
+                              : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                          }`}
+                          title={
+                            hasPurchases(proveedor.id)
+                              ? "No se puede eliminar un proveedor con compras asociadas"
+                              : "Eliminar proveedor"
+                          }
                           onClick={() =>
                             confirmDeleteProveedor(proveedor)
                           }
@@ -1724,6 +1741,8 @@ export const Proveedores: React.FC = () => {
             : ""
         }
         itemType="Proveedor"
+        isDisabled={proveedorToDelete ? hasPurchases(proveedorToDelete.id) : false}
+        disableReason="Este proveedor tiene compras asociadas y no puede ser eliminado para mantener la integridad de los datos."
       />
     </div>
   );
