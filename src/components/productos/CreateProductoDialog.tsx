@@ -20,6 +20,7 @@ import {
 } from '../ui/select';
 import { toast } from "sonner";
 import { ImageSelector } from '../shared/ImageSelector';
+import { uploadImage } from '../../services/api';
 
 import { Categoria, Producto, ProductoDto } from '../../types';
 
@@ -104,10 +105,22 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
     }
 
     setIsLoading(true);
+    const loadingToast = toast.loading("Creando producto...");
 
     try {
-      // Simular API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let finalIdImagen = formData.idImagen;
+
+      // 1. Si hay un archivo, subirlo primero
+      if (formData.imageFile) {
+        toast.loading("Subiendo imagen...", { id: loadingToast });
+        try {
+          const uploadedImage = await uploadImage(formData.imageFile);
+          finalIdImagen = uploadedImage.idImagen;
+        } catch (uploadError) {
+          console.error("Error al subir imagen:", uploadError);
+          toast.error("Error al subir la imagen, se creará el producto sin ella.", { id: loadingToast });
+        }
+      }
 
       const categoria = categorias.find(c => c.id === parseInt(formData.categoriaId));
 
@@ -124,12 +137,13 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
         stock: formData.stock ? parseInt(formData.stock) : 0,
         categoriaId: parseInt(formData.categoriaId),
         estado: formData.estado,
-        idImagen: formData.idImagen
+        idImagen: finalIdImagen
       };
 
       await onProductoCreated(data);
 
       toast.success("Producto creado exitosamente", {
+        id: loadingToast,
         description: `El producto "${data.nombreProducto}" ha sido agregado al inventario.`
       });
 

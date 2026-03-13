@@ -240,7 +240,8 @@ export const Productos: React.FC = () => {
       const categoriaCompleta = categorias.find(c => c.id === result.categoriaId);
       const productoConCategoria = { ...result, categoria: categoriaCompleta };
 
-      setProductos((prev) => [productoConCategoria, ...prev]);
+      setProductos((prev) => [...prev, productoConCategoria]);
+
       toast.success("Producto creado", {
         description: `El producto "${result.nombreProducto}" ha sido creado exitosamente.`,
       });
@@ -260,6 +261,7 @@ export const Productos: React.FC = () => {
       setProductos(
         (prev) => prev.map((p) => (p.id === result.id ? productoConCategoria : p)),
       );
+
       toast.success("Producto actualizado", {
         description: `El producto "${result.nombreProducto}" ha sido actualizado exitosamente.`,
       });
@@ -318,14 +320,7 @@ export const Productos: React.FC = () => {
         productos={productos}
       />
 
-      <CreateProductoDialog
-        isOpen={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-        onProductoCreated={handleProductoCreated}
-        categorias={categorias}
-        nextProductId={getNextProductId()}
-        productos={productos}
-      />
+
 
       <DetailProductoDialog
         isOpen={showDetailDialog}

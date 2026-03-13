@@ -30,15 +30,26 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (producto?.idImagen) {
+    if (!producto) {
+      setImageUrl(null);
+      return;
+    }
+
+    if (producto.idImagen) {
       getImage(producto.idImagen)
-        .then(data => setImageUrl(data.urlimagen))
+        .then(data => {
+          if (data && data.urlimagen) {
+            setImageUrl(data.urlimagen);
+          } else {
+            setImageUrl(producto.imagen || null);
+          }
+        })
         .catch(err => {
           console.error("Error al cargar imagen del producto", err);
-          setImageUrl(null);
+          setImageUrl(producto.imagen || null);
         });
     } else {
-      setImageUrl(producto?.imagen || null);
+      setImageUrl(producto.imagen || null);
     }
   }, [producto]);
 

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { ImageSelector } from '../shared/ImageSelector';
+import { uploadImage } from '../../services/api';
 import { toast } from "sonner";
 
 import { Categoria, Producto, ProductoDto } from '../../types';
@@ -163,10 +164,22 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
     }
 
     setIsLoading(true);
+    const loadingToast = toast.loading("Actualizando producto...");
 
     try {
-      // Simular API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let finalIdImagen = selectedImageId;
+
+      // 1. Si hay un nuevo archivo, subirlo primero
+      if (imageFile) {
+        toast.loading("Subiendo nueva imagen...", { id: loadingToast });
+        try {
+          const uploadedImage = await uploadImage(imageFile);
+          finalIdImagen = uploadedImage.idImagen;
+        } catch (uploadError) {
+          console.error("Error al subir imagen:", uploadError);
+          toast.error("Error al subir la imagen, se actualizará el producto con la imagen previa.", { id: loadingToast });
+        }
+      }
 
       const categoria = categorias.find(c => c.id === parseInt(formData.categoriaId));
 
@@ -183,12 +196,13 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         precio: formData.precio ? parseFloat(formData.precio) : 0,
         stock: formData.stock ? parseInt(formData.stock) : 0,
         estado: formData.estado,
-        idImagen: selectedImageId
+        idImagen: finalIdImagen
       };
 
       await onProductoUpdated(data);
 
       toast.success("Producto actualizado exitosamente", {
+        id: loadingToast,
         description: `Los cambios en "${data.nombreProducto}" han sido guardados.`
       });
 

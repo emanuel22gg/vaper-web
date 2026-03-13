@@ -82,6 +82,7 @@ import {
   User,
   FileText,
 } from "lucide-react";
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 import { cn } from "./ui/utils";
 
 // Interfaces para tipado
@@ -230,7 +231,7 @@ export const Cotizaciones: React.FC = () => {
         }));
         setProductosDisponibles(mappedProductos);
 
-        // Mapear cotizaciones desde la API al formato local
+        // Mapear cotizaciones desde la API al formato local y ordenar por ID ascendente para que se agreguen hacia abajo
         const mappedCotizaciones: Cotizacion[] = cotizacionesData.map(c => {
           // Intentar encontrar el usuario para tener datos completos si es posible
           const usuario = usuariosData.find(u => `${u.nombres} ${u.apellidos}` === c.nombreUsuario);
@@ -267,7 +268,7 @@ export const Cotizaciones: React.FC = () => {
             fechaCreacion: c.fecha || new Date().toISOString(),
             fechaActualizacion: c.fecha || new Date().toISOString()
           };
-        });
+        }).sort((a, b) => a.id - b.id);
         
         setCotizaciones(mappedCotizaciones);
       } catch (error) {
@@ -426,7 +427,8 @@ export const Cotizaciones: React.FC = () => {
       result = result.filter(cotizacion => cotizacion.estado === filtroEstado);
     }
 
-    return result;
+    // Asegurar orden ascendente por ID (las más antiguas primero, nuevas abajo)
+    return result.sort((a, b) => a.id - b.id);
   }, [cotizaciones, searchTerm, filtroEstado]);
 
   // Paginación
@@ -763,7 +765,7 @@ export const Cotizaciones: React.FC = () => {
         fechaActualizacion: createdCotizacion.fecha || new Date().toISOString()
       };
 
-      setCotizaciones((prev) => [nuevaCotizacion, ...prev]);
+      setCotizaciones((prev) => [...prev, nuevaCotizacion]);
       toast.success("Cotización creada exitosamente");
       setIsCreateDialogOpen(false);
       resetFormData();
@@ -813,7 +815,7 @@ export const Cotizaciones: React.FC = () => {
 
     return (
       <Badge
-        variant={config.variant}
+    variant={config.variant}
         className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
       >
         {config.icon}
@@ -825,198 +827,148 @@ export const Cotizaciones: React.FC = () => {
   // Función para generar y descargar PDF
   const generarPDF = async (cotizacion: Cotizacion) => {
     try {
-      // Importar jsPDF dinámicamente
       const { jsPDF } = await import("jspdf");
-
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
 
-      // Configuración de colores y fuentes
-      const primaryColor = [3, 2, 19]; // Color primario del sistema
-      const grayColor = [107, 114, 128];
-      const darkColor = [31, 41, 55];
+      const formatDate = (date: string | Date) => {
+        return new Date(date).toLocaleDateString('es-CO');
+      };
 
-      // Título principal
-      doc.setFontSize(20);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("COTIZACIÓN", 20, 30);
-
-      // Fecha de generación
-      doc.setFontSize(12);
-      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
-      doc.text(
-        `Fecha de generación: ${new Date().toLocaleDateString("es-ES")}`,
-        20,
-        45,
-      );
-
-      // Línea separadora
-      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
-      doc.line(20, 55, 190, 55);
-
-      // Información del cliente
-      doc.setFontSize(14);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("INFORMACIÓN DEL CLIENTE", 20, 70);
-
-      doc.setFontSize(10);
-      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-      doc.text(`Cliente: ${cotizacion.cliente.nombre}`, 20, 85);
-      if (cotizacion.cliente.empresa) {
-        doc.text(
-          `Empresa: ${cotizacion.cliente.empresa}`,
-          20,
-          95,
-        );
-      }
-      doc.text(`Email: ${cotizacion.cliente.email}`, 20, 105);
-      doc.text(
-        `Teléfono: ${cotizacion.cliente.telefono}`,
-        20,
-        115,
-      );
-
-      // Información de la cotización
-      doc.setFontSize(14);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("INFORMACIÓN DE LA COTIZACIÓN", 20, 135);
-
-      doc.setFontSize(10);
-      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-      doc.text(
-        `Fecha de cotización: ${new Date(cotizacion.fechaCotizacion).toLocaleDateString("es-ES")}`,
-        20,
-        150,
-      );
-      doc.text(
-        `Estado: ${cotizacion.estado.toUpperCase()}`,
-        20,
-        160,
-      );
-
-
-      // Productos
-      doc.setFontSize(14);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("PRODUCTOS", 20, 190);
-
-      // Encabezados de tabla
-      doc.setFontSize(9);
-      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-      let yPos = 205;
-
-      // Línea de encabezado
-      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
-      doc.line(20, yPos - 5, 190, yPos - 5);
-
-      doc.text("Código", 20, yPos);
-      doc.text("Producto", 45, yPos);
-      doc.text("Cant.", 120, yPos);
-      doc.text("Precio Unit.", 140, yPos);
-      doc.text("Subtotal", 170, yPos);
-
-      doc.line(20, yPos + 5, 190, yPos + 5);
-
-      // Productos
-      yPos += 15;
-      cotizacion.productos.forEach((producto) => {
-        if (yPos > 250) {
-          doc.addPage();
-          yPos = 30;
+      // Header - Logo y Título
+      try {
+        if (logoImage) {
+          doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+          y += 25;
         }
+      } catch (e) {
+        console.warn("Could not load logo image for PDF", e);
+        y += 10;
+      }
 
-        doc.text(producto.codigo, 20, yPos);
-        // Truncar nombre del producto si es muy largo
-        const nombreTruncado =
-          producto.nombre.length > 25
-            ? producto.nombre.substring(0, 25) + "..."
-            : producto.nombre;
-        doc.text(nombreTruncado, 45, yPos);
-        doc.text(producto.cantidad.toString(), 125, yPos);
-        doc.text(
-          `$${producto.precioUnitario.toLocaleString()}`,
-          140,
-          yPos,
-        );
-        doc.text(
-          `$${producto.subtotal.toLocaleString()}`,
-          170,
-          yPos,
-        );
-        yPos += 10;
+      doc.setFontSize(22);
+      doc.setTextColor(33, 33, 33);
+      doc.setFont("helvetica", "bold");
+      doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+      y += 10;
+      
+      doc.setFontSize(14);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text("COTIZACIÓN", pageWidth / 2, y, { align: "center" });
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+      y += 5;
+      doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+      doc.setDrawColor(33, 33, 33);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Info Section
+      doc.setFontSize(11);
+      doc.setTextColor(33, 33, 33);
+
+      // Columna Izquierda: Datos del Cliente
+      doc.setFont("helvetica", "bold");
+      doc.text("DATOS DEL CLIENTE", margin, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Cliente: ${cotizacion.cliente.nombre}`, margin, y);
+      y += 6;
+      doc.text(`C.C./NIT: ${cotizacion.cliente.documento}`, margin, y);
+      y += 6;
+      doc.text(`Teléfono: ${cotizacion.cliente.telefono}`, margin, y);
+      y += 6;
+      doc.text(`Email: ${cotizacion.cliente.email}`, margin, y);
+
+      // Columna Derecha: Datos de la Cotización
+      let yDerecha = y - 25;
+      doc.setFont("helvetica", "bold");
+      doc.text("INFO COTIZACIÓN", pageWidth - margin - 50, yDerecha);
+      yDerecha += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Número: COT-${String(cotizacion.id).padStart(3, '0')}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Fecha: ${formatDate(cotizacion.fechaCotizacion)}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Vencimiento: ${formatDate(cotizacion.fechaVigencia)}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Estado: ${cotizacion.estado.toUpperCase()}`, pageWidth - margin - 50, yDerecha);
+
+      y = Math.max(y, yDerecha) + 15;
+
+      // Table Header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.text("Producto", margin + 5, y + 7);
+      doc.text("Cant", margin + 100, y + 7);
+      doc.text("Precio", margin + 120, y + 7);
+      doc.text("Subtotal", margin + 150, y + 7);
+
+      y += 10;
+      doc.setFont("helvetica", "normal");
+
+      // Table Content
+      cotizacion.productos.forEach((item) => {
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(item.nombre.substring(0, 45), margin + 5, y + 7);
+        doc.text(String(item.cantidad), margin + 100, y + 7);
+        doc.text(`$${item.precioUnitario.toLocaleString()}`, margin + 120, y + 7);
+        doc.text(`$${item.subtotal.toLocaleString()}`, margin + 150, y + 7);
+        y += 8;
       });
 
-      // Totales
-      yPos += 10;
-      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
-      doc.line(120, yPos, 190, yPos);
+      y += 5;
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
 
-      // Totales
-      yPos += 15;
+      // Totals
+      doc.setFont("helvetica", "bold");
+      if (cotizacion.descuento > 0) {
+        doc.text("Subtotal:", margin + 120, y);
+        doc.text(`$${cotizacion.subtotal.toLocaleString()}`, margin + 150, y);
+        y += 7;
+        doc.text("Descuento:", margin + 120, y);
+        doc.text(`-$${cotizacion.descuento.toLocaleString()}`, margin + 150, y);
+        y += 7;
+      }
+      doc.setFontSize(14);
+      doc.text("TOTAL:", margin + 120, y);
+      doc.text(`$${cotizacion.total.toLocaleString()}`, margin + 150, y);
+
+      y += 30;
+      // Signatures
+      if (y > 250) {
+        doc.addPage();
+        y = 40;
+      }
       doc.setFontSize(10);
-      yPos += 5;
+      doc.line(margin, y, margin + 60, y);
+      doc.text("Firma del Cliente", margin, y + 5);
 
-      yPos += 10;
-      doc.text("Descuento:", 140, yPos);
-      doc.text(
-        `-$${cotizacion.descuento.toLocaleString()}`,
-        170,
-        yPos,
-      );
+      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+      doc.text("Firma del Vendedor", pageWidth - margin - 60, y + 5);
 
-      // Total
-      yPos += 10;
-      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
-      doc.setFontSize(12);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("TOTAL:", 140, yPos);
-      doc.text(
-        `$${cotizacion.total.toLocaleString()}`,
-        170,
-        yPos,
-      );
+      y += 30;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generado el ${formatDate(new Date())} por ${cotizacion.creadoPor}`, pageWidth / 2, y, { align: "center" });
+      doc.text("Vaper One - Sistema de Gestión de Ventas", pageWidth / 2, y + 4, { align: "center" });
 
-      // Observaciones si existen
-      if (
-        cotizacion.observaciones &&
-        cotizacion.observaciones.trim()
-      ) {
-        yPos += 20;
-        doc.setFontSize(10);
-        doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-        doc.text("Observaciones:", 20, yPos);
-        yPos += 10;
-        doc.text(cotizacion.observaciones, 20, yPos);
-      }
-
-      // Motivo de anulación si existe
-      if (cotizacion.motivoAnulacion) {
-        yPos += 20;
-        doc.setFontSize(10);
-        doc.setTextColor(220, 38, 38); // Color rojo
-        doc.text("Motivo de anulación:", 20, yPos);
-        yPos += 10;
-        doc.text(cotizacion.motivoAnulacion, 20, yPos);
-      }
-
-      // Pie de página
-      const totalPages = doc.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
-        doc.text(`Página ${i} de ${totalPages}`, 170, 285);
-        doc.text(
-          `Generado el ${new Date().toLocaleString("es-ES")}`,
-          20,
-          285,
-        );
-      }
-
-      // Guardar el PDF
-      const nombreArchivo = `Cotizacion_${cotizacion.cliente.nombre.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date(cotizacion.fechaCotizacion).toLocaleDateString('es-CO').replace(/\//g, "-")}.pdf`;
+      const nombreArchivo = `Cotizacion_${String(cotizacion.id).padStart(3, '0')}_${cotizacion.cliente.nombre.replace(/\s+/g, '_')}.pdf`;
       doc.save(nombreArchivo);
-
-      toast.success("PDF generado y descargado exitosamente");
+      toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error("Error al generar PDF:", error);
       toast.error("Error al generar el PDF");
@@ -1094,6 +1046,7 @@ export const Cotizaciones: React.FC = () => {
                 <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Fecha</TableHead>
+                <TableHead>Vigencia</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">
@@ -1111,6 +1064,11 @@ export const Cotizaciones: React.FC = () => {
                   <TableCell>
                     {new Date(
                       cotizacion.fechaCotizacion,
+                    ).toLocaleDateString('es-CO')}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(
+                      cotizacion.fechaVigencia,
                     ).toLocaleDateString('es-CO')}
                   </TableCell>
                   <TableCell>
@@ -1192,6 +1150,7 @@ export const Cotizaciones: React.FC = () => {
                     <div><strong>Cliente:</strong> {selectedCotizacion.cliente.nombre}</div>
                   </div>
                   <div className="space-y-2">
+                    <div><strong>Vigencia:</strong> {new Date(selectedCotizacion.fechaVigencia).toLocaleDateString('es-CO')}</div>
                     <div><strong>Estado:</strong> {getEstadoBadge(selectedCotizacion.estado)}</div>
                     {selectedCotizacion.motivoAnulacion && (
                       <div><strong>Motivo Anulación:</strong> {selectedCotizacion.motivoAnulacion}</div>
@@ -1384,6 +1343,21 @@ export const Cotizaciones: React.FC = () => {
                       </div>
                     </PopoverContent>
                   </Popover>
+                </div>
+
+                {/* Fecha de Vigencia */}
+                <div className="space-y-2">
+                  <Label htmlFor="fechaVigencia">Vigencia (Fecha de vencimiento)</Label>
+                  <Input
+                    id="fechaVigencia"
+                    type="date"
+                    value={formData.fechaVigencia}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, fechaVigencia: e.target.value }));
+                    }}
+                    className="bg-input-background"
+                  />
                 </div>
 
                 {/* Descuento */}
