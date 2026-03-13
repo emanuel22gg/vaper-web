@@ -87,7 +87,11 @@ import {
   getVentaPedidos,
   getVentaPedidoById,
   updateProducto,
-  getDetalleVentaPedidos
+  getDetalleVentaPedidos,
+  updateVentaPedido,
+  updateDetalleVentaPedido,
+  deleteDetalleVentaPedido,
+  createDetalleVentaPedido
 } from "../services/api";
 import {
   DevolucionDto,
@@ -128,9 +132,13 @@ export const Devoluciones: React.FC = () => {
     motivo: "",
     fechaDevolucion: new Date().toISOString().split('T')[0], // Fecha default hoy
     productosSeleccionados: [] as { productoId: number; cantidad: number; motivo: string }[],
+    productosReposicion: [] as { productoId: number; cantidad: number; precioUnitario: number }[],
   });
 
+  const [busquedaReposicion, setBusquedaReposicion] = useState("");
+
   const [saleValidity, setSaleValidity] = useState<{ isValid: boolean; message: string; daysLeft?: number } | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // --- DATA LOADING ---
   const loadInitialData = async () => {
@@ -178,6 +186,7 @@ export const Devoluciones: React.FC = () => {
       motivo: "",
       fechaDevolucion: new Date().toISOString().split('T')[0],
       productosSeleccionados: [],
+      productosReposicion: [],
     });
     setVentaEncontrada(null);
     setSaleValidity(null);
@@ -264,47 +273,101 @@ export const Devoluciones: React.FC = () => {
   const handleGuardarDevolucion = async () => {
     if (!ventaEncontrada) return;
     try {
+      const totalDevuelto = formData.productosSeleccionados.reduce((acc, p) => {
+        const prod = productos.find(pr => pr.id === p.productoId);
+        return acc + (prod?.precio || 0) * p.cantidad;
+      }, 0);
+
+      const totalReposicion = formData.productosReposicion.reduce((acc, p) => {
+        return acc + p.cantidad * p.precioUnitario;
+      }, 0);
+
+      const diferenciaNetos = totalReposicion - totalDevuelto;
+
       const nuevaDev: DevolucionDto = {
         ventaPedidoId: ventaEncontrada.id!,
         fechaDevolucion: new Date(formData.fechaDevolucion).toISOString(),
         motivo: formData.motivo,
-        descripcion: formData.motivo, // Mapeo solicitado por el usuario
+        descripcion: formData.motivo || "Reposición de productos defectuosos",
         estadoId: 5, // Status Aceptada
-        montoTotal: formData.productosSeleccionados.reduce((acc, p) => {
-          const prod = productos.find(pr => pr.id === p.productoId);
-          return acc + (prod?.precio || 0) * p.cantidad;
-        }, 0)
+        montoTotal: totalDevuelto
       };
 
       const response = await createDevolucion(nuevaDev);
       const devId = response.id || response.Id;
 
       if (devId) {
-        // Enviar detalles y actualizar stock
+        // 1. Registrar detalles de devolución y sincronizar venta original
         for (const p of formData.productosSeleccionados) {
-          // 1. Guardar detalle
           await createDetalleDevolucion({
             devolucionId: devId,
             productoId: p.productoId,
             cantidad: p.cantidad,
             motivo: p.motivo
           });
-
-          // 2. Incrementar stock del producto (ya que vuelve a la tienda)
-          const prodOriginal = productos.find(pr => pr.id === p.productoId);
-          if (prodOriginal) {
-            await updateProducto(p.productoId, {
-              ...prodOriginal,
-              stock: prodOriginal.stock + p.cantidad
-            });
+          
+          // Buscamos el detalle original en la venta para restarle lo devuelto
+          const detalleOriginal = ventaEncontrada.detalleVenta_Pedido?.find(d => d.productoId === p.productoId);
+          if (detalleOriginal && detalleOriginal.id) {
+            const nuevaCant = Math.max(0, detalleOriginal.cantidad - p.cantidad);
+            if (nuevaCant === 0) {
+              await deleteDetalleVentaPedido(detalleOriginal.id);
+            } else {
+              await updateDetalleVentaPedido(detalleOriginal.id, {
+                ...detalleOriginal,
+                cantidad: nuevaCant,
+                subtotal: nuevaCant * (detalleOriginal.precioUnitario || 0)
+              });
+            }
           }
         }
 
-        toast.success("Devolución Guardada", {
-          description: "Los registros y el stock se han actualizado correctamente."
+        // 2. Gestionar productos de reposición, stock y agregar a la venta
+        for (const p of formData.productosReposicion) {
+          const prodOriginal = productos.find(pr => pr.id === p.productoId);
+          if (prodOriginal) {
+            // Actualizar stock
+            await updateProducto(p.productoId, {
+              ...prodOriginal,
+              stock: Math.max(0, prodOriginal.stock - p.cantidad)
+            });
+
+            // Agregar o actualizar en la venta original
+            const existenteEnVenta = ventaEncontrada.detalleVenta_Pedido?.find(d => d.productoId === p.productoId);
+            if (existenteEnVenta && existenteEnVenta.id) {
+               await updateDetalleVentaPedido(existenteEnVenta.id, {
+                 ...existenteEnVenta,
+                 cantidad: existenteEnVenta.cantidad + p.cantidad,
+                 subtotal: (existenteEnVenta.cantidad + p.cantidad) * p.precioUnitario
+               });
+            } else {
+               await createDetalleVentaPedido({
+                 ventaPedidoId: ventaEncontrada.id!,
+                 productoId: p.productoId,
+                 cantidad: p.cantidad,
+                 precioUnitario: p.precioUnitario,
+                 subtotal: p.cantidad * p.precioUnitario
+               });
+            }
+          }
+        }
+
+        // 3. Actualizar el total del Pedido original
+        const nuevoTotal = (ventaEncontrada.total || 0) + diferenciaNetos;
+        const nuevoSubtotal = (ventaEncontrada.subtotal || 0) + diferenciaNetos;
+        
+        await updateVentaPedido(ventaEncontrada.id!, {
+          ...ventaEncontrada,
+          total: nuevoTotal,
+          subtotal: nuevoSubtotal
+        });
+
+        toast.success("Cambio Procesado", {
+          description: "Se ha registrado la devolución y sincronizado el pedido y el inventario."
         });
         setIsNewDialogOpen(false);
-        loadInitialData(); // Sincronizar UI
+        setShowConfirmDialog(false);
+        loadInitialData();
       }
     } catch (error) {
       console.error(error);
@@ -382,9 +445,9 @@ export const Devoluciones: React.FC = () => {
 
   const getStatusText = (estadoId: number) => {
     switch (estadoId) {
-      case 5: return "Aprobado";
-      case 3: return "Anulado";
-      case 4: return "Cancelado";
+      case 5: return "Aceptada";
+      case 3: return "Anulada";
+      case 4: return "Cancelada";
       default: return "Pendiente";
     }
   };
@@ -471,8 +534,8 @@ export const Devoluciones: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="Aprobado">Aprobado</SelectItem>
-                <SelectItem value="Anulado">Anulado</SelectItem>
+                <SelectItem value="Aceptada">Aceptada</SelectItem>
+                <SelectItem value="Anulada">Anulada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -610,9 +673,10 @@ export const Devoluciones: React.FC = () => {
 
           <Tabs defaultValue="venta" className="flex-1 flex flex-col overflow-hidden">
             <div className="px-6 mt-3 shrink-0">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-0.5 h-9">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-0.5 h-9">
                 <TabsTrigger value="venta" className="font-bold text-xs">1. Localizar Venta</TabsTrigger>
-                <TabsTrigger value="devolucion" disabled={!ventaEncontrada} className="font-bold text-xs">2. Detalle de Devolución</TabsTrigger>
+                <TabsTrigger value="devolucion" disabled={!ventaEncontrada} className="font-bold text-xs">2. Devolución</TabsTrigger>
+                <TabsTrigger value="reposicion" disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0} className="font-bold text-xs">3. Reposición</TabsTrigger>
               </TabsList>
             </div>
 
@@ -827,6 +891,159 @@ export const Devoluciones: React.FC = () => {
                   </>
                 )}
               </TabsContent>
+
+              <TabsContent value="reposicion" className="mt-0 space-y-5 animate-in fade-in duration-300">
+                {ventaEncontrada && (
+                  <>
+                    {/* Buscador de Productos en Catálogo */}
+                    <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-blue-600 tracking-widest flex items-center gap-2">
+                        <Plus className="h-3 w-3" /> Agregar Producto de Reposición
+                      </Label>
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Buscar en catálogo..."
+                          className="h-8 pl-9 rounded-lg border-blue-100 focus-visible:ring-blue-600/20 text-xs"
+                          value={busquedaReposicion}
+                          onChange={(e) => setBusquedaReposicion(e.target.value)}
+                        />
+                      </div>
+
+                      {busquedaReposicion && (
+                        <div className="bg-white border rounded-lg shadow-xl max-h-[160px] overflow-y-auto absolute w-[calc(100%-48px)] z-50">
+                          {productos
+                            .filter(p => p.nombreProducto.toLowerCase().includes(busquedaReposicion.toLowerCase()) && p.estado && p.stock > 0)
+                            .map(p => (
+                              <div
+                                key={p.id}
+                                className="p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center border-b last:border-0"
+                                onClick={() => {
+                                  setFormData(prev => {
+                                    const existing = prev.productosReposicion.find(pr => pr.productoId === p.id);
+                                    if (existing) {
+                                      return {
+                                        ...prev,
+                                        productosReposicion: prev.productosReposicion.map(pr =>
+                                          pr.productoId === p.id ? { ...pr, cantidad: pr.cantidad + 1 } : pr
+                                        )
+                                      };
+                                    }
+                                    return {
+                                      ...prev,
+                                      productosReposicion: [...prev.productosReposicion, { productoId: p.id!, cantidad: 1, precioUnitario: p.precio }]
+                                    };
+                                  });
+                                  setBusquedaReposicion("");
+                                }}
+                              >
+                                <div>
+                                  <p className="text-xs font-bold text-slate-700">{p.nombreProducto}</p>
+                                  <p className="text-[9px] text-slate-400 uppercase font-bold">${p.precio.toLocaleString()} • Stock: {p.stock}</p>
+                                </div>
+                                <Plus className="h-3 w-3 text-blue-500" />
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Resumen de Cambio</Label>
+                      <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+                        <div className="max-h-[160px] overflow-y-auto overflow-x-hidden">
+                          <Table>
+                            <TableHeader className="bg-slate-50 sticky top-0 z-10">
+                              <TableRow className="h-8">
+                                <TableHead className="text-[9px] font-bold uppercase py-1 px-4">Producto</TableHead>
+                                <TableHead className="text-center text-[9px] font-bold uppercase py-1 w-[80px]">Cant.</TableHead>
+                                <TableHead className="text-right text-[9px] font-bold uppercase py-1 px-4">Total</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {formData.productosReposicion.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={3} className="text-center py-6 text-slate-400 italic text-xs">No hay productos seleccionados.</TableCell>
+                                </TableRow>
+                              ) : (
+                                formData.productosReposicion.map((p) => (
+                                  <TableRow key={p.productoId} className="h-10 hover:bg-slate-50/50 transition-colors">
+                                    <TableCell className="px-4 py-1">
+                                      <p className="font-bold text-slate-700 text-xs truncate max-w-[150px]">{getProductoNombre(p.productoId)}</p>
+                                      <p className="text-[9px] text-slate-400 font-bold tracking-tight">${p.precioUnitario.toLocaleString()}</p>
+                                    </TableCell>
+                                    <TableCell className="text-center py-1">
+                                      <div className="flex items-center justify-center bg-white rounded-lg border border-slate-200 h-6 w-14 mx-auto overflow-hidden">
+                                        <button className="h-6 w-5 flex items-center justify-center text-slate-400 hover:bg-slate-50" onClick={() => {
+                                          setFormData(prev => ({
+                                            ...prev,
+                                            productosReposicion: prev.productosReposicion
+                                              .map(pr => pr.productoId === p.productoId ? { ...pr, cantidad: Math.max(0, pr.cantidad - 1) } : pr)
+                                              .filter(pr => pr.cantidad > 0)
+                                          }));
+                                        }}><ChevronLeft className="h-3 w-3" /></button>
+                                        <span className="flex-1 text-center font-black text-slate-700 text-xs">{p.cantidad}</span>
+                                        <button className="h-6 w-5 flex items-center justify-center text-slate-400 hover:bg-slate-50" onClick={() => {
+                                          const stock = productos.find(pr => pr.id === p.productoId)?.stock || 0;
+                                          if (p.cantidad < stock) {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              productosReposicion: prev.productosReposicion.map(pr =>
+                                                pr.productoId === p.productoId ? { ...pr, cantidad: pr.cantidad + 1 } : pr
+                                              )
+                                            }));
+                                          } else {
+                                            toast.error("Stock insuficiente");
+                                          }
+                                        }}><ChevronRight className="h-3 w-3" /></button>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right px-4 py-1 font-black text-slate-700 text-xs">
+                                      ${(p.cantidad * p.precioUnitario).toLocaleString()}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pb-2 pt-1 border-t border-dashed">
+                      <div className="p-2.5 bg-slate-50 border rounded-xl flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-500 uppercase text-[9px]">Sale:</span>
+                        <span className="font-black text-red-600">
+                          -${formData.productosSeleccionados.reduce((acc, ps) => {
+                            const prod = productos.find(p => p.id === ps.productoId);
+                            return acc + (prod?.precio || 0) * ps.cantidad;
+                          }, 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="p-2.5 bg-slate-50 border rounded-xl flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-500 uppercase text-[9px]">Entra:</span>
+                        <span className="font-black text-emerald-600">
+                          +${formData.productosReposicion.reduce((acc, pr) => acc + pr.cantidad * pr.precioUnitario, 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="col-span-2 p-3 bg-black rounded-xl flex justify-between items-center text-white shadow-md">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Ajuste Neto al Pedido</span>
+                        <span className="text-lg font-black tracking-tight">
+                          {(() => {
+                            const totalDev = formData.productosSeleccionados.reduce((acc, ps) => {
+                              const prod = productos.find(p => p.id === ps.productoId);
+                              return acc + (prod?.precio || 0) * ps.cantidad;
+                            }, 0);
+                            const totalRep = formData.productosReposicion.reduce((acc, pr) => acc + pr.cantidad * pr.precioUnitario, 0);
+                            const diff = totalRep - totalDev;
+                            return (diff >= 0 ? "+" : "") + "$" + diff.toLocaleString();
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
             </div>
           </Tabs>
 
@@ -840,13 +1057,59 @@ export const Devoluciones: React.FC = () => {
             </Button>
             <Button
               className="bg-black text-white hover:bg-slate-800 px-8 h-10 font-black rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-30 text-xs"
-              onClick={handleGuardarDevolucion}
+              onClick={() => setShowConfirmDialog(true)}
               disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid}
             >
               <CheckCircle className="h-3.5 w-3.5 mr-2" />
-              Finalizar Devolución
+              Procesar Devolución
             </Button>
           </DialogFooter>
+
+          {/* Dialogo de Confirmación de Impacto */}
+          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+            <AlertDialogContent className="rounded-2xl border-none shadow-2xl max-w-sm">
+              <AlertDialogHeader>
+                <div className="mx-auto h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                  <AlertCircle className="h-6 w-6 text-amber-600" />
+                </div>
+                <AlertDialogTitle className="text-xl font-black text-center">Confirmar Operación</AlertDialogTitle>
+                <AlertDialogDescription className="text-center space-y-4 pt-2">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-[11px] leading-relaxed">
+                    Estás a punto de registrar un cambio. Esta acción tendrá los siguientes efectos:
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 text-left">
+                      <div className="mt-1 h-5 w-5 rounded-full bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
+                        <Package className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <p className="text-[10px] font-medium text-slate-600">
+                        <span className="font-black text-blue-600 uppercase tracking-tighter mr-1">Inventario:</span> Se descontarán las unidades de reposición. Los devueltos no volverán a stock por ser defectuosos.
+                      </p>
+                    </div>
+
+                    <div className="flex items-start gap-3 text-left">
+                      <div className="mt-1 h-5 w-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
+                        <FileText className="h-3 w-3 text-emerald-600" />
+                      </div>
+                      <p className="text-[10px] font-medium text-slate-600">
+                        <span className="font-black text-emerald-600 uppercase tracking-tighter mr-1">Finanzas:</span> El <span className="underline">Total del Pedido</span> se ajustará según la diferencia de precios.
+                      </p>
+                    </div>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-6 flex gap-2">
+                <AlertDialogCancel className="rounded-xl font-bold text-xs h-11 flex-1 border-slate-200">Revisar</AlertDialogCancel>
+                <AlertDialogAction 
+                  className="rounded-xl font-black text-xs h-11 flex-1 bg-black hover:bg-slate-800"
+                  onClick={handleGuardarDevolucion}
+                >
+                  Confirmar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </DialogContent>
       </Dialog>
     </div>

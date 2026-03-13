@@ -104,7 +104,7 @@ interface Usuario {
 }
 
 interface FormularioCotizacion {
-  clienteId: number | null;
+  clienteId: number | string | null;
   productos: Array<{
     productoId: number;
     cantidad: number;
@@ -112,6 +112,7 @@ interface FormularioCotizacion {
   fechaVigencia: string;
   condicionesPago: CondicionesPago;
   descuentoPorcentaje: number;
+  nombreCliente?: string;
 }
 
 interface ProductoDisponible {
@@ -182,7 +183,8 @@ interface Cotizacion {
 }
 
 
-import { getUsuarios, getProductos } from "../services/api";
+import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion } from "../services/api";
+import { CotizacionDto, DetalleCotizacionDto } from "../types";
 
 // ... (interfaces se mantienen igual)
 
@@ -193,43 +195,31 @@ export const Cotizaciones: React.FC = () => {
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   const [isLoadingProductos, setIsLoadingProductos] = useState(false);
 
-  // Inicializar cotizaciones desde localStorage o con array vacío
-  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => {
-    try {
-      const saved = localStorage.getItem('vaper_cotizaciones');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Error al cargar cotizaciones del localStorage:", e);
-    }
-    return [];
-  });
+  // Estados para cotizaciones de la API
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const [selectedCotizacion, setSelectedCotizacion] = useState<Cotizacion | null>(null);
 
-  // Guardar cotizaciones en localStorage cada vez que cambien
-  useEffect(() => {
-    try {
-      localStorage.setItem('vaper_cotizaciones', JSON.stringify(cotizaciones));
-    } catch (e) {
-      console.error("Error al guardar cotizaciones en localStorage:", e);
-    }
-  }, [cotizaciones]);
+  // Efecto eliminado: ya no guardamos en localStorage
 
   // Cargar datos de la API
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingClientes(true);
       setIsLoadingProductos(true);
+      setIsInitialLoading(true);
       try {
-        const [usuariosData, productosData] = await Promise.all([
+        const [usuariosData, productosData, cotizacionesData] = await Promise.all([
           getUsuarios(),
-          getProductos()
+          getProductos(),
+          getCotizaciones()
         ]);
+        
         setClientesDisponibles(usuariosData);
-        // Mapear productos al formato esperado por el componente si es necesario
-        setProductosDisponibles(productosData.map(p => ({
+        
+        // Mapear productos
+        const mappedProductos = productosData.map(p => ({
           id: p.id,
           codigo: p.nombreProducto.substring(0, 5).toUpperCase(),
           nombre: p.nombreProducto,
@@ -237,13 +227,56 @@ export const Cotizaciones: React.FC = () => {
           precio: p.precio,
           categoria: p.categoria?.nombreCategoria || "General",
           stock: p.stock
-        })));
+        }));
+        setProductosDisponibles(mappedProductos);
+
+        // Mapear cotizaciones desde la API al formato local
+        const mappedCotizaciones: Cotizacion[] = cotizacionesData.map(c => {
+          // Intentar encontrar el usuario para tener datos completos si es posible
+          const usuario = usuariosData.find(u => `${u.nombres} ${u.apellidos}` === c.nombreUsuario);
+          
+          return {
+            id: c.id!,
+            fechaCotizacion: c.fecha || new Date().toISOString(),
+            fechaVigencia: c.vigencia 
+              ? new Date(new Date(c.fecha || Date.now()).getTime() + c.vigencia * 24 * 60 * 60 * 1000).toISOString()
+              : new Date().toISOString(),
+            cliente: {
+              id: usuario?.id || 0,
+              nombre: c.nombreUsuario || "Cliente Desconocido",
+              documento: usuario?.numeroDocumento || "N/A",
+              email: usuario?.correo || "N/A",
+              telefono: usuario?.telefono || "N/A"
+            },
+            productos: [], // Se cargarán bajo demanda o se pueden cargar aquí
+            subtotal: Number(c.subtotal || 0),
+            descuento: Number(c.descuento || 0),
+            impuestos: 0,
+            total: Number(c.total || 0),
+            estado: c.estadoId === 3 ? "anulada" : "aceptada",
+            condicionesPago: {
+              tipoPago: "contado",
+              metodoPago: ["Efectivo"],
+              observaciones: ""
+            },
+            politicasCancelacion: {
+              permiteCancelacion: true
+            },
+            creadoPor: "Sistema",
+            cambiosEstado: [],
+            fechaCreacion: c.fecha || new Date().toISOString(),
+            fechaActualizacion: c.fecha || new Date().toISOString()
+          };
+        });
+        
+        setCotizaciones(mappedCotizaciones);
       } catch (error) {
         console.error("Error cargando datos:", error);
         toast.error("Error al cargar datos de la API");
       } finally {
         setIsLoadingClientes(false);
         setIsLoadingProductos(false);
+        setIsInitialLoading(false);
       }
     };
 
@@ -412,17 +445,78 @@ export const Cotizaciones: React.FC = () => {
   };
 
   // Manejar vista de detalles
-  const handleViewDetail = (cotizacion: Cotizacion) => {
+  const handleViewDetail = async (cotizacion: Cotizacion) => {
     setSelectedCotizacion(cotizacion);
     setIsDetailDialogOpen(true);
+    
+    // Si no tiene productos cargados, los buscamos en la API
+    if (cotizacion.productos.length === 0) {
+      try {
+        const detalles = await getDetallesByCotizacion(cotizacion.id);
+        const productosMapeados: ProductoCotizacion[] = detalles.map(d => {
+          const prodInfo = productosDisponibles.find(p => p.id === d.productoId);
+          return {
+            id: d.productoId,
+            codigo: prodInfo?.codigo || "N/A",
+            nombre: d.nombreProducto || prodInfo?.nombre || "Producto",
+            descripcion: prodInfo?.descripcion || "",
+            precioUnitario: Number(d.precioUnitario),
+            cantidad: d.cantidad,
+            subtotal: Number(d.subtotal || 0),
+            categoria: prodInfo?.categoria || "General",
+            disponible: true
+          };
+        });
+        
+        const cotizacionConProductos = { ...cotizacion, productos: productosMapeados };
+        setSelectedCotizacion(cotizacionConProductos);
+        
+        // Actualizar también en la lista principal para no volver a cargar
+        setCotizaciones(prev => prev.map(c => c.id === cotizacion.id ? cotizacionConProductos : c));
+      } catch (error) {
+        console.error("Error al cargar detalles:", error);
+        toast.error("No se pudieron cargar los detalles de la cotización");
+      }
+    }
   };
 
   // Manejar edición
-  const handleEdit = (cotizacion: Cotizacion) => {
+  const handleEdit = async (cotizacion: Cotizacion) => {
     setSelectedCotizacion(cotizacion);
+    
+    let productosParaEditar = cotizacion.productos;
+    
+    // Si no tiene productos, cargarlos primero
+    if (productosParaEditar.length === 0) {
+      try {
+        const detalles = await getDetallesByCotizacion(cotizacion.id);
+        productosParaEditar = detalles.map(d => {
+          const prodInfo = productosDisponibles.find(p => p.id === d.productoId);
+          return {
+            id: d.productoId,
+            codigo: prodInfo?.codigo || "N/A",
+            nombre: d.nombreProducto || prodInfo?.nombre || "Producto",
+            descripcion: prodInfo?.descripcion || "",
+            precioUnitario: Number(d.precioUnitario),
+            cantidad: d.cantidad,
+            subtotal: Number(d.subtotal || 0),
+            categoria: prodInfo?.categoria || "General",
+            disponible: true
+          };
+        });
+        
+        // Sincronizar localmente
+        setCotizaciones(prev => prev.map(c => c.id === cotizacion.id ? { ...c, productos: productosParaEditar } : c));
+      } catch (error) {
+        console.error("Error al cargar detalles para editar:", error);
+        toast.error("No se pudieron cargar los detalles para editar");
+        return;
+      }
+    }
+
     setFormData({
       clienteId: cotizacion.cliente.id,
-      productos: cotizacion.productos.map((p) => ({
+      productos: productosParaEditar.map((p) => ({
         productoId: p.id,
         cantidad: p.cantidad,
       })),
@@ -445,38 +539,42 @@ export const Cotizaciones: React.FC = () => {
   };
 
   // Confirmar anulación
-  const confirmarAnulacion = () => {
+  const confirmarAnulacion = async () => {
     if (cotizacionToDelete) {
-      const cotizacionActualizada: Cotizacion = {
-        ...cotizacionToDelete,
-        estado: "anulada",
-        motivoAnulacion: motivoAnulacion || "Sin motivo especificado",
-        fechaActualizacion: new Date().toISOString(),
-        cambiosEstado: [
-          ...cotizacionToDelete.cambiosEstado,
-          {
-            id: cotizacionToDelete.cambiosEstado.length + 1,
-            fechaCambio: new Date().toISOString(),
-            estadoAnterior: cotizacionToDelete.estado,
-            estadoNuevo: "anulada",
-            motivo: motivoAnulacion || "Anulación manual",
-            usuario: "Usuario Actual",
-          },
-        ],
-      };
+      try {
+        const cotizacionActualizada: CotizacionDto = {
+          nombreUsuario: cotizacionToDelete.cliente.nombre,
+          total: cotizacionToDelete.total,
+          subtotal: cotizacionToDelete.subtotal,
+          descuento: cotizacionToDelete.descuento,
+          estadoId: 3 // 3 = Anulada
+        };
 
-      setCotizaciones((prev) =>
-        prev.map((c) =>
-          c.id === cotizacionToDelete.id
-            ? cotizacionActualizada
-            : c,
-        ),
-      );
+        await updateCotizacion(cotizacionToDelete.id, cotizacionActualizada);
 
-      toast.success("Cotización anulada exitosamente");
-      setIsDeleteDialogOpen(false);
-      setCotizacionToDelete(null);
-      setMotivoAnulacion("");
+        const localUpdated: Cotizacion = {
+          ...cotizacionToDelete,
+          estado: "anulada",
+          motivoAnulacion: motivoAnulacion || "Sin motivo especificado",
+          fechaActualizacion: new Date().toISOString(),
+        };
+
+        setCotizaciones((prev) =>
+          prev.map((c) =>
+            c.id === cotizacionToDelete.id
+              ? localUpdated
+              : c,
+          ),
+        );
+
+        toast.success("Cotización anulada exitosamente");
+        setIsDeleteDialogOpen(false);
+        setCotizacionToDelete(null);
+        setMotivoAnulacion("");
+      } catch (error) {
+        console.error("Error al anular:", error);
+        toast.error("Ocurrió un error al anular la cotización en el servidor");
+      }
     }
   };
 
@@ -564,7 +662,7 @@ export const Cotizaciones: React.FC = () => {
   };
 
   // Crear nueva cotización
-  const crearCotizacion = () => {
+  const crearCotizacion = async () => {
     if (
       !formData.clienteId ||
       formData.productos.length === 0
@@ -576,90 +674,105 @@ export const Cotizaciones: React.FC = () => {
     }
 
     const clienteSeleccionado = clientesDisponibles.find(
-      (c) => c.id.toString() === formData.clienteId.toString(),
+      (c) => c.id.toString() === formData.clienteId?.toString(),
     );
     if (!clienteSeleccionado) {
       toast.error("No se encontró el cliente seleccionado.");
       return;
     }
 
-    const clienteParaCotizacion: Cliente = {
-      id: clienteSeleccionado.id,
-      nombre: `${clienteSeleccionado.nombres} ${clienteSeleccionado.apellidos}`,
-      documento: clienteSeleccionado.numeroDocumento,
-      email: clienteSeleccionado.correo,
-      telefono: clienteSeleccionado.telefono
-    };
-
-    const productosConDetalles = formData.productos.map((p) => {
-      const producto = productosDisponibles.find(
-        (pd) => pd.id === p.productoId,
-      );
-      if (!producto) throw new Error("Producto no encontrado");
-
-      return {
-        id: producto.id,
-        codigo: producto.codigo,
-        nombre: producto.nombre,
-        descripcion: producto.descripcion,
-        precioUnitario: producto.precio,
-        cantidad: p.cantidad,
-        subtotal: producto.precio * p.cantidad,
-        categoria: producto.categoria,
-        disponible: true,
-      };
-    });
-
-    const { subtotal, descuento, impuestos, total } =
+    const { subtotal, descuento, total } =
       calcularTotales(
         formData.productos,
         formData.descuentoPorcentaje,
       );
 
-    const fechaVigenciaAuto =
-      formData.fechaVigencia ||
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
+    // Calcular vigencia en días
+    const hoy = new Date();
+    const fechaVigenciaDate = new Date(formData.fechaVigencia + "T23:59:59");
+    const vigenciaDias = Math.max(0, Math.ceil((fechaVigenciaDate.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)));
 
-    const nuevaCotizacion: Cotizacion = {
-      id: cotizaciones.length > 0 ? Math.max(...cotizaciones.map((c) => c.id)) + 1 : 1,
-      fechaCotizacion: new Date().toISOString(),
-      fechaVigencia: new Date(
-        fechaVigenciaAuto + "T23:59:59",
-      ).toISOString(),
-      cliente: clienteParaCotizacion,
-      productos: productosConDetalles,
-      subtotal,
-      descuento,
-      impuestos,
-      total,
-      estado: "aceptada",
-      condicionesPago: formData.condicionesPago,
-      politicasCancelacion: {
-        permiteCancelacion: true,
-        tiempoLimite: 24,
-        penalizacion: 0,
-      },
-      observaciones: "",
-      creadoPor: "Usuario Actual",
-      cambiosEstado: [
-        {
-          id: 1,
-          fechaCambio: new Date().toISOString(),
-          estadoAnterior: "",
-          estadoNuevo: "aceptada",
-          motivo: "Cotización creada y aceptada",
-          usuario: "Usuario Actual",
+    setIsInitialLoading(true);
+    try {
+      // 1. Crear cabecera de cotización
+      const cotizacionData: CotizacionDto = {
+        nombreUsuario: `${clienteSeleccionado.nombres} ${clienteSeleccionado.apellidos}`,
+        total,
+        subtotal,
+        descuento,
+        vigencia: vigenciaDias,
+        estadoId: 1 // 1 = Aceptada
+      };
+
+      const createdCotizacion = await createCotizacion(cotizacionData);
+      const cotId = createdCotizacion.id!;
+
+      // 2. Crear detalles
+      const detallesPromesas = formData.productos.map(p => {
+        const prodInfo = productosDisponibles.find(pd => pd.id === p.productoId);
+        const detalle: DetalleCotizacionDto = {
+          cotizacionId: cotId,
+          productoId: p.productoId,
+          cantidad: p.cantidad,
+          precioUnitario: prodInfo?.precio || 0,
+          subtotal: (prodInfo?.precio || 0) * p.cantidad
+        };
+        return createDetalleCotizacion(detalle);
+      });
+
+      const detallesCreados = await Promise.all(detallesPromesas);
+
+      // 3. Mapear al formato local y actualizar estado
+      const productosConDetalles: ProductoCotizacion[] = detallesCreados.map(d => {
+        const productInfo = productosDisponibles.find(pd => pd.id === d.productoId);
+        return {
+          id: d.productoId,
+          codigo: productInfo?.codigo || "N/A",
+          nombre: productInfo?.nombre || "Producto",
+          descripcion: productInfo?.descripcion || "",
+          precioUnitario: Number(d.precioUnitario),
+          cantidad: d.cantidad,
+          subtotal: Number(d.subtotal || 0),
+          categoria: productInfo?.categoria || "General",
+          disponible: true
+        };
+      });
+
+      const nuevaCotizacion: Cotizacion = {
+        id: cotId,
+        fechaCotizacion: createdCotizacion.fecha || new Date().toISOString(),
+        fechaVigencia: fechaVigenciaDate.toISOString(),
+        cliente: {
+          id: clienteSeleccionado.id,
+          nombre: `${clienteSeleccionado.nombres} ${clienteSeleccionado.apellidos}`,
+          documento: clienteSeleccionado.numeroDocumento,
+          email: clienteSeleccionado.correo,
+          telefono: clienteSeleccionado.telefono
         },
-      ],
-      fechaCreacion: new Date().toISOString(),
-      fechaActualizacion: new Date().toISOString(),
-    };
-    setCotizaciones((prev) => [...prev, nuevaCotizacion]);
-    toast.success("Cotización creada exitosamente");
-    setIsCreateDialogOpen(false);
-    resetFormData();
+        productos: productosConDetalles,
+        subtotal,
+        descuento,
+        impuestos: 0,
+        total,
+        estado: "aceptada",
+        condicionesPago: formData.condicionesPago,
+        politicasCancelacion: { permiteCancelacion: true },
+        creadoPor: "Usuario Actual",
+        cambiosEstado: [],
+        fechaCreacion: createdCotizacion.fecha || new Date().toISOString(),
+        fechaActualizacion: createdCotizacion.fecha || new Date().toISOString()
+      };
+
+      setCotizaciones((prev) => [nuevaCotizacion, ...prev]);
+      toast.success("Cotización creada exitosamente");
+      setIsCreateDialogOpen(false);
+      resetFormData();
+    } catch (error) {
+      console.error("Error al crear cotización:", error);
+      toast.error("Ocurrió un error al guardar la cotización en el servidor");
+    } finally {
+      setIsInitialLoading(false);
+    }
   };
 
   // Resetear formulario
@@ -852,10 +965,9 @@ export const Cotizaciones: React.FC = () => {
 
       // Total
       yPos += 10;
-      doc.setDrawColor(...primaryColor);
-      doc.line(140, yPos - 5, 190, yPos - 5);
+      doc.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
       doc.setFontSize(12);
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("TOTAL:", 140, yPos);
       doc.text(
         `$${cotizacion.total.toLocaleString()}`,
@@ -870,7 +982,7 @@ export const Cotizaciones: React.FC = () => {
       ) {
         yPos += 20;
         doc.setFontSize(10);
-        doc.setTextColor(...darkColor);
+        doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
         doc.text("Observaciones:", 20, yPos);
         yPos += 10;
         doc.text(cotizacion.observaciones, 20, yPos);
@@ -891,7 +1003,7 @@ export const Cotizaciones: React.FC = () => {
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
-        doc.setTextColor(...grayColor);
+        doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
         doc.text(`Página ${i} de ${totalPages}`, 170, 285);
         doc.text(
           `Generado el ${new Date().toLocaleString("es-ES")}`,

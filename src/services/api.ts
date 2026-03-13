@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DetalleVentaPedidoDto, DevolucionDto, DetalleDevolucionDto, DepartmentColombian, CityColombian, Proveedor, CompraDto, VentaAbonoDto } from '../types';
+import { Categoria, ImageneDto, UsuarioDto, RolDto, RolPermisoDto, PermisoDto, Producto, ProductoDto, VentaPedidoDto, DetalleVentaPedidoDto, DevolucionDto, DetalleDevolucionDto, DepartmentColombian, CityColombian, Proveedor, CompraDto, VentaAbonoDto, CotizacionDto, DetalleCotizacionDto } from '../types';
 
 const API_URL = '/api';
 
@@ -229,6 +229,18 @@ export const createDetalleVentaPedido = async (detalle: DetalleVentaPedidoDto): 
     return response.data;
 };
 
+export const updateDetalleVentaPedido = async (id: number, detalle: DetalleVentaPedidoDto): Promise<any> => {
+    const response = await api.put(`/DetalleVentaPedidoes/${id}`, {
+        ...detalle,
+        id
+    });
+    return response.data;
+};
+
+export const deleteDetalleVentaPedido = async (id: number): Promise<void> => {
+    await api.delete(`/DetalleVentaPedidoes/${id}`);
+};
+
 // --- SERVICIOS DE DEVOLUCIONES ---
 
 export const getDevoluciones = async (): Promise<DevolucionDto[]> => {
@@ -369,5 +381,37 @@ export const updateAbono = async (id: number, abono: VentaAbonoDto): Promise<Ven
         ...abono,
         id
     });
+    return response.data;
+};
+
+// Cotizaciones Service
+export const getCotizaciones = async (): Promise<CotizacionDto[]> => {
+    const response = await api.get('/Cotizaciones');
+    return response.data;
+};
+
+export const createCotizacion = async (cotizacion: CotizacionDto): Promise<CotizacionDto> => {
+    const response = await api.post('/Cotizaciones', cotizacion);
+    return response.data;
+};
+
+export const updateCotizacion = async (id: number, cotizacion: CotizacionDto): Promise<void> => {
+    await api.put(`/Cotizaciones/${id}`, {
+        ...cotizacion,
+        id
+    });
+};
+
+export const deleteCotizacion = async (id: number): Promise<void> => {
+    await api.delete(`/Cotizaciones/${id}`);
+};
+
+export const getDetallesByCotizacion = async (cotizacionId: number): Promise<DetalleCotizacionDto[]> => {
+    const response = await api.get(`/DetalleCotizaciones/ByCotizacion/${cotizacionId}`);
+    return response.data;
+};
+
+export const createDetalleCotizacion = async (detalle: DetalleCotizacionDto): Promise<DetalleCotizacionDto> => {
+    const response = await api.post('/DetalleCotizaciones', detalle);
     return response.data;
 };

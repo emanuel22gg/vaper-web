@@ -337,3 +337,24 @@ export interface CompraDto {
   fechaCreacion?: string;
   detalleCompras?: DetalleCompraDto[];
 }
+export interface DetalleCotizacionDto {
+  id?: number;
+  cotizacionId?: number;
+  productoId: number;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  nombreProducto?: string;
+}
+
+export interface CotizacionDto {
+  id?: number;
+  nombreUsuario: string;
+  fecha?: string;
+  total: number;
+  subtotal: number;
+  descuento: number;
+  vigencia?: number;
+  estadoId: number;
+  detalleCotizaciones?: DetalleCotizacionDto[];
+}
