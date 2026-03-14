@@ -150,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       default:
         return (
           <>
-            <HeroBanner />
+            <HeroBanner onNavigate={handleNavigation} />
             <ProductCatalog />
           </>
         );

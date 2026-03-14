@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -36,6 +36,7 @@ import {
   Heart,
   Check,
   ArrowRight,
+  ArrowLeft,
   Truck,
   CreditCard,
   MapPin,
@@ -45,127 +46,21 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PedidosCliente } from "./PedidosCliente";
-
-// Datos simulados de productos
-const productos = [
-  {
-    id: "1",
-    nombre: "Vape Desechable 2000 puffs",
-    descripcion:
-      "Vapeador desechable con sabor a frutas tropicales, 2000 puffs aproximados",
-    precio: 25000,
-    precioAnterior: 30000,
-    categoria: "Desechables",
-    stock: 45,
-    rating: 4.8,
-    reviews: 124,
-    imagen:
-      "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop",
-    sabores: ["Tropical", "Menta", "Fresa", "Mango"],
-    enOferta: true,
-    nuevo: false,
-    destacado: true,
-  },
-  {
-    id: "2",
-    nombre: "Pod System Premium",
-    descripcion:
-      "Sistema de pods recargable con batería de larga duración y control de flujo de aire",
-    precio: 180000,
-    categoria: "Pods",
-    stock: 12,
-    rating: 4.9,
-    reviews: 89,
-    imagen:
-      "https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop",
-    colores: ["Negro", "Plateado", "Azul", "Rojo"],
-    enOferta: false,
-    nuevo: true,
-    destacado: true,
-  },
-  {
-    id: "3",
-    nombre: "Líquido Premium 60ml",
-    descripcion:
-      "E-liquid premium con nicotina, sabor intenso y vapor denso",
-    precio: 35000,
-    categoria: "Líquidos",
-    stock: 28,
-    rating: 4.7,
-    reviews: 201,
-    imagen:
-      "https://images.unsplash.com/photo-1607734834519-d8576ae60ea4?w=300&h=300&fit=crop",
-    nicotina: ["0mg", "3mg", "6mg", "12mg"],
-    sabores: ["Vainilla", "Chocolate", "Café", "Tabaco"],
-    enOferta: false,
-    nuevo: false,
-    destacado: false,
-  },
-  {
-    id: "4",
-    nombre: "Mod Avanzado 100W",
-    descripcion:
-      "Mod profesional con control de temperatura y pantalla OLED",
-    precio: 320000,
-    precioAnterior: 380000,
-    categoria: "Mods",
-    stock: 5,
-    rating: 4.9,
-    reviews: 67,
-    imagen:
-      "https://images.unsplash.com/photo-1607734834519-d8576ae60ea4?w=300&h=300&fit=crop",
-    colores: ["Negro", "Plateado"],
-    enOferta: true,
-    nuevo: false,
-    destacado: true,
-  },
-  {
-    id: "5",
-    nombre: "Bobinas de Repuesto Pack x5",
-    descripcion:
-      "Pack de 5 bobinas de repuesto compatibles con varios modelos",
-    precio: 45000,
-    categoria: "Accesorios",
-    stock: 35,
-    rating: 4.6,
-    reviews: 156,
-    imagen:
-      "https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop",
-    resistencia: ["0.2Ω", "0.4Ω", "0.6Ω"],
-    enOferta: false,
-    nuevo: false,
-    destacado: false,
-  },
-  {
-    id: "6",
-    nombre: "Kit Iniciación Completo",
-    descripcion:
-      "Kit perfecto para principiantes, incluye todo lo necesario para empezar",
-    precio: 150000,
-    precioAnterior: 200000,
-    categoria: "Kits",
-    stock: 18,
-    rating: 4.8,
-    reviews: 93,
-    imagen:
-      "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop",
-    incluye: ["Mod", "Tank", "Bobinas", "Cargador", "Manual"],
-    enOferta: true,
-    nuevo: true,
-    destacado: true,
-  },
-];
+import { getProductos, getCategorias, getAllImages } from "../services/api";
+import { Producto, Categoria } from "../types";
 
 interface CartItem {
-  id: string;
+  id: string; // Changed back to string since you might use `${id}-${variante}`? Or we can just use the int id from DB. Let's use string to keep it compatible with existing Cart logic that does `item.id === id` if needed.
   nombre: string;
   precio: number;
   cantidad: number;
   imagen: string;
   variante?: string;
+  productoId: number; // Keep real ID for sending to API later
 }
 
 export const TiendaCliente: React.FC = () => {
@@ -173,49 +68,93 @@ export const TiendaCliente: React.FC = () => {
   const [selectedCategory, setSelectedCategory] =
     useState("all");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<
-    (typeof productos)[0] | null
-  >(null);
+
+  // State for Real API Data
+  const [apiProductos, setApiProductos] = useState<Producto[]>([]);
+  const [apiCategorias, setApiCategorias] = useState<Categoria[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [prods, cats, images] = await Promise.all([
+        getProductos(),
+        getCategorias(),
+        getAllImages()
+      ]);
+      
+      const productsWithImages = prods.map(p => {
+        const matchingImage = images.find(img => img.idImagen === p.idImagen);
+        return {
+          ...p,
+          imagen: matchingImage ? matchingImage.urlimagen : p.imagen
+        };
+      });
+
+      const categoriesWithImages = cats.map(c => {
+        const matchingImage = images.find(img => img.idImagen === c.idImagen);
+        return {
+          ...c,
+          imagen: matchingImage ? matchingImage.urlimagen : undefined
+        };
+      });
+
+      setApiProductos(productsWithImages.filter(p => p.estado && p.stock > 0)); // Only show active items with stock
+      setApiCategorias(categoriesWithImages.filter(c => c.estado));
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Error al cargar los productos de la tienda");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const categorias = [
-    "all",
-    "Desechables",
-    "Pods",
-    "Líquidos",
-    "Mods",
-    "Accesorios",
-    "Kits",
+    { id: "all", nombreCategoria: "Todos" },
+    ...apiCategorias,
   ];
 
-  const filteredProducts = productos.filter((product) => {
+  const filteredProducts = apiProductos.filter((product) => {
     const matchesSearch =
-      product.nombre
+      product.nombreProducto
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       product.descripcion
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
+    
+    // Si la categoría seleccionada es "all" o el nombre de la categoría del producto coincide
+    // o el ID de la categoría coincide si estamos filtrando por ID en `selectedCategory`.
+    // Asumiremos que `selectedCategory` guarda el `nombreCategoria` para ser compatibles con el UI dropdown.
     const matchesCategory =
       selectedCategory === "all" ||
-      product.categoria === selectedCategory;
+      (product.categoria?.nombreCategoria && product.categoria.nombreCategoria === selectedCategory);
+
     return matchesSearch && matchesCategory;
   });
 
   const addToCart = (
-    product: (typeof productos)[0],
+    product: Producto,
     variante?: string,
   ) => {
+    const stringId = product.id.toString();
     const existingItem = cart.find(
       (item) =>
-        item.id === product.id && item.variante === variante,
+        item.productoId === product.id && item.variante === variante,
     );
 
     if (existingItem) {
       setCart(
         cart.map((item) =>
-          item.id === product.id && item.variante === variante
+          item.productoId === product.id && item.variante === variante
             ? { ...item, cantidad: item.cantidad + 1 }
             : item,
         ),
@@ -224,22 +163,23 @@ export const TiendaCliente: React.FC = () => {
       setCart([
         ...cart,
         {
-          id: product.id,
-          nombre: product.nombre,
+          id: stringId, // String id for frontend lists if needed
+          productoId: product.id,
+          nombre: product.nombreProducto,
           precio: product.precio,
           cantidad: 1,
-          imagen: product.imagen,
+          imagen: product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop", // placeholder
           variante,
         },
       ]);
     }
 
     // Mostrar notificación de éxito
-    toast.success(`${product.nombre} agregado al carrito`);
+    toast.success(`${product.nombreProducto} agregado al carrito`);
   };
 
   const updateQuantity = (
-    id: string,
+    id: string, // this is the string id used in cart items mapped from existing stringId
     variante: string | undefined,
     newQuantity: number,
   ) => {
@@ -274,6 +214,14 @@ export const TiendaCliente: React.FC = () => {
       0,
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="h-12 w-12 animate-spin text-yellow-500" />
+      </div>
+    );
+  }
 
   return (
     <Tabs defaultValue="tienda" className="space-y-6">
@@ -417,149 +365,158 @@ export const TiendaCliente: React.FC = () => {
             </div>
           </div>
 
-          {/* Filtros y búsqueda */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-              <Input
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto">
-              {categorias.map((categoria) => (
-                <Button
-                  key={categoria}
-                  variant={
-                    selectedCategory === categoria
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  onClick={() => setSelectedCategory(categoria)}
-                  className="whitespace-nowrap"
+          {/* Filtros y búsqueda - Solo mostrar cuando hay una categoría seleccionada (opcional, o siempre) */}
+          {selectedCategory !== "all" && (
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex items-center gap-4 flex-1">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedCategory("all")}
+                  className="shrink-0"
                 >
-                  {categoria === "all" ? "Todos" : categoria}
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Volver a Categorías
                 </Button>
-              ))}
+                <h2 className="text-2xl font-bold border-l-4 border-yellow-500 pl-4">
+                  {selectedCategory}
+                </h2>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+                <Input
+                  placeholder="Buscar productos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Grid de productos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <div className="relative">
-                  <ImageWithFallback
-                    src={product.imagen}
-                    alt={product.nombre}
-                    className="w-full h-48 object-cover"
-                  />
+          {/* Grid Conditional */}
+          {selectedCategory === "all" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {apiCategorias.map((category) => {
+                const hasProducts = apiProductos.some(p => p.categoriaId === category.id);
+                if (!hasProducts) return null;
 
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.enOferta && (
-                      <Badge className="bg-red-500">Oferta</Badge>
-                    )}
-                    {product.nuevo && (
-                      <Badge className="bg-green-500">Nuevo</Badge>
-                    )}
-                    {product.destacado && (
-                      <Badge className="bg-purple-500">
-                        Destacado
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Stock badge */}
-                  <div className="absolute top-2 right-2">
-                    <Badge
-                      variant={
-                        product.stock > 10
-                          ? "default"
-                          : "destructive"
-                      }
-                    >
-                      {product.stock} disponibles
-                    </Badge>
-                  </div>
-
-                  {/* Wishlist */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute bottom-2 right-2 rounded-full h-8 w-8 p-0"
+                return (
+                  <Card 
+                    key={category.id} 
+                    className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 overflow-hidden flex flex-col"
+                    onClick={() => setSelectedCategory(category.nombreCategoria)}
                   >
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg line-clamp-2">
-                      {product.nombre}
-                    </CardTitle>
-                  </div>
-
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="text-sm ml-1">
-                        {product.rating}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      ({product.reviews} reseñas)
-                    </span>
-                  </div>
-
-                  <CardDescription className="line-clamp-2">
-                    {product.descripcion}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">
-                        ${product.precio.toLocaleString()}
-                      </span>
-                      {product.precioAnterior && (
-                        <span className="text-lg text-gray-400 line-through">
-                          ${product.precioAnterior.toLocaleString()}
-                        </span>
+                    <div className="h-48 relative bg-gray-100 flex items-center justify-center border-b">
+                      {category.imagen ? (
+                        <ImageWithFallback 
+                          src={category.imagen} 
+                          alt={category.nombreCategoria}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                          <Package className="h-8 w-8 text-yellow-500" />
+                        </div>
                       )}
                     </div>
+                    
+                    <CardHeader className="text-center p-6 bg-white flex-1 flex flex-col justify-center">
+                      <CardTitle className="text-xl">{category.nombreCategoria}</CardTitle>
+                      <p className="text-muted-foreground mt-2 text-sm line-clamp-2">
+                        {category.descripcion || `Explora productos de ${category.nombreCategoria}`}
+                      </p>
+                    </CardHeader>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredProducts.map((product) => (
+                    <Card
+                      key={product.id}
+                      className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                    >
+                      <div className="relative">
+                        <ImageWithFallback
+                          src={product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"}
+                          alt={product.nombreProducto}
+                          className="w-full h-48 object-cover"
+                        />
 
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1"
-                        onClick={() => addToCart(product)}
-                        disabled={product.stock === 0}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        {product.stock === 0
-                          ? "Agotado"
-                          : "Agregar"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setSelectedProduct(product)}
-                      >
-                        Ver
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                        {/* Stock badge */}
+                        <div className="absolute top-2 right-2">
+                          <Badge
+                            variant={
+                              product.stock > 10
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {product.stock} disponibles
+                          </Badge>
+                        </div>
+
+                        {/* Wishlist */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute bottom-2 right-2 rounded-full h-8 w-8 p-0"
+                        >
+                          <Heart className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <CardHeader className="pb-3 flex-1">
+                        <CardTitle className="text-lg line-clamp-2">
+                          {product.nombreProducto}
+                        </CardTitle>
+
+                        <CardDescription className="line-clamp-2 mt-2">
+                          {product.descripcion}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="pt-0 border-t mt-auto">
+                        <div className="space-y-3 pt-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl font-bold text-green-600">
+                              ${product.precio.toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 bg-[rgb(240,177,0)] hover:bg-yellow-600 text-black border border-yellow-700"
+                              onClick={() => addToCart(product)}
+                              disabled={product.stock === 0}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              {product.stock === 0
+                                ? "Agotado"
+                                : "Agregar"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedProduct(product)}
+                            >
+                              Ver
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-12">
+                  No se encontraron productos en esta categoría o con esta búsqueda.
+                </div>
+              )}
+            </>
+          )}
 
           {/* Dialog de producto detallado */}
           <Dialog
@@ -571,30 +528,22 @@ export const TiendaCliente: React.FC = () => {
                 <>
                   <DialogHeader>
                     <DialogTitle>
-                      {selectedProduct.nombre}
+                      {selectedProduct.nombreProducto}
                     </DialogTitle>
                   </DialogHeader>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <ImageWithFallback
-                        src={selectedProduct.imagen}
-                        alt={selectedProduct.nombre}
+                        src={selectedProduct.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"}
+                        alt={selectedProduct.nombreProducto}
                         className="w-full h-64 object-cover rounded-lg"
                       />
                     </div>
 
                     <div className="space-y-4">
                       <div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                          <span>{selectedProduct.rating}</span>
-                          <span className="text-gray-500">
-                            ({selectedProduct.reviews} reseñas)
-                          </span>
-                        </div>
-
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-gray-600 mb-4 text-lg">
                           {selectedProduct.descripcion}
                         </p>
 
@@ -603,12 +552,6 @@ export const TiendaCliente: React.FC = () => {
                             $
                             {selectedProduct.precio.toLocaleString()}
                           </span>
-                          {selectedProduct.precioAnterior && (
-                            <span className="text-xl text-gray-400 line-through">
-                              $
-                              {selectedProduct.precioAnterior.toLocaleString()}
-                            </span>
-                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -616,8 +559,8 @@ export const TiendaCliente: React.FC = () => {
                             <Package className="h-4 w-4 inline mr-1" />
                             {selectedProduct.stock} disponibles
                           </p>
-                          <p className="text-sm">
-                            Categoría: {selectedProduct.categoria}
+                          <p className="text-sm border p-2 rounded-md inline-block bg-gray-50">
+                            Categoría: <span className="font-semibold">{selectedProduct.categoria?.nombreCategoria || "Sin categoría"}</span>
                           </p>
                         </div>
                       </div>
