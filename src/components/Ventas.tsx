@@ -85,9 +85,9 @@ import {
   Calculator,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight,
   Receipt
 } from 'lucide-react';
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
 // Función helper para formatear fechas
 const formatDate = (date: Date | string): string => {
@@ -124,6 +124,7 @@ interface Usuario {
   correo: string;
   telefono: string;
   numeroDocumento: string;
+  tipoCliente?: 'Minorista' | 'Mayorista' | null;
 }
 
 interface ItemVenta {
@@ -150,6 +151,7 @@ interface Venta {
   fecha: string;
   clienteId: number;
   nombreCliente: string;
+  documentoCliente: string;
   telefonoCliente: string;
   emailCliente: string;
   items: ItemVenta[];
@@ -169,6 +171,7 @@ interface Venta {
   fechaActualizacion: string;
   creadoPor: string;
   motivoAnulacion?: string;
+  tipoCliente?: string;
 }
 
 // Datos simulados
@@ -246,6 +249,7 @@ export const Ventas: React.FC = () => {
     pedidoId: '',
     metodoPago: '',
     descuento: 0,
+    tipoCliente: 'Minorista' as 'Minorista' | 'Mayorista',
     items: [] as ItemVenta[]
   });
 
@@ -374,6 +378,7 @@ export const Ventas: React.FC = () => {
             fecha: v.fechaCreacion?.split('T')[0] || new Date().toISOString().split('T')[0],
             clienteId: v.usuarioId,
             nombreCliente: cliente ? `${cliente.nombres} ${cliente.apellidos}` : 'Cliente Desconocido',
+            documentoCliente: cliente?.numeroDocumento || '',
             telefonoCliente: cliente?.telefono || '',
             emailCliente: cliente?.correo || '',
             items: detallesVenta.map(d => {
@@ -393,6 +398,7 @@ export const Ventas: React.FC = () => {
             total: v.total,
             estado: v.estadoId === 1 ? 'aceptada' : (v.estadoId === idAbonos ? 'en abonos' : 'anulada'),
             metodoPago: v.metodoPago,
+            tipoCliente: cliente?.tipoCliente || 'Minorista',
             tipoVenta: v.tipoVenta === 'Venta' ? 'directa' : 'pedido',
             pedidoId: v.id,
             fechaCreacion: v.fechaCreacion || '',
@@ -459,17 +465,9 @@ export const Ventas: React.FC = () => {
       if (!response.ok) throw new Error('Error al cargar detalles del pedido');
       const pedido = await response.json();
 
-      // 0. Antes de cargar el nuevo pedido, devolvemos el stock LOCALMENTE (ya que no se ha descontado en el servidor aún para pedidos)
-      // Si antes era una venta directa o un pedido ya cargado, restauramos el stock local de los productos para refrescar la UI
-      setProductosDisponibles(prevProd => {
-        let currentProds = [...prevProd];
-        formData.items.forEach(item => {
-          currentProds = currentProds.map(p =>
-            p.id === item.productoId ? { ...p, stock: p.stock + item.cantidad } : p
-          );
-        });
-        return currentProds;
-      });
+      // 0. Antes de cargar el nuevo pedido, restauramos el stock local de los productos para refrescar la UI
+      fetchProductos();
+
 
       // Mapear los items del pedido a items de venta (probamos varias nomenclaturas de la API)
       let detallesRaw = pedido.detalleVenta_Pedido ||
@@ -510,8 +508,7 @@ export const Ventas: React.FC = () => {
       });
 
       // NO SINCRONIZAMOS EN EL SERVIDOR TODAVÍA PARA EVITAR 503
-      // Solo actualizamos el estado local para feedback visual inmediato
-
+      // Solo actualizamos el estado local para feedback
       // Actualizar el formulario con los datos del pedido
       setFormData(prev => ({
         ...prev,
@@ -520,17 +517,6 @@ export const Ventas: React.FC = () => {
         descuento: pedido.descuento || 0,
         pedidoId: pedidoId
       }));
-
-      // Actualizar stock localmente
-      setProductosDisponibles(prevProd => {
-        let updatedProds = [...prevProd];
-        itemsVenta.forEach(item => {
-          updatedProds = updatedProds.map(p =>
-            p.id === item.productoId ? { ...p, stock: p.stock - item.cantidad } : p
-          );
-        });
-        return updatedProds;
-      });
 
       if (itemsVenta.length === 0) {
         toast.warning(`El pedido #${pedidoId} no tiene productos válidos`, { id: loadingToast });
@@ -659,6 +645,7 @@ export const Ventas: React.FC = () => {
       const subtotal = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
       const montoDescuento = (subtotal * formData.descuento) / 100;
       const total = subtotal - montoDescuento;
+      const clienteInfo = clientesDisponibles.find(c => c.id.toString() === formData.clienteId);
 
       const nuevaVenta: Venta = {
         id: Math.max(...ventas.map(v => v.id)) + 1,
@@ -666,8 +653,9 @@ export const Ventas: React.FC = () => {
         fecha: today,
         clienteId: parseInt(formData.clienteId) || 0,
         nombreCliente: formData.nombreCliente,
-        telefonoCliente: '', // Campo eliminado, valor por defecto
-        emailCliente: '', // Campo eliminado, valor por defecto
+        documentoCliente: clienteInfo?.numeroDocumento || '',
+        telefonoCliente: clienteInfo?.telefono || '',
+        emailCliente: clienteInfo?.correo || '',
         items: formData.items,
         subtotal: subtotal,
         descuento: montoDescuento,
@@ -690,10 +678,12 @@ export const Ventas: React.FC = () => {
         ],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
-        creadoPor: 'Usuario Actual'
+        creadoPor: 'Usuario Actual',
+        tipoCliente: formData.tipoCliente
       };
 
-      // Refrescar lista de ventas desde la API
+      // Refrescar lista de ventas e inventario desde la API
+      await fetchProductos();
       await fetchVentas();
       setIsCreateDialogOpen(false);
       resetForm();
@@ -725,25 +715,22 @@ export const Ventas: React.FC = () => {
         // 2. Refrescar productos disponibles localmente
         fetchProductos();
 
-        // 3. Si era una venta por pedido, cancelamos el pedido en el servidor
-        if (ventaToDelete.tipoVenta === 'pedido' && ventaToDelete.pedidoId) {
-          const cancelPedidoToast = toast.loading('Cancelando pedido asociado...');
-          try {
-            const pedidoIdNum = ventaToDelete.pedidoId;
-            const pedidoOriginal = await getVentaPedidoById(pedidoIdNum);
-            if (pedidoOriginal) {
-              const updatedPedido = {
-                ...pedidoOriginal,
-                estadoId: 3, // 3 = Cancelado
-                observaciones: pedidoOriginal.observaciones ? `${pedidoOriginal.observaciones} [Cancelado desde Ventas]` : '[Cancelado desde Ventas]'
-              };
-              await updateVentaPedido(pedidoIdNum, updatedPedido);
-              toast.success('Pedido asociado cancelado', { id: cancelPedidoToast });
-            }
-          } catch (e) {
-            console.error("Error al cancelar pedido asociado:", e);
-            toast.error("Error al cancelar el pedido en el servidor", { id: cancelPedidoToast });
+        // 3. Sincronizar estado en el servidor (Persistencia)
+        try {
+          const ventaOriginal = await getVentaPedidoById(ventaToDelete.id);
+          if (ventaOriginal) {
+            const updatedVenta = {
+              ...ventaOriginal,
+              estadoId: 3, // 3 = Anulada/Cancelada
+              observaciones: motivoAnulacion 
+                ? `${ventaOriginal.observaciones || ''} [Anulada: ${motivoAnulacion}]` 
+                : `${ventaOriginal.observaciones || ''} [Anulada desde Ventas]`
+            };
+            await updateVentaPedido(ventaToDelete.id, updatedVenta);
           }
+        } catch (e) {
+          console.error("Error persistiendo anulación en servidor:", e);
+          toast.error("Error al guardar el estado de anulación en el servidor");
         }
 
         // 4. Marcar como anulada en el estado local
@@ -786,169 +773,64 @@ export const Ventas: React.FC = () => {
       return;
     }
 
-    const loadingToast = toast.loading(`Actualizando stock de ${producto.nombre}...`);
+    // 2. Solo actualizamos el estado local
+    const maxId = formData.items.length > 0 ? Math.max(...formData.items.map(i => i.id)) : 0;
+    const nuevoItem: ItemVenta = {
+      id: maxId + 1,
+      productoId: producto.id,
+      nombreProducto: producto.nombre,
+      cantidad: cantidad,
+      precioUnitario: producto.precio,
+      subtotal: producto.precio * cantidad
+    };
 
-    try {
-      // 2. Sincronizar con el servidor
-      const getRes = await fetch(`/api/Productoes/${producto.id}`);
-      if (!getRes.ok) throw new Error('No se pudo verificar el stock en el servidor');
-      const pOriginal = await getRes.json();
+    setFormData({
+      ...formData,
+      items: [...formData.items, nuevoItem]
+    });
 
-      if (pOriginal.stock < cantidad) {
-        toast.error('El stock en el servidor ha cambiado y no es suficiente.', { id: loadingToast });
-        fetchProductos();
-        return;
-      }
-
-      const putRes = await fetch(`/api/Productoes/${producto.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - cantidad })
-      });
-
-      if (!putRes.ok) throw new Error('Error al actualizar servidor');
-
-      // 3. Actualizar estado local
-      const maxId = formData.items.length > 0 ? Math.max(...formData.items.map(i => i.id)) : 0;
-      const nuevoItem: ItemVenta = {
-        id: maxId + 1,
-        productoId: producto.id,
-        nombreProducto: producto.nombre,
-        cantidad: cantidad,
-        precioUnitario: producto.precio,
-        subtotal: producto.precio * cantidad
-      };
-
-      setProductosDisponibles(prev => prev.map(p =>
-        p.id === producto.id ? { ...p, stock: p.stock - cantidad } : p
-      ));
-
-      setFormData({
-        ...formData,
-        items: [...formData.items, nuevoItem]
-      });
-
-      setSelectedProducto('');
-      setCantidad(1);
-      toast.success(`${producto.nombre} agregado e inventario actualizado`, { id: loadingToast });
-    } catch (error) {
-      console.error('Error al agregar producto:', error);
-      toast.error('No se pudo actualizar el inventario', { id: loadingToast });
-    }
+    setSelectedProducto('');
+    setCantidad(1);
+    toast.success(`${producto.nombre} añadido a la lista`);
   };
   // Función para eliminar producto
-  const eliminarProducto = async (itemId: number) => {
-    const item = formData.items.find(i => i.id === itemId);
-    if (!item) return;
-
-    const loadingToast = toast.loading(`Restaurando stock de ${item.nombreProducto}...`);
-
-    try {
-      const getRes = await fetch(`/api/Productoes/${item.productoId}`);
-      if (!getRes.ok) throw new Error('No se pudo obtener el producto del servidor');
-      const pOriginal = await getRes.json();
-
-      const putRes = await fetch(`/api/Productoes/${item.productoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock + item.cantidad })
-      });
-
-      if (!putRes.ok) throw new Error('Error al restaurar stock en el servidor');
-
-      // Actualizar localmente
-      setProductosDisponibles(prev => prev.map(p =>
-        p.id === item.productoId ? { ...p, stock: p.stock + item.cantidad } : p
-      ));
-
-      setFormData({
-        ...formData,
-        items: formData.items.filter(i => i.id !== itemId)
-      });
-      toast.success('Stock restaurado exitosamente', { id: loadingToast });
-    } catch (error) {
-      console.error('Error eliminando producto:', error);
-      toast.error('Error al sincronizar con el servidor', { id: loadingToast });
-    }
+  const eliminarProducto = (itemId: number) => {
+    setFormData({
+      ...formData,
+      items: formData.items.filter(i => i.id !== itemId)
+    });
+    toast.success('Producto removido de la lista');
   };
 
   // Función para restaurar stock globalmente (usada al cancelar o cerrar diálogo sin guardar)
-  const handleRestoreStock = async () => {
-    if (formData.items.length === 0) return;
-
-    // Solo restauramos en el servidor si la venta es DIRECTA, 
-    // porque en PEDIDO no se descontó nada en el servidor hasta el final.
-    if (formData.tipoVenta === 'pedido') {
-      // Solo refrescamos localmente para devolver lo que quitamos de la UI
-      fetchProductos();
-      return;
-    }
-
-    const loadingToast = toast.loading('Restaurando inventario...');
-    try {
-      for (const item of formData.items) {
-        const getRes = await fetch(`/api/Productoes/${item.productoId}`);
-        if (getRes.ok) {
-          const pOriginal = await getRes.json();
-          await fetch(`/api/Productoes/${item.productoId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock + item.cantidad })
-          });
-        }
-      }
-      toast.success('Inventario restaurado correctamente', { id: loadingToast });
-    } catch (error) {
-      console.error('Error restaurando stock:', error);
-      toast.error('Error al restaurar inventario', { id: loadingToast });
-    }
+  const handleRestoreStock = () => {
+    // Ya no es necesario restaurar en el servidor porque no descontamos preventivamente
+    resetForm();
+    fetchProductos(); // Solo para asegurar que la UI esté sincronizada
   };
 
-  const cambiarCantidad = async (itemId: number, delta: number) => {
+  const cambiarCantidad = (itemId: number, delta: number) => {
     const item = formData.items.find(i => i.id === itemId);
     if (!item) return;
 
     const nuevaCantidad = item.cantidad + delta;
     if (nuevaCantidad < 1) return;
 
-    const loadingToast = toast.loading('Actualizando inventario...');
-    try {
-      const getRes = await fetch(`/api/Productoes/${item.productoId}`);
-      if (!getRes.ok) throw new Error('No se pudo verificar stock');
-      const pOriginal = await getRes.json();
-
-      // Si queremos aumentar, verificamos stock
-      if (delta > 0 && pOriginal.stock < delta) {
-        toast.error('No hay stock suficiente para aumentar la cantidad', { id: loadingToast });
-        return;
-      }
-
-      const putRes = await fetch(`/api/Productoes/${item.productoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - delta })
-      });
-
-      if (!putRes.ok) throw new Error('Error al actualizar servidor');
-
-      // Actualizar localmente
-      setProductosDisponibles(prev => prev.map(p =>
-        p.id === item.productoId ? { ...p, stock: p.stock - delta } : p
-      ));
-
-      setFormData({
-        ...formData,
-        items: formData.items.map(i => i.id === itemId ? {
-          ...i,
-          cantidad: nuevaCantidad,
-          subtotal: nuevaCantidad * i.precioUnitario
-        } : i)
-      });
-      toast.success('Cantidad actualizada', { id: loadingToast });
-    } catch (error) {
-      console.error('Error cambiando cantidad:', error);
-      toast.error('Error al sincronizar con el servidor', { id: loadingToast });
+    // Verificar stock disponible (usando la data inicial de productosDisponibles)
+    const producto = productosDisponibles.find(p => p.id === item.productoId);
+    if (producto && nuevaCantidad > producto.stock) {
+      toast.error(`Stock insuficiente. Solo hay ${producto.stock} disponibles.`);
+      return;
     }
+
+    setFormData({
+      ...formData,
+      items: formData.items.map(i => i.id === itemId ? {
+        ...i,
+        cantidad: nuevaCantidad,
+        subtotal: nuevaCantidad * i.precioUnitario
+      } : i)
+    });
   };
 
   const handleTipoVentaChange = async (value: 'directa' | 'pedido') => {
@@ -967,7 +849,8 @@ export const Ventas: React.FC = () => {
       items: [],
       pedidoId: '',
       metodoPago: '',
-      descuento: 0
+      descuento: 0,
+      tipoCliente: prev.tipoCliente
     }));
     setSelectedPedidoId('');
   };
@@ -982,6 +865,7 @@ export const Ventas: React.FC = () => {
       pedidoId: '',
       metodoPago: '',
       descuento: 0,
+      tipoCliente: 'Minorista',
       items: []
     });
   };
@@ -1022,66 +906,84 @@ export const Ventas: React.FC = () => {
       const margin = 20;
       let y = 20;
 
-      // Header
+      // Header - Logo y Título
+      try {
+        if (logoImage) {
+          doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+          y += 25;
+        }
+      } catch (e) {
+        console.warn("Could not load logo image for PDF", e);
+        y += 10;
+      }
+
       doc.setFontSize(22);
       doc.setTextColor(33, 33, 33);
+      doc.setFont("helvetica", "bold");
       doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
       y += 10;
-      doc.setFontSize(16);
+      
+      doc.setFontSize(14);
       doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
       doc.text("FACTURA DE VENTA", pageWidth / 2, y, { align: "center" });
+      y += 8;
 
-      y += 15;
+      doc.setFontSize(10);
+      doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+      y += 5;
+      doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+      y += 10;
+
       doc.setDrawColor(33, 33, 33);
       doc.setLineWidth(0.5);
       doc.line(margin, y, pageWidth - margin, y);
-
       y += 10;
+
+      // Info Section
       doc.setFontSize(11);
       doc.setTextColor(33, 33, 33);
 
-      // Info Section
+      // Columna Izquierda: Datos del Cliente
       doc.setFont("helvetica", "bold");
-      doc.text("Número de Venta:", margin, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(venta.numeroVenta, margin + 35, y);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Fecha:", pageWidth - margin - 50, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(formatDate(venta.fecha), pageWidth - margin - 35, y);
-
+      doc.text("DATOS DEL CLIENTE", margin, y);
       y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Cliente:", margin, y);
       doc.setFont("helvetica", "normal");
-      doc.text(venta.nombreCliente, margin + 35, y);
+      doc.text(`Cliente: ${venta.nombreCliente}`, margin, y);
+      y += 6;
+      doc.text(`C.C./NIT: ${venta.documentoCliente}`, margin, y);
+      y += 6;
+      doc.text(`Teléfono: ${venta.telefonoCliente}`, margin, y);
+      y += 6;
+      doc.text(`Email: ${venta.emailCliente}`, margin, y);
+      y += 6;
+      doc.text(`Tipo de Cliente: ${venta.tipoCliente || 'Minorista'}`, margin, y);
+      y += 6;
+      doc.text(`Tipo de Venta: ${venta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}`, margin, y);
 
+      // Columna Derecha: Datos de la Venta
+      let yDerecha = y - 31;
       doc.setFont("helvetica", "bold");
-      doc.text("Estado:", pageWidth - margin - 50, y);
+      doc.text("INFO VENTA", pageWidth - margin - 50, yDerecha);
+      yDerecha += 7;
       doc.setFont("helvetica", "normal");
-      doc.text(venta.estado.toUpperCase(), pageWidth - margin - 35, y);
+      doc.text(`Número: ${venta.numeroVenta}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Fecha: ${formatDate(venta.fecha)}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Estado: ${venta.estado.toUpperCase()}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Método Pago: ${venta.metodoPago}`, pageWidth - margin - 50, yDerecha);
 
-      y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Tipo de Venta:", margin, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(venta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa', margin + 35, y);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Método Pago:", pageWidth - margin - 50, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(venta.metodoPago, pageWidth - margin - 23, y);
+      y = Math.max(y, yDerecha) + 15;
 
       if (venta.motivoAnulacion) {
-        y += 7;
         doc.setFont("helvetica", "bold");
         doc.text("Motivo Anulación:", margin, y);
         doc.setFont("helvetica", "normal");
         doc.text(venta.motivoAnulacion, margin + 35, y);
+        y += 10;
       }
-
-      y += 15;
 
       // Table Header
       doc.setFillColor(245, 245, 245);
@@ -1097,7 +999,7 @@ export const Ventas: React.FC = () => {
 
       // Table Content
       venta.items.forEach((item) => {
-        if (y > 270) {
+        if (y > 260) {
           doc.addPage();
           y = 20;
         }
@@ -1404,7 +1306,8 @@ export const Ventas: React.FC = () => {
                                     setFormData({
                                       ...formData,
                                       clienteId: cliente.id.toString(),
-                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`
+                                      nombreCliente: `${cliente.nombres} ${cliente.apellidos}`,
+                                      tipoCliente: (cliente.tipoCliente as 'Minorista' | 'Mayorista') || 'Minorista'
                                     });
                                     setSelectedPedidoId('');
                                     setClientSearchTerm('');
@@ -1487,6 +1390,28 @@ export const Ventas: React.FC = () => {
                       <span>Este cliente no tiene pedidos pendientes.</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Tipo de Cliente - Mostrar solo cuando se selecciona un cliente */}
+              {formData.clienteId && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoCliente" className="text-sm">Tipo de Cliente</Label>
+                    <Select 
+                      value={formData.tipoCliente} 
+                      onValueChange={(value: 'Minorista' | 'Mayorista') => setFormData({ ...formData, tipoCliente: value })}
+                      disabled
+                    >
+                      <SelectTrigger className="w-full bg-muted/50 cursor-not-allowed">
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Minorista">Minorista</SelectItem>
+                        <SelectItem value="Mayorista">Mayorista</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
 
@@ -1800,6 +1725,7 @@ export const Ventas: React.FC = () => {
                     <div><strong>Número:</strong> {selectedVenta.numeroVenta}</div>
                     <div><strong>Fecha:</strong> {formatDate(selectedVenta.fecha)}</div>
                     <div><strong>Cliente:</strong> {selectedVenta.nombreCliente}</div>
+                    <div><strong>Tipo de Cliente:</strong> {selectedVenta.tipoCliente || 'Minorista'}</div>
                   </div>
                   <div className="space-y-2">
                     <div><strong>Tipo:</strong> {selectedVenta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}</div>

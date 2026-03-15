@@ -1,160 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { ShoppingCart, ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Loader2, ArrowLeft, Package } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { toast } from 'sonner';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import { getProductos, getCategorias, getAllImages } from '../services/api';
+import { Producto, Categoria } from '../types';
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  category: string;
-  description: string;
-}
-
-const PRODUCTS: Product[] = [
-  // Vapes Desechables
-  {
-    id: 'vd1',
-    name: 'Vape Desechable Mango',
-    price: 35000,
-    images: [
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400',
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400',
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400'
-    ],
-    category: 'Vapes Desechables',
-    description: '5000 puffs, sabor mango tropical'
-  },
-  {
-    id: 'vd2',
-    name: 'Vape Desechable Fresa',
-    price: 35000,
-    images: [
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400',
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400',
-      'https://images.unsplash.com/photo-1761311984592-9f27e34dd9ae?w=400'
-    ],
-    category: 'Vapes Desechables',
-    description: '5000 puffs, sabor fresa dulce'
-  },
-  {
-    id: 'vd3',
-    name: 'Vape Desechable Menta',
-    price: 35000,
-    images: [
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400',
-      'https://images.unsplash.com/photo-1761311984592-9f27e34dd9ae?w=400',
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400'
-    ],
-    category: 'Vapes Desechables',
-    description: '5000 puffs, sabor menta fresca'
-  },
-  // Vapes Recargables
-  {
-    id: 'vr1',
-    name: 'Vape Recargable Pro',
-    price: 120000,
-    images: [
-      'https://images.unsplash.com/photo-1761311984592-9f27e34dd9ae?w=400',
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400',
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400'
-    ],
-    category: 'Vapes Recargables',
-    description: 'Sistema recargable con control de flujo de aire'
-  },
-  {
-    id: 'vr2',
-    name: 'Vape Recargable Elite',
-    price: 150000,
-    images: [
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400',
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400',
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400'
-    ],
-    category: 'Vapes Recargables',
-    description: 'Modelo premium con pantalla LED'
-  },
-  {
-    id: 'vr3',
-    name: 'Vape Recargable Basic',
-    price: 80000,
-    images: [
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400',
-      'https://images.unsplash.com/photo-1761311984592-9f27e34dd9ae?w=400',
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400'
-    ],
-    category: 'Vapes Recargables',
-    description: 'Modelo básico ideal para principiantes'
-  },
-  // Baterías
-  {
-    id: 'bat1',
-    name: 'Batería 510 Standard',
-    price: 45000,
-    images: [
-      'https://images.unsplash.com/photo-1701120286678-7cb81e752725?w=400',
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400',
-      'https://images.unsplash.com/photo-1754821305554-e76d884076db?w=400'
-    ],
-    category: 'Baterías',
-    description: 'Batería estándar 510 thread, 650mAh'
-  },
-  {
-    id: 'bat2',
-    name: 'Batería Variable Voltage',
-    price: 65000,
-    images: [
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400',
-      'https://images.unsplash.com/photo-1701120286678-7cb81e752725?w=400',
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400'
-    ],
-    category: 'Baterías',
-    description: 'Batería con voltaje variable, 900mAh'
-  },
-  {
-    id: 'bat3',
-    name: 'Batería Premium Box',
-    price: 95000,
-    images: [
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400',
-      'https://images.unsplash.com/photo-1701120286678-7cb81e752725?w=400',
-      'https://images.unsplash.com/photo-1760443728269-767e903b94e4?w=400'
-    ],
-    category: 'Baterías',
-    description: 'Box mod premium con pantalla digital'
-  },
-];
-
-const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? product.images.length - 1 : prev - 1
-    );
-  };
 
   const handleAddToCart = () => {
     addToCart(
       {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images[0],
-        category: product.category,
+        id: product.id.toString(),
+        name: product.nombreProducto,
+        price: product.precio,
+        image: product.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+        category: product.categoria?.nombreCategoria || 'Sin Categoría',
       },
       quantity
     );
-    toast.success(`${quantity} ${product.name} agregado al carrito`);
+    toast.success(`${quantity} ${product.nombreProducto} agregado al carrito`);
     setQuantity(1);
   };
 
@@ -167,52 +36,22 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   };
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow">
       <CardHeader className="p-0">
         <div className="relative aspect-square bg-gray-100">
-          <img
-            src={product.images[currentImageIndex]}
-            alt={product.name}
+          <ImageWithFallback
+            src={product.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'}
+            alt={product.nombreProducto}
             className="w-full h-full object-cover"
           />
-          
-          {product.images.length > 1 && (
-            <>
-              <button
-                onClick={prevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
-                aria-label="Imagen anterior"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
-                aria-label="Siguiente imagen"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-              
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {product.images.map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
         </div>
       </CardHeader>
       
       <CardContent className="flex-1 p-4">
-        <CardTitle className="mb-2">{product.name}</CardTitle>
-        <p className="text-muted-foreground text-sm mb-3">{product.description}</p>
+        <CardTitle className="mb-2 line-clamp-2">{product.nombreProducto}</CardTitle>
+        <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{product.descripcion}</p>
         <p className="text-2xl font-bold text-primary">
-          ${product.price.toLocaleString('es-CO')}
+          ${product.precio.toLocaleString('es-CO')}
         </p>
       </CardContent>
       
@@ -231,6 +70,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             size="sm"
             variant="outline"
             onClick={incrementQuantity}
+            disabled={product.stock <= quantity}
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -238,10 +78,11 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         
         <Button 
           onClick={handleAddToCart}
-          className="w-full text-[rgb(0,0,0)] bg-[rgb(240,177,0,100)] hover:bg-gray-400"
+          disabled={product.stock === 0}
+          className="w-full text-[rgb(0,0,0)] bg-[rgb(240,177,0,100)] hover:bg-gray-400 disabled:opacity-50"
         >
           <ShoppingCart className="w-4 h-4 mr-2" />
-          Agregar al carrito
+          {product.stock === 0 ? "Agotado" : "Agregar al carrito"}
         </Button>
       </CardFooter>
     </Card>
@@ -249,7 +90,66 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 };
 
 export const ProductCatalog: React.FC = () => {
-  const categories = ['Vapes Desechables', 'Vapes Recargables', 'Baterías'];
+  const [apiProductos, setApiProductos] = useState<Producto[]>([]);
+  const [apiCategorias, setApiCategorias] = useState<Categoria[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [prods, cats, images] = await Promise.all([
+          getProductos(),
+          getCategorias(),
+          getAllImages()
+        ]);
+        
+        const productsWithImages = prods.map(p => {
+          const matchingImage = images.find(img => img.idImagen === p.idImagen);
+          return {
+            ...p,
+            imagen: matchingImage ? matchingImage.urlimagen : p.imagen
+          };
+        });
+
+        const categoriesWithImages = cats.map(c => {
+          const matchingImage = images.find(img => img.idImagen === c.idImagen);
+          return {
+            ...c,
+            imagen: matchingImage ? matchingImage.urlimagen : undefined
+          };
+        });
+
+        setApiProductos(productsWithImages.filter(p => p.estado && p.stock > 0)); 
+        setApiCategorias(categoriesWithImages.filter(c => c.estado));
+      } catch (error) {
+        console.error("Error fetching catalog data:", error);
+        toast.error("Error al cargar el catálogo de productos");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <Loader2 className="h-12 w-12 animate-spin text-yellow-500" />
+      </div>
+    );
+  }
+
+  // Obtenemos los productos para la categoría seleccionada
+  const categoryProducts = selectedCategoryId 
+    ? apiProductos.filter(p => p.categoriaId === selectedCategoryId)
+    : [];
+
+  const selectedCategory = selectedCategoryId 
+    ? apiCategorias.find(c => c.id === selectedCategoryId)
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -261,25 +161,79 @@ export const ProductCatalog: React.FC = () => {
           </p>
         </div>
 
-        {categories.map((category) => {
-          const categoryProducts = PRODUCTS.filter(
-            (product) => product.category === category
-          );
+        {selectedCategoryId === null ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {apiCategorias.map((category) => {
+                // Determine if category has active products
+                const hasProducts = apiProductos.some(p => p.categoriaId === category.id);
+                if (!hasProducts) return null;
 
-          return (
-            <div key={category} className="mb-12">
-              <h2 className="text-2xl font-bold mb-6 pb-2 border-b">
-                {category}
+                return (
+                  <Card 
+                    key={category.id} 
+                    className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 overflow-hidden flex flex-col"
+                    onClick={() => setSelectedCategoryId(category.id)}
+                  >
+                    <div className="h-48 relative bg-gray-100 flex items-center justify-center border-b">
+                      {category.imagen ? (
+                        <ImageWithFallback 
+                          src={category.imagen} 
+                          alt={category.nombreCategoria}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                          <Package className="h-8 w-8 text-yellow-500" />
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader className="text-center p-6 bg-white flex-1 flex flex-col justify-center">
+                      <CardTitle className="text-2xl">{category.nombreCategoria}</CardTitle>
+                      <p className="text-muted-foreground mt-2 text-sm line-clamp-2">
+                        {category.descripcion || `Explora productos de ${category.nombreCategoria}`}
+                      </p>
+                    </CardHeader>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {apiProductos.length === 0 && (
+              <div className="text-center text-gray-500 py-12">
+                No hay productos disponibles en el catálogo en este momento.
+              </div>
+            )}
+          </>
+        ) : (
+          <div>
+            <div className="flex items-center mb-8">
+              <Button 
+                variant="ghost" 
+                onClick={() => setSelectedCategoryId(null)}
+                className="mr-4 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Volver a Categorías
+              </Button>
+              <h2 className="text-2xl font-bold border-l-4 border-yellow-500 pl-4">
+                {selectedCategory?.nombreCategoria}
               </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+            
+            {categoryProducts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {categoryProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-            </div>
-          );
-        })}
+            ) : (
+               <div className="text-center text-gray-500 py-12">
+                 No hay productos disponibles en esta categoría.
+               </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,10 @@
 import vapeImage from 'figma:asset/6c1887bd6eba23fed5ff96a23e2c0895aa21c8a1.png';
 
-export function HeroBanner() {
+interface HeroBannerProps {
+  onNavigate?: (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => void;
+}
+
+export function HeroBanner({ onNavigate }: HeroBannerProps) {
   return (
     <section className="bg-black text-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 py-16">
@@ -23,7 +27,10 @@ export function HeroBanner() {
               necesidades de todos los usuarios, desde principiantes hasta expertos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-yellow-500 text-black px-8 py-3 rounded-lg font-medium hover:bg-yellow-400 transition-colors">
+              <button 
+                onClick={() => onNavigate && onNavigate('shop')}
+                className="bg-yellow-500 text-black px-8 py-3 rounded-lg font-medium hover:bg-yellow-400 transition-colors"
+              >
                 Ver Catálogo
               </button>
               <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-black transition-colors">

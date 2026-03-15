@@ -100,6 +100,7 @@ export interface Categoria {
   descripcion: string;
   estado: boolean;
   idImagen?: number;
+  imagen?: string;
 }
 
 export interface CategoriaFormData {

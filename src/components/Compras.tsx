@@ -76,6 +76,7 @@ import {
   AlertTriangle,
   Download,
 } from "lucide-react";
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
 
 
@@ -239,8 +240,6 @@ export const Compras: React.FC = () => {
 
         toast.success("Orden de compra anulada y stock revertido");
         fetchData();
-        setIsAnularDialogOpen(false);
-        setOrdenToAnular(null);
         setRazonAnulacion("");
       } catch (error) {
         console.error("Error anular compra:", error);
@@ -255,129 +254,141 @@ export const Compras: React.FC = () => {
     try {
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
+
+      const formatDate = (date: string | Date) => {
+        return new Date(date).toLocaleDateString('es-CO');
+      };
+
       const proveedor = proveedores.find(p => p.id === orden.proveedorId);
 
-      doc.setFontSize(20);
-      doc.text("ORDEN DE COMPRA", 105, 20, { align: "center" });
+      // Header - Logo y Título
+      try {
+        if (logoImage) {
+          doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+          y += 25;
+        }
+      } catch (e) {
+        console.warn("Could not load logo image for PDF", e);
+        y += 10;
+      }
 
+      doc.setFontSize(22);
+      doc.setTextColor(33, 33, 33);
+      doc.setFont("helvetica", "bold");
+      doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+      y += 10;
+      
       doc.setFontSize(14);
-      doc.text("Información de la Orden", 20, 40);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text("ORDEN DE COMPRA", pageWidth / 2, y, { align: "center" });
+      y += 8;
 
       doc.setFontSize(10);
-      doc.text(`Número de Orden: ${orden.numeroCompra || "N/A"}`, 20, 50);
-      doc.text(`Proveedor: ${proveedor?.nombreCompletoORazonSocial || "N/A"}`, 20, 60);
-      doc.text(
-        `Fecha: ${new Date(orden.fechaCompra || "").toLocaleDateString("es-ES")}`,
-        20,
-        70,
-      );
-      doc.text(
-        `Estado: ${orden.estado === 3 ? "Anulada" : "Activa"}`,
-        20,
-        80,
-      );
+      doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+      y += 5;
+      doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+      y += 10;
 
-      // Línea separadora
-      doc.line(20, 95, 190, 95);
+      doc.setDrawColor(33, 33, 33);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
 
-      // Productos
-      doc.setFontSize(14);
-      doc.text("Productos Solicitados", 20, 110);
+      // Info Section
+      doc.setFontSize(11);
+      doc.setTextColor(33, 33, 33);
 
-      // Encabezados de tabla
-      doc.setFontSize(9);
-      doc.text("Código", 20, 125);
-      doc.text("Producto", 45, 125);
-      doc.text("Cant.", 120, 125);
-      doc.text("Precio Unit.", 140, 125);
-      doc.text("Subtotal", 170, 125);
+      // Columna Izquierda: Datos del Proveedor
+      doc.setFont("helvetica", "bold");
+      doc.text("DATOS DEL PROVEEDOR", margin, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Proveedor: ${proveedor?.nombreCompletoORazonSocial || "N/A"}`, margin, y);
+      y += 6;
+      doc.text(`Teléfono: ${proveedor?.telefono || "N/A"}`, margin, y);
 
-      // Línea de encabezado
-      doc.line(20, 127, 190, 127);
+      // Columna Derecha: Datos de la Orden
+      let yDerecha = y - 13;
+      doc.setFont("helvetica", "bold");
+      doc.text("INFO COMPRA", pageWidth - margin - 50, yDerecha);
+      yDerecha += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Número: ${orden.numeroCompra || "N/A"}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Fecha: ${formatDate(orden.fechaCompra || "")}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Estado: ${orden.estado === 3 ? "ANULADA" : "ACTIVA"}`, pageWidth - margin - 50, yDerecha);
 
-      // Datos de productos
-      let yPosition = 135;
-      orden.detalleCompras?.forEach((detalle, index) => {
-        if (yPosition > 250) {
-          // Nueva página si es necesario
+      y = Math.max(y, yDerecha) + 15;
+
+      // Table Header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.text("Código", margin + 5, y + 7);
+      doc.text("Producto", margin + 30, y + 7);
+      doc.text("Cant", margin + 100, y + 7);
+      doc.text("Precio", margin + 120, y + 7);
+      doc.text("Subtotal", margin + 150, y + 7);
+
+      y += 10;
+      doc.setFont("helvetica", "normal");
+
+      // Table Content
+      orden.detalleCompras?.forEach((detalle) => {
+        if (y > 260) {
           doc.addPage();
-          yPosition = 30;
-          doc.setFontSize(9);
-          doc.text("Código", 20, yPosition);
-          doc.text("Producto", 45, yPosition);
-          doc.text("Cant.", 120, yPosition);
-          doc.text("Precio Unit.", 140, yPosition);
-          doc.text("Subtotal", 170, yPosition);
-          doc.line(20, yPosition + 2, 190, yPosition + 2);
-          yPosition += 10;
+          y = 20;
         }
-
         const productoInfo = productos.find(p => p.id === detalle.productoId);
         const nombreProducto = productoInfo?.nombreProducto || "Producto";
-        const codigoProducto = String(detalle.productoId);
-
-        doc.text(codigoProducto, 20, yPosition);
-
-        // Truncar nombre si es muy largo
-        const nombreTruncado =
-          nombreProducto.length > 25
-            ? nombreProducto.substring(0, 25) + "..."
-            : nombreProducto;
-        doc.text(nombreTruncado, 45, yPosition);
-
-        doc.text(detalle.cantidad.toString(), 120, yPosition);
-        doc.text(
-          `$${detalle.precioUnitario.toLocaleString()}`,
-          140,
-          yPosition,
-        );
-        doc.text(
-          `$${detalle.subtotal.toLocaleString()}`,
-          170,
-          yPosition,
-        );
-
-        yPosition += 8;
+        
+        doc.text(String(detalle.productoId), margin + 5, y + 7);
+        doc.text(nombreProducto.substring(0, 45), margin + 30, y + 7);
+        doc.text(String(detalle.cantidad), margin + 100, y + 7);
+        doc.text(`$${detalle.precioUnitario.toLocaleString()}`, margin + 120, y + 7);
+        doc.text(`$${detalle.subtotal.toLocaleString()}`, margin + 150, y + 7);
+        y += 8;
       });
 
-      // Totales
-      yPosition += 10;
-      doc.line(20, yPosition, 190, yPosition);
-      yPosition += 10;
+      y += 5;
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
 
-      // Total en negrita
-      doc.setFontSize(12);
-      doc.text(
-        `TOTAL: $${orden.total.toLocaleString()}`,
-        140,
-        yPosition,
-      );
+      // Totals
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("TOTAL:", margin + 120, y);
+      doc.text(`$${orden.total.toLocaleString()}`, margin + 150, y);
 
-      // Información adicional
-      yPosition += 20;
+      y += 30;
+      // Signatures
+      if (y > 250) {
+        doc.addPage();
+        y = 40;
+      }
+      doc.setFontSize(10);
+      doc.line(margin, y, margin + 60, y);
+      doc.text("Autorizado por", margin, y + 5);
+
+      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+      doc.text("Firma Proveedor", pageWidth - margin - 60, y + 5);
+
+      y += 30;
       doc.setFontSize(8);
-      doc.text(
-        `Documento generado el ${new Date().toLocaleDateString("es-ES")} a las ${new Date().toLocaleTimeString("es-ES")}`,
-        20,
-        yPosition,
-      );
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generado el ${formatDate(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });
+      doc.text("Vaper One - Sistema de Gestión de Compras", pageWidth / 2, y + 4, { align: "center" });
 
-      // Pie de página
-      const pageHeight = doc.internal.pageSize.height;
-      doc.text(
-        "Sistema de Gestión Empresarial - VapeStore",
-        105,
-        pageHeight - 15,
-        { align: "center" },
-      );
-
-      // Descargar el PDF
       doc.save(`Orden_Compra_${orden.numeroCompra}.pdf`);
 
       toast.success("PDF exportado exitosamente");
     } catch (error) {
       console.error("Error al generar PDF:", error);
-      toast.error("Error al exportar PDF");
     }
   };
 

@@ -39,7 +39,7 @@ import { AbonosIndividuales } from "./AbonosIndividuales";
 import { DetallePedido } from "./DetallePedido";
 import { TablePagination } from './ui/TablePagination';
 import { VentaPedidoDto, UsuarioDto, Producto } from "../types";
-import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados } from "../services/api";
+import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados, getDetalleVentaPedidos } from "../services/api";
 import { CreateVentaPedidoView } from "./pedidos/CreateVentaPedidoView";
 import { toast } from "sonner";
 import {
@@ -56,6 +56,7 @@ import {
   Search,
   Package,
 } from "lucide-react";
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
 interface PedidosProps {
   onNavigateToDetail?: (id: string) => void;
@@ -70,6 +71,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
 
   useEffect(() => {
@@ -106,14 +108,33 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [pedidosData, usuariosData, estadosData] = await Promise.all([
+      const [pedidosData, usuariosData, estadosData, productosData, detallesData] = await Promise.all([
         getVentaPedidos(),
         getUsuarios(),
-        getEstados()
+        getEstados(),
+        fetch('/api/Productoes').then(res => res.json()),
+        getDetalleVentaPedidos()
       ]);
-      setPedidos(pedidosData);
+
+      // Mapear detalles a sus respectivos pedidos
+      const pedidosConDetalles = pedidosData.map(pedido => ({
+        ...pedido,
+        detalleVenta_Pedido: detallesData.filter((d: any) => d.ventaPedidoId === pedido.id)
+      }));
+
+      setPedidos(pedidosConDetalles);
       setUsuarios(usuariosData);
       setStatuses(estadosData);
+      setProductos(productosData.map((p: any) => ({
+        id: p.id,
+        nombreProducto: p.nombreProducto,
+        precio: p.precio,
+        stock: p.stock,
+        categoriaId: p.categoriaId,
+        descripcion: p.descripcion,
+        idImagen: p.idImagen,
+        estado: p.estado
+      })));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Error al cargar los datos");
@@ -198,86 +219,163 @@ export const Pedidos: React.FC<PedidosProps> = ({
   // Eliminado getStatusIcon previo para evitar duplicados si existía
 
 
-  const handleExportToPDF = (pedido: VentaPedidoDto) => {
-    const doc = new jsPDF();
-    doc.setFont("helvetica");
-    let yPosition = 20;
-    const lineHeight = 7;
-    const pageWidth = doc.internal.pageSize.width;
-    const leftMargin = 20;
-    const rightMargin = 20;
-    const maxWidth = pageWidth - leftMargin - rightMargin;
+  const handleExportToPDF = async (pedido: VentaPedidoDto) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
 
-    const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize = 10) => {
-      doc.setFontSize(fontSize);
-      const lines = doc.splitTextToSize(text, maxWidth);
-      doc.text(lines, x, y);
-      return y + lines.length * lineHeight;
-    };
+      const formatDateStr = (date: string | Date) => {
+        return new Date(date).toLocaleDateString('es-CO');
+      };
 
-    const addTitle = (title: string, y: number) => {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(title, leftMargin, y);
-      doc.setFont("helvetica", "normal");
-      return y + lineHeight + 2;
-    };
+      const cliente = usuarios.find(u => u.id === pedido.usuarioId);
 
-    const addSeparator = (y: number) => {
-      doc.line(leftMargin, y, pageWidth - rightMargin, y);
-      return y + 5;
-    };
-
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("PEDIDO", leftMargin, yPosition);
-    yPosition += 15;
-    yPosition = addSeparator(yPosition);
-
-    const usuarioName = getUsuarioName(pedido.usuarioId);
-    yPosition = addTitle("INFORMACIÓN DEL CLIENTE", yPosition);
-    yPosition = addWrappedText(`Nombre: ${usuarioName}`, leftMargin, yPosition, maxWidth);
-    yPosition += 5;
-
-    yPosition = addTitle("INFORMACIÓN DEL PEDIDO", yPosition);
-    yPosition = addWrappedText(`Pedido ID: ${pedido.id}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`Fecha: ${pedido.fechaCreacion ? new Date(pedido.fechaCreacion).toLocaleDateString() : 'N/A'}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`Estado: ${getStatusName(pedido.estadoId).toUpperCase()}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`Método de Pago: ${pedido.metodoPago}`, leftMargin, yPosition, maxWidth);
-    yPosition += 5;
-
-    if (pedido.detalleVenta_Pedido && pedido.detalleVenta_Pedido.length > 0) {
-      yPosition = addTitle("PRODUCTOS", yPosition);
-      pedido.detalleVenta_Pedido.forEach((detalle: any) => {
-        if (yPosition > 250) {
-          doc.addPage();
-          yPosition = 20;
+      // Header - Logo y Título
+      try {
+        if (logoImage) {
+          doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+          y += 25;
         }
-        yPosition = addWrappedText(
-          `• Producto ID: ${detalle.productoId} | Cantidad: ${detalle.cantidad} | Subtotal: $${detalle.subtotal.toLocaleString()}`,
-          leftMargin,
-          yPosition,
-          maxWidth
-        );
-        yPosition += 2;
-      });
-      yPosition += 5;
+      } catch (e) {
+        console.warn("Could not load logo image for PDF", e);
+        y += 10;
+      }
+
+      doc.setFontSize(22);
+      doc.setTextColor(33, 33, 33);
+      doc.setFont("helvetica", "bold");
+      doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+      y += 10;
+      
+      doc.setFontSize(14);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text("ORDEN DE PEDIDO", pageWidth / 2, y, { align: "center" });
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+      y += 5;
+      doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+      doc.setDrawColor(33, 33, 33);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Info Section
+      doc.setFontSize(11);
+      doc.setTextColor(33, 33, 33);
+
+      // Columna Izquierda: Datos del Cliente
+      doc.setFont("helvetica", "bold");
+      doc.text("DATOS DEL CLIENTE", margin, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Cliente: ${cliente ? `${cliente.nombres} ${cliente.apellidos}` : 'N/A'}`, margin, y);
+      y += 6;
+      doc.text(`C.C./NIT: ${cliente?.numeroDocumento || 'N/A'}`, margin, y);
+      y += 6;
+      doc.text(`Teléfono: ${cliente?.telefono || 'N/A'}`, margin, y);
+      y += 6;
+      doc.text(`Dirección: ${pedido.direccionEntrega || 'Regístrate'}`, margin, y);
+      y += 6;
+      doc.text(`${pedido.ciudadEntrega || ''}, ${pedido.departamentoEntrega || ''}`, margin, y);
+
+      // Columna Derecha: Datos del Pedido
+      let yDerecha = y - 31;
+      doc.setFont("helvetica", "bold");
+      doc.text("INFO PEDIDO", pageWidth - margin - 50, yDerecha);
+      yDerecha += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Número: #${pedido.id}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Fecha: ${pedido.fechaCreacion ? formatDateStr(pedido.fechaCreacion) : 'N/A'}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Estado: ${getStatusName(pedido.estadoId).toUpperCase()}`, pageWidth - margin - 50, yDerecha);
+      yDerecha += 6;
+      doc.text(`Método Pago: ${pedido.metodoPago || 'N/A'}`, pageWidth - margin - 50, yDerecha);
+
+      y = Math.max(y, yDerecha) + 15;
+
+      // Table Header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.text("Código", margin + 5, y + 7);
+      doc.text("Producto", margin + 30, y + 7);
+      doc.text("Cant", margin + 100, y + 7);
+      doc.text("Precio", margin + 120, y + 7);
+      doc.text("Subtotal", margin + 150, y + 7);
+
+      y += 10;
+      doc.setFont("helvetica", "normal");
+
+      // Table Content
+      if (pedido.detalleVenta_Pedido && pedido.detalleVenta_Pedido.length > 0) {
+        pedido.detalleVenta_Pedido.forEach((detalle: any) => {
+          if (y > 260) {
+            doc.addPage();
+            y = 20;
+          }
+          
+          const productoInfo = productos.find(p => p.id === detalle.productoId);
+          const nombreProducto = productoInfo?.nombreProducto || `Producto #${detalle.productoId}`;
+          
+          doc.text(String(detalle.productoId), margin + 5, y + 7);
+          doc.text(nombreProducto.substring(0, 45), margin + 30, y + 7);
+          doc.text(String(detalle.cantidad), margin + 100, y + 7);
+          doc.text(`$${detalle.precioUnitario.toLocaleString()}`, margin + 120, y + 7);
+          doc.text(`$${detalle.subtotal.toLocaleString()}`, margin + 150, y + 7);
+          y += 8;
+        });
+      }
+
+      y += 5;
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Totals
+      doc.setFont("helvetica", "bold");
+      doc.text("Subtotal:", margin + 120, y);
+      doc.text(`$${pedido.subtotal.toLocaleString()}`, margin + 150, y);
+      y += 7;
+      doc.text("Envío:", margin + 120, y);
+      doc.text(`$${pedido.envio.toLocaleString()}`, margin + 150, y);
+      y += 7;
+      doc.setFontSize(14);
+      doc.text("TOTAL:", margin + 120, y);
+      doc.text(`$${pedido.total.toLocaleString()}`, margin + 150, y);
+
+      y += 30;
+      // Signatures
+      if (y > 250) {
+        doc.addPage();
+        y = 40;
+      }
+      doc.setFontSize(10);
+      doc.line(margin, y, margin + 60, y);
+      doc.text("Firma del Cliente", margin, y + 5);
+
+      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+      doc.text("Autorizado por", pageWidth - margin - 60, y + 5);
+
+      y += 30;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generado el ${formatDateStr(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });
+      doc.text("Vaper One - Sistema de Gestión de Pedidos", pageWidth / 2, y + 4, { align: "center" });
+
+      doc.save(`Pedido_${pedido.id}.pdf`);
+      toast.success("PDF exportado exitosamente");
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      toast.error("Error al generar el PDF");
     }
-
-    yPosition = addTitle("DIRECCIÓN DE ENTREGA", yPosition);
-    yPosition = addWrappedText(`${pedido.direccionEntrega || 'No especificada'}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`${pedido.ciudadEntrega || ''}, ${pedido.departamentoEntrega || ''}`, leftMargin, yPosition, maxWidth);
-    yPosition += 5;
-
-    yPosition = addSeparator(yPosition);
-    yPosition = addWrappedText(`Subtotal: $${pedido.subtotal.toLocaleString()}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`Envío: $${pedido.envio.toLocaleString()}`, leftMargin, yPosition, maxWidth);
-    yPosition = addWrappedText(`TOTAL: $${pedido.total.toLocaleString()}`, leftMargin, yPosition, maxWidth, 12);
-
-    doc.save(`Pedido_${pedido.id}.pdf`);
-    toast.success("PDF exportado", {
-      description: `El pedido #${pedido.id} se ha descargado exitosamente.`,
-    });
   };
 
   const handleVerDetalles = (pedido: VentaPedidoDto) => {
