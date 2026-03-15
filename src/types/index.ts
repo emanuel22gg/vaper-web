@@ -209,6 +209,7 @@ export interface VentaAbonoDto {
   id: number;
   ventaPedidoId: number;
   monto: number;
+  saldoRestante: number;
   fecha: string;
   metodoPago: string;
   estado: boolean;
@@ -248,7 +249,7 @@ export interface DevolucionDto {
 export interface DetalleDevolucionDto {
   id?: number;
   devolucionId: number;
-  productoId: number;
+  detalleVentaPedidoId: number;
   cantidad: number;
   motivo?: string; // Por qué se devuelve el producto (defectuoso)
 }

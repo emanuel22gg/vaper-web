@@ -81,6 +81,11 @@ import {
   ChevronsUpDown,
   User,
   FileText,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  ArrowLeft
 } from "lucide-react";
 import { cn } from "./ui/utils";
 
@@ -802,19 +807,27 @@ export const Cotizaciones: React.FC = () => {
     setOpenSelectorCliente(false);
   };
 
-  // Función para obtener el badge del estado con el mismo estilo que Ventas
+  // Función para obtener el badge del estado con estilo SaaS minimalista
   const getEstadoBadge = (estado: string) => {
     const variants = {
-      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90', label: 'Aceptada' },
-      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700', label: 'Anulada' },
+      'aceptada': { 
+        className: 'bg-blue-50 text-blue-700 border-blue-100', 
+        icon: <CheckCircle className="h-3 w-3" />, 
+        label: 'Aceptada' 
+      },
+      'anulada': { 
+        className: 'bg-red-50 text-red-700 border-red-100', 
+        icon: <XCircle className="h-3 w-3" />, 
+        label: 'Anulada' 
+      },
     };
 
     const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
 
     return (
       <Badge
-        variant={config.variant}
-        className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
+        variant="outline"
+        className={cn("flex items-center gap-1.5 w-fit capitalize font-bold px-2.5 py-0.5 rounded-full border shadow-none", config.className)}
       >
         {config.icon}
         {config.label}
@@ -1054,7 +1067,7 @@ export const Cotizaciones: React.FC = () => {
                 id="search"
                 placeholder="Buscar por número o cliente..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -1173,93 +1186,161 @@ export const Cotizaciones: React.FC = () => {
 
       {/* Dialog de detalles */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] modal-scroll">
-          <DialogHeader>
-            <DialogTitle>Detalles de Cotización</DialogTitle>
-            <DialogDescription>
-              Información completa de la cotización {`COT-${String(selectedCotizacion?.id).padStart(3, '0')}`}
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles de Cotización</DialogTitle>
+                <DialogDescription className="text-sm text-gray-500 mt-1">
+                  Propuesta comercial enviada al cliente {`COT-${String(selectedCotizacion?.id).padStart(3, '0')}`}
+                </DialogDescription>
+              </div>
+              {selectedCotizacion && getEstadoBadge(selectedCotizacion.estado)}
+            </div>
           </DialogHeader>
 
           {selectedCotizacion && (
-            <ScrollArea className="max-h-[600px] pr-4">
-              <div className="space-y-6">
-                {/* Información general */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div><strong>Número:</strong> {`COT-${String(selectedCotizacion.id).padStart(3, '0')}`}</div>
-                    <div><strong>Fecha:</strong> {new Date(selectedCotizacion.fechaCotizacion).toLocaleDateString('es-CO')}</div>
-                    <div><strong>Cliente:</strong> {selectedCotizacion.cliente.nombre}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div><strong>Estado:</strong> {getEstadoBadge(selectedCotizacion.estado)}</div>
-                    {selectedCotizacion.motivoAnulacion && (
-                      <div><strong>Motivo Anulación:</strong> {selectedCotizacion.motivoAnulacion}</div>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Productos */}
-                <div>
-                  <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wider">Productos</h4>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Producto</TableHead>
-                          <TableHead>Cantidad</TableHead>
-                          <TableHead>Precio Unitario</TableHead>
-                          <TableHead>Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedCotizacion.productos.map((producto, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{producto.nombre}</TableCell>
-                            <TableCell>{producto.cantidad}</TableCell>
-                            <TableCell>${producto.precioUnitario.toLocaleString()}</TableCell>
-                            <TableCell>${producto.subtotal.toLocaleString()}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Resumen financiero */}
-                <div className="space-y-4">
-                  <div className="max-w-md ml-auto">
-                    <h4 className="border-b pb-2 mb-3 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Resumen de Pago</h4>
-                    <div className="space-y-2">
-                      {/* La línea de subtotal fue removida por diseño de Ventas */}
-                      {selectedCotizacion.descuento > 0 && (
-                        <div className="flex justify-between text-sm text-red-600">
-                          <span>Descuento:</span>
-                          <span>-${selectedCotizacion.descuento.toLocaleString()}</span>
+            <div className="p-8 space-y-10">
+              {/* Información General y Cliente */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información del Cliente</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-lg font-bold text-gray-900 leading-tight">{selectedCotizacion.cliente.nombre}</p>
+                      <p className="text-sm text-gray-500 mt-1 font-mono">Doc: {selectedCotizacion.cliente.documento}</p>
+                    </div>
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                          <Mail className="h-3.5 w-3.5" />
                         </div>
-                      )}
-                      <div className="flex justify-between font-bold text-lg pt-2 border-t text-black">
-                        <span>Total:</span>
-                        <span>${selectedCotizacion.total.toLocaleString()}</span>
+                        <p className="text-sm font-medium text-gray-600 truncate">{selectedCotizacion.cliente.email}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                          <Phone className="h-3.5 w-3.5" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-600">{selectedCotizacion.cliente.telefono}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Vigencia y Control</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                      <Calendar className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Fecha Emisión</Label>
+                        <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaCotizacion).toLocaleDateString('es-CO')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                      <Receipt className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Válida Hasta</Label>
+                        <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaVigencia).toLocaleDateString('es-CO')}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+
+              <Separator className="bg-gray-100" />
+
+              {/* Productos */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos Cotizados</h4>
+                  <Badge variant="secondary" className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100">
+                    {selectedCotizacion.productos.length} Items
+                  </Badge>
+                </div>
+                
+                <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-gray-50 sticky top-0">
+                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Cant</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Unitario</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {selectedCotizacion.productos.map((producto, index) => (
+                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-5">
+                            <p className="text-sm font-semibold text-gray-900">{producto.nombre}</p>
+                            <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase">{producto.codigo}</p>
+                          </td>
+                          <td className="px-6 py-5 text-center">
+                            <span className="inline-flex h-7 px-2 items-center justify-center bg-gray-100 text-gray-700 font-bold rounded-lg text-xs min-w-[32px]">
+                              {producto.cantidad}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-right text-sm text-gray-500 font-medium font-mono">
+                            ${producto.precioUnitario.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-5 text-right text-sm font-bold text-gray-900 font-mono">
+                            ${producto.subtotal.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Resumen Financiero */}
+              <div className="flex justify-end pt-4">
+                <div className="w-full md:w-72 space-y-4 pr-6">
+                  <div className="flex justify-between items-center text-sm font-medium text-gray-400">
+                    <span>Subtotal Bruto</span>
+                    <span className="font-mono">${selectedCotizacion.subtotal.toLocaleString()}</span>
+                  </div>
+                  {selectedCotizacion.descuento > 0 && (
+                    <div className="flex justify-between items-center text-sm font-medium text-red-500">
+                      <span>Descuento Aplicado</span>
+                      <span className="font-mono">-${selectedCotizacion.descuento.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="h-px bg-gray-100 w-full" />
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Importe Neto</span>
+                    <span className="text-3xl font-black text-gray-900 tracking-tighter leading-none">${selectedCotizacion.total.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedCotizacion.observaciones && (
+                <div className="p-4 bg-blue-50/30 rounded-xl border border-blue-100/30">
+                  <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Comentarios Adicionales</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed italic">"{selectedCotizacion.observaciones}"</p>
+                </div>
+              )}
+            </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="p-8 border-t border-gray-100 bg-white">
             <Button
               variant="outline"
               onClick={() => setIsDetailDialogOpen(false)}
+              className="h-11 px-8 font-medium text-gray-600 hover:bg-gray-50 border-gray-200 rounded-xl"
             >
-              Cerrar
+              Cerrar Detalle
             </Button>
+            {selectedCotizacion && (
+              <Button 
+                onClick={() => generarPDF(selectedCotizacion)}
+                className="h-11 px-8 bg-gray-900 text-white font-medium hover:bg-black transition-all rounded-xl shadow-md"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Descargar Documento
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1309,26 +1390,26 @@ export const Cotizaciones: React.FC = () => {
                 {/* Cliente - Buscador Directo */}
                 <div className="relative">
                   <Label htmlFor="cliente">Cliente (Buscar por nombre o documento)</Label>
-                  <Popover open={openSelectorCliente && clientSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorCliente}>
-                    <PopoverTrigger asChild>
-                      <div className="relative mt-1">
-                        <Input
-                          placeholder="Escribe el nombre o documento..."
-                          value={clientSearchTerm}
-                          onChange={(e) => {
-                            setClientSearchTerm(e.target.value);
-                            if (!openSelectorCliente) setOpenSelectorCliente(true);
-                            if (e.target.value === "") setFormData(prev => ({ ...prev, clienteId: "" }));
-                          }}
-                          className="bg-input-background pr-10"
-                        />
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
-                      </div>
-                    </PopoverTrigger>
+                    <Popover open={openSelectorCliente && clientSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorCliente}>
+                      <PopoverTrigger asChild>
+                        <div className="relative mt-1">
+                          <Input
+                            placeholder="Escribe el nombre o documento..."
+                            value={clientSearchTerm}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              setClientSearchTerm(e.target.value);
+                              if (!openSelectorCliente) setOpenSelectorCliente(true);
+                              if (e.target.value === "") setFormData(prev => ({ ...prev, clienteId: "" }));
+                            }}
+                            className="bg-input-background pr-10"
+                          />
+                          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
+                        </div>
+                      </PopoverTrigger>
                     <PopoverContent
                       className="w-[300px] p-0"
                       align="start"
-                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onOpenAutoFocus={(e: Event) => e.preventDefault()}
                     >
                       <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-2xl">
                         <div className="p-2 border-b bg-muted/30">
@@ -1390,14 +1471,14 @@ export const Cotizaciones: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="descuento" className="text-sm">Descuento (%)</Label>
                   <div className="relative">
-                    <Input
-                      id="descuento"
-                      type="text"
-                      inputMode="decimal"
-                      value={formData.descuentoPorcentaje === 0 ? '' : formData.descuentoPorcentaje.toString()}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(',', '.');
-                        if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
+                      <Input
+                        id="descuento"
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.descuentoPorcentaje === 0 ? '' : formData.descuentoPorcentaje.toString()}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const val = e.target.value.replace(',', '.');
+                          if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
                           setFormData(prev => ({ ...prev, descuentoPorcentaje: val === '' ? 0 : parseFloat(val) }));
                         }
                       }}
@@ -1423,7 +1504,7 @@ export const Cotizaciones: React.FC = () => {
                           <Input
                             placeholder="Escribe el nombre o código..."
                             value={productSearchTerm}
-                            onChange={(e) => {
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                               setProductSearchTerm(e.target.value);
                               if (!openSelectorProducto) setOpenSelectorProducto(true);
                               // No reseteamos el ID aquí para permitir escribir y luego seleccionar
@@ -1436,7 +1517,7 @@ export const Cotizaciones: React.FC = () => {
                       <PopoverContent
                         className="w-[300px] p-0"
                         align="start"
-                        onOpenAutoFocus={(e) => e.preventDefault()}
+                        onOpenAutoFocus={(e: Event) => e.preventDefault()}
                       >
                         <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-2xl">
                           <div className="p-2 border-b bg-muted/30 text-center">

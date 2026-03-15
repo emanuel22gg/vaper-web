@@ -172,6 +172,11 @@ export const getProductos = async (): Promise<Producto[]> => {
     return response.data;
 };
 
+export const getProductoById = async (id: number): Promise<Producto> => {
+    const response = await api.get(`/Productoes/${id}`);
+    return response.data;
+};
+
 export const createProducto = async (producto: ProductoDto): Promise<Producto> => {
     const response = await api.post('/Productoes', producto);
     return response.data;
@@ -286,6 +291,11 @@ export const deleteVentaPedido = async (id: number): Promise<void> => {
 };
 
 // Search Usuarios by Documento (for Clients)
+export const getUsuarioById = async (id: number): Promise<UsuarioDto> => {
+    const response = await api.get(`/Usuarios/${id}`);
+    return response.data;
+};
+
 export const getUsuarioByDocumento = async (documento: string): Promise<UsuarioDto | null> => {
     const response = await api.get('/Usuarios');
     const usuarios: UsuarioDto[] = response.data;
@@ -360,7 +370,12 @@ export const getAbonos = async (): Promise<VentaAbonoDto[]> => {
     return response.data;
 };
 
-export const createAbono = async (abono: Omit<VentaAbonoDto, 'id'> & { saldoRestante: number }): Promise<VentaAbonoDto> => {
+export const getAbonosByPedido = async (pedidoId: number): Promise<VentaAbonoDto[]> => {
+    const response = await api.get(`/Abonoes/pedido/${pedidoId}`);
+    return response.data;
+};
+
+export const createAbono = async (abono: Partial<VentaAbonoDto> & { ventaPedidoId: number, monto: number, saldoRestante: number, metodoPago: string }): Promise<VentaAbonoDto> => {
     // Map frontend fields to match AbonoDto in backend controller
     const payload = {
         ventaPedidoId: abono.ventaPedidoId,

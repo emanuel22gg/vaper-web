@@ -37,7 +37,7 @@ import {
     Calendar,
     ArrowLeft
 } from "lucide-react";
-import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados, updateVentaPedido } from "../../services/api";
+import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados, updateVentaPedido, updateProducto } from "../../services/api";
 import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, DetalleVentaPedidoDto } from "../../types";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
@@ -228,23 +228,61 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         setCarrito((prev) => {
             const existe = prev.find((item) => item.producto.id === producto.id);
             if (existe) {
+                if (existe.cantidad >= producto.stock) {
+                    toast.error(`Stock insuficiente. Solo hay ${producto.stock} unidades de ${producto.nombreProducto}.`);
+                    return prev;
+                }
+                toast.success(`Se sumó otra unidad de ${producto.nombreProducto}`);
                 return prev.map((item) =>
                     item.producto.id === producto.id
                         ? { ...item, cantidad: item.cantidad + 1 }
                         : item
                 );
             }
+            
+            if (producto.stock < 1) {
+                toast.error("Producto agotado.");
+                return prev;
+            }
+            
+            toast.success(`${producto.nombreProducto} agregado al pedido`);
             return [...prev, { producto, cantidad: 1 }];
         });
-        toast.success(`${producto.nombreProducto} agregado`);
     };
 
     const actualizarCantidad = (id: number, delta: number) => {
         setCarrito((prev) =>
             prev.map((item) => {
                 if (item.producto.id === id) {
-                    const nuevaCantidad = Math.max(1, item.cantidad + delta);
-                    return { ...item, cantidad: nuevaCantidad };
+                    const nuevaCantidad = item.cantidad + delta;
+                    if (nuevaCantidad > item.producto.stock) {
+                        toast.error(`Stock insuficiente. El límite es ${item.producto.stock}.`);
+                        return item;
+                    }
+                    return { ...item, cantidad: Math.max(1, nuevaCantidad) };
+                }
+                return item;
+            })
+        );
+    };
+
+    const setCantidadExacta = (id: number, rawValue: string) => {
+        setCarrito((prev) =>
+            prev.map((item) => {
+                if (item.producto.id === id) {
+                    if (rawValue === '') {
+                        // Permite dejar la caja vacía temporalmente mientras escribe
+                        return { ...item, cantidad: '' as any };
+                    }
+                    
+                    const val = parseInt(rawValue, 10);
+                    if (isNaN(val)) return item;
+                    
+                    if (val > item.producto.stock) {
+                        toast.error(`Stock insuficiente. El límite es ${item.producto.stock}.`);
+                        return { ...item, cantidad: item.producto.stock };
+                    }
+                    return { ...item, cantidad: val };
                 }
                 return item;
             })
@@ -319,6 +357,16 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                     subtotal: item.producto.precio * item.cantidad
                 };
                 await createDetalleVentaPedido(detalleData);
+
+                // Actualizar stock del producto (restar cantidad vendida/apartada)
+                try {
+                    await updateProducto(item.producto.id, {
+                        ...item.producto,
+                        stock: Math.max(0, item.producto.stock - item.cantidad),
+                    });
+                } catch (e) {
+                    console.error("Error al actualizar el stock del producto:", e);
+                }
             }
 
             toast.success("Pedido registrado con éxito", {
@@ -562,9 +610,21 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                                             <span>{item.producto.nombreProducto}</span>
                                                                         </p>
                                                                         <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-gray-200 shrink-0">
-                                                                            <button onClick={() => actualizarCantidad(item.producto.id, -1)} className="h-5 w-5 flex items-center justify-center hover:bg-white rounded transition-colors text-gray-600"><Minus className="h-2.5 w-2.5" /></button>
-                                                                            <span className="w-6 text-center text-[10.5px] font-black text-gray-900">{item.cantidad}</span>
-                                                                            <button onClick={() => actualizarCantidad(item.producto.id, 1)} className="h-5 w-5 flex items-center justify-center hover:bg-white rounded transition-colors text-gray-600"><Plus className="h-2.5 w-2.5" /></button>
+                                                                            <button onClick={() => actualizarCantidad(item.producto.id, -1)} className="h-6 w-6 flex items-center justify-center hover:bg-white rounded transition-colors text-gray-600"><Minus className="h-3 w-3" /></button>
+                                                                            <Input
+                                                                                className="w-10 h-6 text-center text-xs font-black text-gray-900 bg-transparent border-none p-0 focus-visible:ring-0 [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [appearance:textfield]"
+                                                                                type="number"
+                                                                                min="1"
+                                                                                max={item.producto.stock}
+                                                                                value={item.cantidad || ''}
+                                                                                onChange={(e) => setCantidadExacta(item.producto.id, e.target.value)}
+                                                                                onBlur={(e) => {
+                                                                                    if (e.target.value === '' || parseInt(e.target.value, 10) < 1) {
+                                                                                        setCantidadExacta(item.producto.id, "1");
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                            <button onClick={() => actualizarCantidad(item.producto.id, 1)} className="h-6 w-6 flex items-center justify-center hover:bg-white rounded transition-colors text-gray-600"><Plus className="h-3 w-3" /></button>
                                                                         </div>
                                                                     </div>
                                                                     <span className="text-[11px] font-black text-gray-900 tracking-tight">${(item.producto.precio * item.cantidad).toLocaleString()}</span>

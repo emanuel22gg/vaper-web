@@ -36,15 +36,10 @@ import {
 import { Separator } from './ui/separator';
 import { toast } from "sonner";
 import { VentaPedidoDto, VentaAbonoDto, UsuarioDto } from '../types';
-import { getAbonos, createAbono, updateAbono, updateVentaPedido, getUsuarios } from '../services/api';
+import { getAbonos, getAbonosByPedido, createAbono, updateAbono, updateVentaPedido, getUsuarioById } from '../services/api';
 
 // Adaptar el DTO para el componente local
-type AbonoIndividual = Omit<VentaAbonoDto, 'id' | 'fecha' | 'estado'> & {
-  id: string | number;
-  fecha: string;
-  estado: string;
-  saldoRestante: number;
-};
+type AbonoIndividual = VentaAbonoDto;
 
 interface AbonosIndividualesProps {
   pedido: VentaPedidoDto;
@@ -52,7 +47,7 @@ interface AbonosIndividualesProps {
 }
 
 export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, onBack }) => {
-  // Lista de abonos (actualmente mock)
+  // Lista de abonos reales
   const [abonosIndividuales, setAbonosIndividuales] = useState<AbonoIndividual[]>([]);
   const [loading, setLoading] = useState(true);
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
@@ -72,21 +67,26 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [allAbonos, allUsuarios] = await Promise.all([
-        getAbonos(),
-        getUsuarios()
-      ]);
-      setUsuarios(allUsuarios);
-      // Filtrar por este pedido y mapear al formato local
-      const filtered = allAbonos
-        .filter(a => a.ventaPedidoId === pedido.id)
-        .map(a => ({
-          ...a,
-          fecha: a.fecha ? new Date(a.fecha).toLocaleDateString() : 'N/A',
-          estado: a.estado ? 'Registrado' : 'Anulado'
-        })) as AbonoIndividual[];
+      
+      // Intentar obtener abonos filtrados por pedido (Optimizado)
+      let pedidoAbonos: any[] = [];
+      try {
+        pedidoAbonos = await getAbonosByPedido(pedido.id!);
+      } catch (error: any) {
+        // FALLBACK: Si el endpoint nuevo da 404 (no desplegado), traemos todo y filtramos local
+        if (error.response?.status === 404) {
+          console.warn("Endpoint optimizado de abonos no encontrado (404). Usando fallback local.");
+          const allAbonos = await getAbonos();
+          pedidoAbonos = allAbonos.filter((a: any) => a.ventaPedidoId === pedido.id);
+        } else {
+          throw error;
+        }
+      }
 
-      setAbonosIndividuales(filtered);
+      const clienteInfo = await getUsuarioById(pedido.usuarioId);
+      setUsuarios([clienteInfo]);
+      
+      setAbonosIndividuales(pedidoAbonos);
     } catch (error) {
       console.error("Error fetching abonos:", error);
       toast.error("Error al cargar el historial de abonos");
@@ -109,10 +109,8 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
 
   // Función para formatear como moneda COP (sin $)
   const formatCOPInput = (value: string) => {
-    // Eliminar todo lo que no sea número
     const rawValue = value.replace(/\D/g, "");
     if (!rawValue) return "";
-    // Formatear con puntos de miles
     return new Intl.NumberFormat("de-DE").format(parseInt(rawValue));
   };
 
@@ -121,9 +119,8 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
     return parseFloat(formattedValue.replace(/\./g, "")) || 0;
   };
 
-
   const totalAbonos = abonosIndividuales
-    .filter(abono => abono.estado === 'Registrado')
+    .filter(abono => abono.estado === true)
     .reduce((sum, abono) => sum + abono.monto, 0);
 
   const saldoPendiente = pedido.total - totalAbonos;
@@ -132,8 +129,6 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = abonosIndividuales.slice(startIndex, startIndex + itemsPerPage);
-
-
 
   const handleAddAbono = async () => {
     if (!newAbono.monto || !newAbono.metodoPago) {
@@ -156,19 +151,19 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
       const nuevoSaldo = saldoPendiente - montoAbono;
 
       await createAbono({
+        id: 0,
         ventaPedidoId: pedido.id!,
         monto: montoAbono,
         metodoPago: newAbono.metodoPago,
-        estado: true, // Ahora es Booleano
+        estado: true,
         saldoRestante: nuevoSaldo,
         fecha: new Date().toISOString()
       });
 
-      // Si el saldo llega a 0, actualizar estado del pedido a Entregado (ID: 1)
       if (nuevoSaldo === 0) {
         await updateVentaPedido(pedido.id!, {
           ...pedido,
-          estadoId: 1, // Entregado
+          estadoId: 1,
           fechaEntrega: new Date().toISOString()
         });
         toast.info("¡Pedido liquidado por completo! Estado actualizado a Entregado.");
@@ -189,27 +184,30 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
 
     try {
       setLoading(true);
+
+      const montoAnulado = abonoToAnular.monto;
+      const nuevoSaldoPedido = pedido.total - (totalAbonos - montoAnulado);
+
+      // CORRECCIÓN: Enviar datos limpios (estado false, fecha ISO)
       await updateAbono(Number(abonoToAnular.id), {
         ...abonoToAnular,
-        id: Number(abonoToAnular.id),
         estado: false // Anulado
-      } as any);
+      });
 
-      // Si el pedido estaba entregado y anulamos el abono que lo liquidó, 
-      // opcionalmente podríamos volver el pedido a "En Abonos" (ID 6).
-      // Pero por ahora simplemente actualizamos la lista.
-      if (pedido.estadoId === 1) {
+      if (pedido.estadoId === 1 && nuevoSaldoPedido > 0) {
         await updateVentaPedido(pedido.id!, {
           ...pedido,
-          estadoId: 6 // Volver a En Abonos
+          estadoId: 6
         });
-        toast.info("El pedido ha vuelto al estado 'En Abonos' debido a la anulación.");
+        toast.info("El pedido ha vuelto al estado 'En Abonos' debido a la anulación del pago.");
       }
 
       await fetchData();
       setIsAnularDialogOpen(false);
       setAbonoToAnular(null);
-      toast.success("Abono anulado correctamente");
+      toast.success("Abono anulado correctamente", {
+        description: `El saldo pendiente de la cuenta subió a $${nuevoSaldoPedido.toLocaleString()}`
+      });
     } catch (error) {
       console.error("Error anular abono:", error);
       toast.error("No se pudo anular el abono");
@@ -344,7 +342,6 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                       <SelectContent>
                         <SelectItem value="Efectivo">Efectivo</SelectItem>
                         <SelectItem value="Transferencia">Transferencia</SelectItem>
-                        <SelectItem value="Tarjeta">Tarjeta</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -396,12 +393,12 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                   currentItems.map((abono) => (
                     <TableRow key={abono.id}>
                       <TableCell className="font-mono text-xs">{abono.id}</TableCell>
-                      <TableCell>{abono.fecha}</TableCell>
+                      <TableCell>{new Date(abono.fecha).toLocaleDateString()}</TableCell>
                       <TableCell className="font-bold">${abono.monto.toLocaleString()}</TableCell>
                       <TableCell>{abono.metodoPago}</TableCell>
                       <TableCell>
-                        <Badge className={abono.estado === 'Registrado' ? 'bg-green-500' : 'bg-red-500'}>
-                          {abono.estado}
+                        <Badge className={(abono.estado === true || (abono.estado as any) === 'Registrado') ? 'bg-green-500' : 'bg-red-500'}>
+                          {abono.estado === true ? 'Registrado' : 'Anulado'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -421,7 +418,7 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                             variant="outline"
                             size="sm"
                             onClick={() => handleExportarPDF(abono)}
-                            disabled={abono.estado !== 'Registrado'}
+                            disabled={abono.estado !== true}
                             title="Descargar comprobante"
                           >
                             <Download className="h-4 w-4" />
@@ -434,7 +431,7 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                               setAbonoToAnular(abono);
                               setIsAnularDialogOpen(true);
                             }}
-                            disabled={abono.estado !== 'Registrado'}
+                            disabled={abono.estado !== true}
                             title="Anular abono"
                           >
                             <XCircle className="h-4 w-4" />
@@ -471,7 +468,7 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground font-medium">Fecha de Registro</p>
-                  <p className="font-bold">{selectedAbono.fecha}</p>
+                  <p className="font-bold">{new Date(selectedAbono.fecha).toLocaleDateString()}</p>
                 </div>
                 <div className="space-y-1 col-span-2 border-t pt-2 mt-2">
                   <p className="text-muted-foreground font-medium">Cliente</p>
@@ -492,8 +489,8 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                 </div>
                 <div className="space-y-1 border-t pt-2">
                   <p className="text-muted-foreground font-medium">Estado</p>
-                  <Badge className={selectedAbono.estado === 'Registrado' ? 'bg-green-500' : 'bg-red-500'}>
-                    {selectedAbono.estado}
+                  <Badge className={selectedAbono.estado === true ? 'bg-green-500' : 'bg-red-500'}>
+                    {selectedAbono.estado === true ? 'Registrado' : 'Anulado'}
                   </Badge>
                 </div>
               </div>

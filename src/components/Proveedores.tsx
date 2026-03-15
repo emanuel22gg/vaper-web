@@ -915,11 +915,10 @@ export const Proveedores: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className={`${
-                            hasPurchases(proveedor.id)
+                          className={`${hasPurchases(proveedor.id)
                               ? "opacity-50 cursor-not-allowed"
                               : "text-red-600 hover:text-red-700 hover:bg-red-50"
-                          }`}
+                            }`}
                           title={
                             hasPurchases(proveedor.id)
                               ? "No se puede eliminar un proveedor con compras asociadas"
@@ -975,370 +974,172 @@ export const Proveedores: React.FC = () => {
       </AlertDialog>
 
       {/* Diálogo Ver Detalles */}
-      <Dialog
-        open={isViewDialogOpen}
-        onOpenChange={setIsViewDialogOpen}
-      >
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto modal-scroll">
-          <DialogHeader>
-            <DialogTitle>Detalles del Proveedor</DialogTitle>
-            <DialogDescription>
-              Información completa del proveedor
-            </DialogDescription>
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles del Proveedor</DialogTitle>
+                <DialogDescription className="text-sm text-gray-500 mt-1">
+                  Perfil administrativo e información comercial detallada.
+                </DialogDescription>
+              </div>
+              {selectedProveedor && (
+                <Badge 
+                  variant={selectedProveedor.estado ? "default" : "secondary"}
+                  className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                    selectedProveedor.estado 
+                    ? "bg-green-50 text-green-700 border-green-100" 
+                    : "bg-gray-50 text-gray-600 border-gray-100"
+                  }`}
+                >
+                  {selectedProveedor.estado ? "Proveedor Activo" : "Proveedor Inactivo"}
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedProveedor && (
-            <div className="space-y-6">
-              {/* Información Principal */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  {getTipoIcon(selectedProveedor.tipoPersona)}
-                  <div>
-                    <h3 className="font-semibold text-lg">
-                      {getNombreProveedor(selectedProveedor)}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedProveedor.codigo} •{" "}
-                      {getDocumentoProveedor(selectedProveedor)}
-                    </p>
-                  </div>
-                  <div className="ml-auto">
-                    <Badge
-                      variant={
-                        selectedProveedor.estado
-                          ? "default"
-                          : "secondary"
-                      }
-                      className={`${selectedProveedor.estado ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
-                    >
-                      {getStatusIcon(selectedProveedor.estado)}
-                      <span className="ml-1">
-                        {selectedProveedor.estado ? "Activo" : "Inactivo"}
-                      </span>
-                    </Badge>
-                  </div>
+            <div className="p-8 space-y-10">
+              {/* Cabecera de Identidad */}
+              <div className="flex items-center gap-6">
+                <div className="h-16 w-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                  {selectedProveedor.tipoPersona === "natural" ? <User className="h-8 w-8" /> : <Building2 className="h-8 w-8" />}
                 </div>
-
-                {/* Datos específicos del tipo */}
-                {selectedProveedor.tipoPersona === "natural" ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Nombres
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.nombres ||
-                          "No especificado"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Apellidos
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.apellidos ||
-                          "No especificado"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Documento de identidad
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.cedula ||
-                          "No especificado"}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Razón Social
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.razonSocial ||
-                          "No especificada"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        NIT
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.nit ||
-                          "No especificado"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Representante Legal
-                      </Label>
-                      <p className="text-sm">
-                        {selectedProveedor.representanteLegal ||
-                          "No especificado"}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {getNombreProveedor(selectedProveedor)}
+                  </h3>
+                  <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                    <span className="font-mono text-gray-400">CÓD: {selectedProveedor.codigo}</span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-gray-600 font-medium">
+                      {selectedProveedor.tipoPersona === "natural" ? "Persona Natural" : "Empresa / Entidad"}
+                    </span>
+                  </p>
+                </div>
               </div>
 
-              <Separator />
+              {/* Información de Identificación */}
+              <div className="space-y-6">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Identificación y Registro</h4>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  {selectedProveedor.tipoPersona === "natural" ? (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Nombres y Apellidos</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedProveedor.nombres} {selectedProveedor.apellidos}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Cédula de Ciudadanía</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedProveedor.cedula || 'N/A'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Razón Social</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedProveedor.razonSocial}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">NIT</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedProveedor.nit}</p>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-gray-500">Representante Legal</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedProveedor.representanteLegal || 'N/A'}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
 
-              {/* Información de Contacto */}
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Información de Contacto
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Email
-                    </Label>
-                    <p className="text-sm">
-                      {selectedProveedor.email}
-                    </p>
+              <Separator className="bg-gray-100" />
+
+              {/* Contacto */}
+              <div className="space-y-6">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información de Contacto</h4>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Correo Electrónico</Label>
+                    <p className="text-sm font-medium text-gray-900 truncate">{selectedProveedor.email}</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Teléfono
-                    </Label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Phone className="h-3 w-3 text-gray-400" />
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Teléfono Principal</Label>
+                    <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-gray-400" />
                       {selectedProveedor.telefono}
                     </p>
                   </div>
-                  {selectedProveedor.celular && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">
-                        Celular
-                      </Label>
-                      <p className="text-sm flex items-center gap-2">
-                        <Phone className="h-3 w-3 text-gray-400" />
-                        {selectedProveedor.celular}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Dirección
-                    </Label>
-                    <p className="text-sm flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-gray-400" />
-                      {selectedProveedor.direccion}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Ciudad
-                    </Label>
-                    <p className="text-sm">
-                      {selectedProveedor.ciudad}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      País
-                    </Label>
-                    <p className="text-sm">
-                      {selectedProveedor.pais}
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs font-medium text-gray-500">Ubicación y Dirección</Label>
+                    <p className="text-sm font-medium text-gray-900 flex items-start gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5" />
+                      <span>{selectedProveedor.direccion}, {selectedProveedor.ciudad} ({selectedProveedor.pais})</span>
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="bg-gray-100" />
 
               {/* Información Comercial */}
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Información Comercial
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Productos
-                    </Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedProveedor.productos?.map(
-                        (producto, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {producto}
-                          </Badge>
-                        ),
-                      )}
+              <div className="space-y-6">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información Comercial y Bancaria</h4>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Categoría de Productos</Label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {selectedProveedor.productos?.map((p, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] font-bold text-gray-500 border-gray-200">
+                          {p}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Total Compras
-                    </Label>
-                    <p className="text-sm font-semibold text-green-700">
-                      $
-                      {(selectedProveedor.totalCompras || 0).toLocaleString(
-                        "es-CO",
-                      )}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Volumen de Compras</Label>
+                    <p className="text-lg font-black text-gray-900">
+                      ${(selectedProveedor.totalCompras || 0).toLocaleString("es-CO")}
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Fecha Registro
-                    </Label>
-                    <p className="text-sm">
-                      {formatDate(
-                        selectedProveedor.fechaRegistro,
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Última Compra
-                    </Label>
-                    <p className="text-sm">
-                      {selectedProveedor.ultimaCompra
-                        ? formatDate(
-                          selectedProveedor.ultimaCompra,
-                        )
-                        : "Sin compras"}
-                    </p>
-                  </div>
+                  {(selectedProveedor.banco || selectedProveedor.numeroCuenta) && (
+                    <div className="col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-bold text-gray-400 uppercase">Banco / Entidad</Label>
+                          <p className="text-sm font-semibold text-gray-800">{selectedProveedor.banco || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-bold text-gray-400 uppercase">Cuenta</Label>
+                          <p className="text-sm font-mono font-bold text-gray-800">{selectedProveedor.numeroCuenta || 'N/A'}</p>
+                          <p className="text-[10px] text-gray-500 uppercase">{selectedProveedor.tipoCuenta || 'Ahorros'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Información Bancaria */}
-              {(selectedProveedor.banco ||
-                selectedProveedor.numeroCuenta) && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Información Bancaria
-                      </h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        {selectedProveedor.banco && (
-                          <div>
-                            <Label className="text-sm font-medium text-gray-600">
-                              Banco
-                            </Label>
-                            <p className="text-sm">
-                              {selectedProveedor.banco}
-                            </p>
-                          </div>
-                        )}
-                        {selectedProveedor.numeroCuenta && (
-                          <div>
-                            <Label className="text-sm font-medium text-gray-600">
-                              Número de Cuenta
-                            </Label>
-                            <p className="text-sm">
-                              {selectedProveedor.numeroCuenta}
-                            </p>
-                          </div>
-                        )}
-                        {selectedProveedor.tipoCuenta && (
-                          <div>
-                            <Label className="text-sm font-medium text-gray-600">
-                              Tipo de Cuenta
-                            </Label>
-                            <p className="text-sm">
-                              {selectedProveedor.tipoCuenta}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-              {/* Contacto Adicional */}
-              {selectedProveedor.contactoAdicional && (
-                <>
-                  <Separator />
-                  <div className="space-y-4">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <UserCheck className="h-4 w-4" />
-                      Contacto Adicional
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">
-                          Nombre
-                        </Label>
-                        <p className="text-sm">
-                          {
-                            selectedProveedor.contactoAdicional
-                              .nombre
-                          }
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">
-                          Cargo
-                        </Label>
-                        <p className="text-sm">
-                          {
-                            selectedProveedor.contactoAdicional
-                              .cargo
-                          }
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">
-                          Teléfono
-                        </Label>
-                        <p className="text-sm">
-                          {
-                            selectedProveedor.contactoAdicional
-                              .telefono
-                          }
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">
-                          Email
-                        </Label>
-                        <p className="text-sm">
-                          {
-                            selectedProveedor.contactoAdicional
-                              .email
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
 
               {/* Observaciones */}
               {selectedProveedor.observaciones && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-600">
-                      Observaciones
-                    </Label>
-                    <p className="text-sm p-3 bg-gray-50 rounded-lg">
-                      {selectedProveedor.observaciones}
-                    </p>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-gray-500">Observaciones Internas</Label>
+                  <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed border border-gray-100">
+                    {selectedProveedor.observaciones}
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              variant="outline"
+          <DialogFooter className="p-8 border-t border-gray-100 bg-white">
+            <Button 
+              variant="outline" 
               onClick={() => setIsViewDialogOpen(false)}
+              className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200 w-full"
             >
-              Cerrar
+              Cerrar Detalle
             </Button>
           </DialogFooter>
         </DialogContent>

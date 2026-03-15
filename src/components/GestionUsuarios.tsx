@@ -39,8 +39,12 @@ import {
   Plus,
   MoreHorizontal,
   UserPlus,
-  Info
+  Info,
+  MapPin,
+  Phone,
+  User as UserIcon
 } from 'lucide-react';
+import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 export const GestionUsuarios: React.FC = () => {
@@ -1002,125 +1006,125 @@ export const GestionUsuarios: React.FC = () => {
 
       {/* Dialog para ver detalle del usuario */}
       <Dialog open={isUserDetailDialogOpen} onOpenChange={setIsUserDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Detalle del Usuario</DialogTitle>
-            <DialogDescription>
-              Información completa del usuario seleccionado
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalle del Usuario</DialogTitle>
+                <DialogDescription className="text-sm text-gray-500 mt-1">
+                  Información de perfil y privilegios de acceso al sistema.
+                </DialogDescription>
+              </div>
+              {selectedUser && (
+                <Badge 
+                  variant={selectedUser.isActive ? "default" : "secondary"}
+                  className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                    selectedUser.isActive 
+                    ? "bg-blue-50 text-blue-700 border-blue-100" 
+                    : "bg-gray-50 text-gray-600 border-gray-100"
+                  }`}
+                >
+                  {selectedUser.isActive ? "Usuario Activo" : "Usuario Desactivado"}
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedUser && (
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-500">Tipo de Documento</Label>
-                    <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                      {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
-                        selectedUser.tipoDocumento === 'C.C' ? 'Cédula de Ciudadanía (C.C)' :
-                          'C.C (Por defecto)'}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-500">Número de Documento</Label>
-                    <div className="p-2 bg-gray-100 rounded text-sm text-gray-700 font-mono">
-                      {selectedUser.numeroDocumento || selectedUser.username}
-                    </div>
-                  </div>
+            <div className="p-8 space-y-10">
+              {/* Perfil Principal */}
+              <div className="flex items-center gap-6">
+                <div className="h-20 w-20 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                  <UserIcon className="h-10 w-10 text-gray-300" />
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-500">Nombre</Label>
-                    <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                      {selectedUser.firstName}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-500">Apellido</Label>
-                    <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                      {selectedUser.lastName}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Fecha de Nacimiento</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.fechaNacimiento ? new Date(selectedUser.fechaNacimiento).toLocaleDateString() : 'No registrada'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Email</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.email}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.telefono || 'No registrado'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Ciudad</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.ciudad || 'No registrada'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Dirección</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.direccion || 'No registrada'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Barrio</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    {selectedUser.barrio || 'No registrado'}
-                  </div>
-                </div>
-
-
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Rol</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    <div className="flex items-center space-x-2">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {selectedUser.firstName} {selectedUser.lastName}
+                  </h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md text-[11px] font-bold text-gray-600 uppercase tracking-tight">
                       {getRoleIcon(selectedUser.role.name)}
-                      <span>{selectedUser.role.name}</span>
+                      {selectedUser.role.name}
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-500">Estado</Label>
-                  <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                    <Badge variant={selectedUser.isActive ? "default" : "secondary"}>
-                      {selectedUser.isActive ? 'Activo' : 'Inactivo'}
-                    </Badge>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-sm font-mono text-gray-400">
+                      ID: {selectedUser.numeroDocumento || selectedUser.username}
+                    </span>
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+
+              {/* Información Personal */}
+              <div className="space-y-6">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información Personal e Identidad</h4>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Tipo de Documento</Label>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
+                        selectedUser.tipoDocumento === 'C.C' ? 'Cédula de Ciudadanía (C.C)' : 'Cédula de Ciudadanía'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Fecha de Nacimiento</Label>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedUser.fechaNacimiento ? new Date(selectedUser.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Correo Electrónico</Label>
+                    <p className="text-sm font-medium text-gray-900 truncate">{selectedUser.email}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Teléfono</Label>
+                    <p className="text-sm font-medium text-gray-900">{selectedUser.telefono || 'No registrado'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="bg-gray-100" />
+
+              {/* Ubicación */}
+              <div className="space-y-6">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ubicación y Domicilio</h4>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Ciudad</Label>
+                    <p className="text-sm font-medium text-gray-900">{selectedUser.ciudad || 'No registrada'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500">Barrio</Label>
+                    <p className="text-sm font-medium text-gray-900">{selectedUser.barrio || 'No registrado'}</p>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs font-medium text-gray-500">Dirección</Label>
+                    <p className="text-sm font-medium text-gray-900 flex items-start gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5" />
+                      {selectedUser.direccion || 'No registrada'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUserDetailDialogOpen(false)}>
+          <DialogFooter className="p-8 border-t border-gray-100 bg-white gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsUserDetailDialogOpen(false)}
+              className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+            >
               Cerrar
             </Button>
             {selectedUser && (
-              <Button onClick={() => {
-                setIsUserDetailDialogOpen(false);
-                handleEditUser(selectedUser);
-              }}>
-                Editar Usuario
+              <Button 
+                onClick={() => {
+                  setIsUserDetailDialogOpen(false);
+                  handleEditUser(selectedUser);
+                }}
+                className="h-10 px-6 bg-gray-900 text-white font-medium hover:bg-black transition-all flex-1 sm:flex-none"
+              >
+                Editar Información
               </Button>
             )}
           </DialogFooter>
