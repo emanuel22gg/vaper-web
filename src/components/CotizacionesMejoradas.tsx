@@ -87,8 +87,10 @@ import {
   Calendar,
   ArrowLeft
 } from "lucide-react";
-import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
+import logoImage from "@/assets/da58514cc4a62145203981edd12b890ba8690130.png";
 import { cn } from "./ui/utils";
+import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion } from "../services/api";
+import { CotizacionDto, DetalleCotizacionDto } from "../types";
 
 // Interfaces para tipado
 interface Cliente {
@@ -189,11 +191,6 @@ interface Cotizacion {
 }
 
 
-import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion } from "../services/api";
-import { CotizacionDto, DetalleCotizacionDto } from "../types";
-
-// ... (interfaces se mantienen igual)
-
 export const Cotizaciones: React.FC = () => {
   // Estados para API
   const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
@@ -236,8 +233,8 @@ export const Cotizaciones: React.FC = () => {
         }));
         setProductosDisponibles(mappedProductos);
 
-        // Mapear cotizaciones desde la API al formato local y ordenar por ID ascendente para que se agreguen hacia abajo
-        const mappedCotizaciones: Cotizacion[] = cotizacionesData.map(c => {
+        // Mapear cotizaciones desde la API al formato local y ordenar por ID ascendente
+        const mappedCotizaciones: Cotizacion[] = (cotizacionesData as CotizacionDto[]).map((c: CotizacionDto) => {
           // Intentar encontrar el usuario para tener datos completos si es posible
           const usuario = usuariosData.find(u => `${u.nombres} ${u.apellidos}` === c.nombreUsuario);
           
@@ -259,9 +256,9 @@ export const Cotizaciones: React.FC = () => {
             descuento: Number(c.descuento || 0),
             impuestos: 0,
             total: Number(c.total || 0),
-            estado: c.estadoId === 3 ? "anulada" : "aceptada",
+            estado: (c.estadoId === 3 ? "anulada" : "aceptada") as "anulada" | "aceptada",
             condicionesPago: {
-              tipoPago: "contado",
+              tipoPago: "contado" as "contado" | "credito",
               metodoPago: ["Efectivo"],
               observaciones: ""
             },
@@ -840,6 +837,37 @@ export const Cotizaciones: React.FC = () => {
   // Función para generar y descargar PDF
   const generarPDF = async (cotizacion: Cotizacion) => {
     try {
+      let cotizacionParaPDF = { ...cotizacion };
+
+      // Si no tiene productos cargados, los buscamos en la API
+      if (cotizacion.productos.length === 0) {
+        try {
+          const detalles = await getDetallesByCotizacion(cotizacion.id);
+          const productosMapeados: ProductoCotizacion[] = detalles.map(d => {
+            const prodInfo = productosDisponibles.find(p => p.id === d.productoId);
+            return {
+              id: d.productoId,
+              codigo: prodInfo?.codigo || "N/A",
+              nombre: d.nombreProducto || prodInfo?.nombre || "Producto",
+              descripcion: prodInfo?.descripcion || "",
+              precioUnitario: Number(d.precioUnitario),
+              cantidad: d.cantidad,
+              subtotal: Number(d.subtotal || 0),
+              categoria: prodInfo?.categoria || "General",
+              disponible: true
+            };
+          });
+          
+          cotizacionParaPDF = { ...cotizacion, productos: productosMapeados };
+          
+          // Actualizar también en la lista principal para no volver a cargar
+          setCotizaciones(prev => prev.map(c => c.id === cotizacion.id ? cotizacionParaPDF : c));
+        } catch (error) {
+          console.error("Error al cargar detalles para PDF:", error);
+          toast.error("No se pudieron cargar los detalles para el PDF");
+        }
+      }
+
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -893,13 +921,13 @@ export const Cotizaciones: React.FC = () => {
       doc.text("DATOS DEL CLIENTE", margin, y);
       y += 7;
       doc.setFont("helvetica", "normal");
-      doc.text(`Cliente: ${cotizacion.cliente.nombre}`, margin, y);
+      doc.text(`Cliente: ${cotizacionParaPDF.cliente.nombre}`, margin, y);
       y += 6;
-      doc.text(`C.C./NIT: ${cotizacion.cliente.documento}`, margin, y);
+      doc.text(`C.C./NIT: ${cotizacionParaPDF.cliente.documento}`, margin, y);
       y += 6;
-      doc.text(`Teléfono: ${cotizacion.cliente.telefono}`, margin, y);
+      doc.text(`Teléfono: ${cotizacionParaPDF.cliente.telefono}`, margin, y);
       y += 6;
-      doc.text(`Email: ${cotizacion.cliente.email}`, margin, y);
+      doc.text(`Email: ${cotizacionParaPDF.cliente.email}`, margin, y);
 
       // Columna Derecha: Datos de la Cotización
       let yDerecha = y - 25;
@@ -907,13 +935,13 @@ export const Cotizaciones: React.FC = () => {
       doc.text("INFO COTIZACIÓN", pageWidth - margin - 50, yDerecha);
       yDerecha += 7;
       doc.setFont("helvetica", "normal");
-      doc.text(`Número: COT-${String(cotizacion.id).padStart(3, '0')}`, pageWidth - margin - 50, yDerecha);
+      doc.text(`Número: COT-${String(cotizacionParaPDF.id).padStart(3, '0')}`, pageWidth - margin - 50, yDerecha);
       yDerecha += 6;
-      doc.text(`Fecha: ${formatDate(cotizacion.fechaCotizacion)}`, pageWidth - margin - 50, yDerecha);
+      doc.text(`Fecha: ${formatDate(cotizacionParaPDF.fechaCotizacion)}`, pageWidth - margin - 50, yDerecha);
       yDerecha += 6;
-      doc.text(`Vencimiento: ${formatDate(cotizacion.fechaVigencia)}`, pageWidth - margin - 50, yDerecha);
+      doc.text(`Vencimiento: ${formatDate(cotizacionParaPDF.fechaVigencia)}`, pageWidth - margin - 50, yDerecha);
       yDerecha += 6;
-      doc.text(`Estado: ${cotizacion.estado.toUpperCase()}`, pageWidth - margin - 50, yDerecha);
+      doc.text(`Estado: ${cotizacionParaPDF.estado.toUpperCase()}`, pageWidth - margin - 50, yDerecha);
 
       y = Math.max(y, yDerecha) + 15;
 
@@ -930,7 +958,7 @@ export const Cotizaciones: React.FC = () => {
       doc.setFont("helvetica", "normal");
 
       // Table Content
-      cotizacion.productos.forEach((item) => {
+      cotizacionParaPDF.productos.forEach((item) => {
         if (y > 260) {
           doc.addPage();
           y = 20;
@@ -948,17 +976,17 @@ export const Cotizaciones: React.FC = () => {
 
       // Totals
       doc.setFont("helvetica", "bold");
-      if (cotizacion.descuento > 0) {
+      if (cotizacionParaPDF.descuento > 0) {
         doc.text("Subtotal:", margin + 120, y);
-        doc.text(`$${cotizacion.subtotal.toLocaleString()}`, margin + 150, y);
+        doc.text(`$${cotizacionParaPDF.subtotal.toLocaleString()}`, margin + 150, y);
         y += 7;
         doc.text("Descuento:", margin + 120, y);
-        doc.text(`-$${cotizacion.descuento.toLocaleString()}`, margin + 150, y);
+        doc.text(`-$${cotizacionParaPDF.descuento.toLocaleString()}`, margin + 150, y);
         y += 7;
       }
       doc.setFontSize(14);
       doc.text("TOTAL:", margin + 120, y);
-      doc.text(`$${cotizacion.total.toLocaleString()}`, margin + 150, y);
+      doc.text(`$${cotizacionParaPDF.total.toLocaleString()}`, margin + 150, y);
 
       y += 30;
       // Signatures
@@ -976,10 +1004,10 @@ export const Cotizaciones: React.FC = () => {
       y += 30;
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Generado el ${formatDate(new Date())} por ${cotizacion.creadoPor}`, pageWidth / 2, y, { align: "center" });
+      doc.text(`Generado el ${formatDate(new Date())} por ${cotizacionParaPDF.creadoPor}`, pageWidth / 2, y, { align: "center" });
       doc.text("Vaper One - Sistema de Gestión de Ventas", pageWidth / 2, y + 4, { align: "center" });
 
-      const nombreArchivo = `Cotizacion_${String(cotizacion.id).padStart(3, '0')}_${cotizacion.cliente.nombre.replace(/\s+/g, '_')}.pdf`;
+      const nombreArchivo = `Cotizacion_${String(cotizacionParaPDF.id).padStart(3, '0')}_${cotizacionParaPDF.cliente.nombre.replace(/\s+/g, '_')}.pdf`;
       doc.save(nombreArchivo);
       toast.success("PDF generado exitosamente");
     } catch (error) {
