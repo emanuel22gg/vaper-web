@@ -62,7 +62,7 @@ export const GestionUsuarios: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all'); // Nuevo filtro de estado
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(10); // Usuarios por página
+  const [usersPerPage] = useState(5); // Usuarios por página
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isUserDetailDialogOpen, setIsUserDetailDialogOpen] = useState(false);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
