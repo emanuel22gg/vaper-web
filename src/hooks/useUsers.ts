@@ -106,6 +106,11 @@ export const useUsers = () => {
         isLoading,
         fetchUsers: () => loadData(false),
         updateUser: async (updatedUser: User) => {
+            // Seguridad: No permitir activar usuario con rol inactivo
+            if (updatedUser.isActive && !updatedUser.role.isActive) {
+                throw new Error(`No se puede activar al usuario porque su rol "${updatedUser.role.name}" está desactivado.`);
+            }
+
             setIsLoading(true);
             try {
                 await apiService.updateUsuario(parseInt(updatedUser.id), {

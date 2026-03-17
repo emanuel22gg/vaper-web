@@ -107,26 +107,18 @@ export function SideMenu({
         minWidth: isOpen ? '200px' : '35px',
         maxWidth: isOpen ? '200px' : '35px'
       }}
-      className="bg-white border-r border-gray-200 transition-[width] duration-300 ease-in-out flex flex-col h-full z-40 flex-none overflow-hidden"
+      className="sticky top-0 bg-white border-r border-gray-200 transition-[width] duration-300 ease-in-out flex flex-col h-screen z-40 flex-none overflow-hidden"
     >
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-3 min-w-0 max-w-full">
-        {isAuthenticated && user && (
-          <div className={`transition-all duration-300 ${isOpen ? 'bg-gray-50 rounded-lg p-1' : 'flex justify-center'}`}>
-            <div className={`flex items-center gap-1 ${!isOpen && 'justify-center'}`}>
-              <div className="w-6 h-6 min-w-[24px] bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-              </div>
-              {isOpen && (
-                <div className="overflow-hidden whitespace-nowrap">
-                  <div className="text-[11px] font-medium truncate leading-tight">{user.firstName}</div>
-                  <div className="text-[9px] text-gray-500 flex items-center gap-0.5 leading-tight">
-                    <span>{getRoleIcon()}</span>
-                    {user.role.name}
-                  </div>
-                </div>
-              )}
+        {showAdminMenu && isOpen && (
+          <>
+            <div className="px-3 py-4 transition-all duration-300">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                Panel Administrativo
+              </span>
             </div>
-          </div>
+            <Separator className="my-1" />
+          </>
         )}
 
         {/* Navigation Menu */}

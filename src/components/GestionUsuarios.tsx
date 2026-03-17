@@ -168,6 +168,13 @@ export const GestionUsuarios: React.FC = () => {
         });
         return;
       }
+      // Restricción: No se puede crear más de un Super Administrador
+      if (newUser.role === 'Super Administrador') {
+        toast.error("Error al crear usuario", {
+          description: "No se puede crear otro Super Administrador. Solo se permite uno en el sistema.",
+        });
+        return;
+      }
 
       // Validar duplicados (correo y documento)
       const duplicateEmail = users.find(u => u.email.toLowerCase() === newUser.email.toLowerCase());
@@ -318,6 +325,17 @@ export const GestionUsuarios: React.FC = () => {
           return;
         }
 
+        // Restricción: No se puede activar un usuario si su rol está desactivado
+        const isActivating = editUserData.isActive && !editingUser.isActive;
+        const isStayingActive = editUserData.isActive && editingUser.isActive;
+        
+        if ((isActivating || isStayingActive) && !roleObj.isActive) {
+          toast.error("Acción no permitida", {
+            description: `No se puede mantener activo al usuario porque el rol "${roleObj.name}" está desactivado.`,
+          });
+          return;
+        }
+
         const updatedUser: User = {
           ...editingUser,
           username: editUserData.documento,
@@ -396,6 +414,15 @@ export const GestionUsuarios: React.FC = () => {
     if (user.role.name === 'Super Administrador') {
       toast.error("Acción no permitida", {
         description: "No se puede desactivar a un usuario con el rol de Super Administrador.",
+      });
+      return;
+    }
+
+    // Restricción: No se puede activar un usuario si su rol está desactivado
+    const isActivating = !user.isActive;
+    if (isActivating && !user.role.isActive) {
+      toast.error("Acción no permitida", {
+        description: `No se puede activar al usuario porque el rol "${user.role.name}" está desactivado.`,
       });
       return;
     }
@@ -600,7 +627,7 @@ export const GestionUsuarios: React.FC = () => {
                           <SelectValue placeholder="Selecciona un rol" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.filter(role => role.isActive && role.name !== 'Cliente').map((role) => (
+                          {roles.filter(role => role.isActive && role.name !== 'Cliente' && role.name !== 'Super Administrador').map((role) => (
                             <SelectItem key={role.id} value={role.name as UserRole}>
                               {role.name}
                             </SelectItem>

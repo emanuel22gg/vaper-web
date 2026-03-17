@@ -160,20 +160,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isMainView = currentView === 'home';
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50">
-      <SideMenu
-        isOpen={isSideMenuOpen}
-        onClose={() => setIsSideMenuOpen(false)}
-        currentView={currentView}
-        onNavigate={handleNavigation}
-        user={user}
-        isAuthenticated={isAuthenticated}
-        canAccessAdmin={canAccessAdmin()}
-        onAdminNavigate={handleAdminNavigation}
-        activeAdminView={activeAdminView}
-      />
+    <div className="min-h-screen flex bg-gray-50 relative">
+      {canAccessAdmin() && currentView === 'admin' && (
+        <div className="sticky top-0 h-screen flex-none z-40 shadow-sm border-r border-gray-200">
+          <SideMenu
+            isOpen={isSideMenuOpen}
+            onClose={() => setIsSideMenuOpen(false)}
+            currentView={currentView}
+            onNavigate={handleNavigation}
+            user={user}
+            isAuthenticated={isAuthenticated}
+            canAccessAdmin={canAccessAdmin()}
+            onAdminNavigate={handleAdminNavigation}
+            activeAdminView={activeAdminView}
+          />
+        </div>
+      )}
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
         <Header
           onMenuToggle={toggleSideMenu}
           currentView={currentView}
@@ -184,8 +188,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           onAdminNavigate={handleAdminNavigation}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="max-w-screen-2xl mx-auto">
+        <main className="flex-1 pt-4 pb-10">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6">
             {renderMainContent()}
           </div>
           {isMainView && <Footer />}

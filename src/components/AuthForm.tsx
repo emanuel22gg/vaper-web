@@ -43,14 +43,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     setError('');
 
     try {
-      const success = await login(loginData.username, loginData.password);
-      if (!success) {
-        setError('Credenciales incorrectas. Intenta nuevamente.');
+      await login(loginData.username, loginData.password);
+      onSuccess?.();
+    } catch (err: any) {
+      console.error('Error en handleLogin:', err);
+      if (err.message === 'UserDeactivated') {
+        setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
+      } else if (err.message === 'RoleDeactivated') {
+        setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
       } else {
-        onSuccess?.();
+        setError('Credenciales incorrectas o usuario no encontrado. Intenta nuevamente.');
       }
-    } catch (err) {
-      setError('Error al iniciar sesión. Intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }

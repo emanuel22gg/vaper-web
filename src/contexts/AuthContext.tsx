@@ -35,81 +35,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 2. Buscar el usuario que coincida con correo/documento/username y contraseña
       const foundUserApi = apiUsers.find(u =>
         (u.correo === usernameOrEmail || u.numeroDocumento === usernameOrEmail || (u as any).username === usernameOrEmail) &&
-        u.contraseña === password &&
-        u.estadoUsuario
+        u.contraseña === password
       );
 
-      if (foundUserApi) {
-        // 3. Obtener roles y sus permisos
-        const apiRoles = await apiService.getRoles();
-        const apiRolPermisos = await apiService.getRolesPermisos();
-
-        const foundRolApi = apiRoles.find(r => r.id === foundUserApi.rolId);
-
-        if (!foundRolApi) return false;
-
-        // 4. Mapear permisos del rol - Obtener detalles de todos los permisos primero para mayor seguridad
-        const apiPermisos = await apiService.getPermisos();
-        const isAdmin =
-          foundRolApi.nombreRol === 'Administrador' ||
-          foundRolApi.nombreRol === 'Admin' ||
-          foundRolApi.nombreRol === 'Super Administrador';
-
-        const rolePermissions: Permission[] = isAdmin
-          ? apiPermisos.map(p => ({
-            id: p.id.toString(),
-            name: p.nombrePermiso,
-            description: p.descripcion || '',
-            module: p.modulo || 'General'
-          }))
-          : apiRolPermisos
-            .filter(rp => rp.rolId === foundUserApi.rolId)
-            .map(rp => {
-              const permisoInfo = apiPermisos.find(p => p.id === rp.permisoId);
-              return {
-                id: rp.permisoId.toString(),
-                name: permisoInfo?.nombrePermiso || rp.permiso?.nombrePermiso || 'Sin nombre',
-                description: permisoInfo?.descripcion || rp.permiso?.descripcion || '',
-                module: permisoInfo?.modulo || rp.permiso?.modulo || 'General'
-              };
-            });
-
-        const role: Role = {
-          id: foundRolApi.id.toString(),
-          name: foundRolApi.nombreRol,
-          description: foundRolApi.descripcion,
-          permissions: rolePermissions,
-          isActive: foundRolApi.estadoRol === true || foundRolApi.estadoRol === null
-        };
-
-        const loggedUser: User = {
-          id: foundUserApi.id.toString(),
-          username: (foundUserApi as any).username || foundUserApi.numeroDocumento || foundUserApi.correo.split('@')[0],
-          email: foundUserApi.correo,
-          firstName: foundUserApi.nombres,
-          lastName: foundUserApi.apellidos,
-          numeroDocumento: foundUserApi.numeroDocumento,
-          tipoDocumento: foundUserApi.tipoDocumento,
-          telefono: foundUserApi.telefono,
-          ciudad: foundUserApi.ciudad,
-          direccion: foundUserApi.direccion,
-          barrio: foundUserApi.barrio,
-          fechaNacimiento: foundUserApi.fechaNacimiento,
-          tipoCliente: foundUserApi.tipoCliente,
-          role: role,
-          isActive: foundUserApi.estadoUsuario,
-          createdAt: new Date(foundUserApi.fechaNacimiento),
-          lastLogin: new Date()
-        };
-
-        setUser(loggedUser);
-        localStorage.setItem('currentUser', JSON.stringify(loggedUser));
-        return true;
+      if (!foundUserApi) {
+        throw new Error('InvalidCredentials');
       }
-      return false;
-    } catch (error) {
+
+      // 3. Verificar si el usuario está activo
+      if (!foundUserApi.estadoUsuario) {
+        throw new Error('UserDeactivated');
+      }
+
+      // 4. Obtener roles y sus permisos
+      const apiRoles = await apiService.getRoles();
+      const foundRolApi = apiRoles.find(r => r.id === foundUserApi.rolId);
+
+      if (!foundRolApi) {
+        throw new Error('RoleNotFound');
+      }
+
+      // 5. Verificar si el rol está activo
+      if (foundRolApi.estadoRol === false) {
+        throw new Error('RoleDeactivated');
+      }
+
+      // 6. Mapear permisos del rol
+      const apiRolPermisos = await apiService.getRolesPermisos();
+      const apiPermisos = await apiService.getPermisos();
+      const isAdmin =
+        foundRolApi.nombreRol === 'Administrador' ||
+        foundRolApi.nombreRol === 'Admin' ||
+        foundRolApi.nombreRol === 'Super Administrador';
+
+      const rolePermissions: Permission[] = isAdmin
+        ? apiPermisos.map(p => ({
+          id: p.id.toString(),
+          name: p.nombrePermiso,
+          description: p.descripcion || '',
+          module: p.modulo || 'General'
+        }))
+        : apiRolPermisos
+          .filter(rp => rp.rolId === foundUserApi.rolId)
+          .map(rp => {
+            const permisoInfo = apiPermisos.find(p => p.id === rp.permisoId);
+            return {
+              id: rp.permisoId.toString(),
+              name: permisoInfo?.nombrePermiso || rp.permiso?.nombrePermiso || 'Sin nombre',
+              description: permisoInfo?.descripcion || rp.permiso?.descripcion || '',
+              module: permisoInfo?.modulo || rp.permiso?.modulo || 'General'
+            };
+          });
+
+      const role: Role = {
+        id: foundRolApi.id.toString(),
+        name: foundRolApi.nombreRol,
+        description: foundRolApi.descripcion,
+        permissions: rolePermissions,
+        isActive: foundRolApi.estadoRol === true || foundRolApi.estadoRol === null
+      };
+
+      const loggedUser: User = {
+        id: foundUserApi.id.toString(),
+        username: (foundUserApi as any).username || foundUserApi.numeroDocumento || foundUserApi.correo.split('@')[0],
+        email: foundUserApi.correo,
+        firstName: foundUserApi.nombres,
+        lastName: foundUserApi.apellidos,
+        numeroDocumento: foundUserApi.numeroDocumento,
+        tipoDocumento: foundUserApi.tipoDocumento,
+        telefono: foundUserApi.telefono,
+        ciudad: foundUserApi.ciudad,
+        direccion: foundUserApi.direccion,
+        barrio: foundUserApi.barrio,
+        fechaNacimiento: foundUserApi.fechaNacimiento,
+        tipoCliente: foundUserApi.tipoCliente,
+        role: role,
+        isActive: foundUserApi.estadoUsuario,
+        createdAt: new Date(foundUserApi.fechaNacimiento),
+        lastLogin: new Date()
+      };
+
+      setUser(loggedUser);
+      localStorage.setItem('currentUser', JSON.stringify(loggedUser));
+      return true;
+    } catch (error: any) {
       console.error('Error durante el login:', error);
-      return false;
+      // Propagar el error para que el formulario pueda manejarlo específicamente
+      throw error;
     }
   };
 
