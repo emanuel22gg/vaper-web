@@ -330,7 +330,9 @@ export interface DetalleCompraDto {
 export interface CompraDto {
   id?: number;
   numeroCompra?: string;
+  numeroFactura?: string;
   fechaCompra: string;
+  fechaRegistro?: string;
   proveedorId: number;
   subtotal: number;
   total: number;

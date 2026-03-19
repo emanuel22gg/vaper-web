@@ -114,10 +114,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const mesActualStr = mesesOpciones[0].valor;
 
   const [activeView, setActiveView] = useState("dashboard");
-  const [fechaFiltro, setFechaFiltro] = useState("");
-  const [periodoVentas, setPeriodoVentas] = useState(
-    "ultimas2semanas",
-  );
+  const [anioVentasFiltro, setAnioVentasFiltro] = useState(new Date().getFullYear().toString());
   const [mesComprasFiltro, setMesComprasFiltro] = useState(mesActualStr);
   const [mesVentasFiltro, setMesVentasFiltro] = useState(mesActualStr);
   const [dashboardPage, setDashboardPage] = useState(1); // Estado para paginación del dashboard
@@ -315,30 +312,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // --- FUNCIONES DE PROCESAMIENTO DE DATOS REALES ---
 
+  const MESES_NOMBRES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+  const getAniosDisponibles = () => {
+    const anios = new Set<string>();
+    realPedidos.forEach(pedido => {
+      if (pedido.fechaCreacion && (pedido.estadoId === 1 || pedido.estadoId === 5)) {
+        anios.add(new Date(pedido.fechaCreacion).getFullYear().toString());
+      }
+    });
+    // Siempre incluir el año actual
+    anios.add(new Date().getFullYear().toString());
+    return Array.from(anios).sort((a, b) => Number(b) - Number(a));
+  };
+
   const getVentasFiltradas = () => {
-    const ventasPorDia: { [key: string]: number } = {};
+    // Inicializar los 12 meses en 0
+    const ventasPorMes: { [key: number]: number } = {};
+    for (let i = 0; i < 12; i++) ventasPorMes[i] = 0;
 
     realPedidos.forEach(pedido => {
       if (pedido.fechaCreacion && (pedido.estadoId === 1 || pedido.estadoId === 5)) {
-        const fecha = pedido.fechaCreacion.split('T')[0];
-        ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + pedido.total;
+        const d = new Date(pedido.fechaCreacion);
+        if (d.getFullYear().toString() === anioVentasFiltro) {
+          ventasPorMes[d.getMonth()] += pedido.total;
+        }
       }
     });
 
-    const todasLasVentas = Object.entries(ventasPorDia).map(([fecha, total]) => {
-      const d = new Date(fecha);
-      return {
-        dia: d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
-        ventas: total,
-        fecha: fecha
-      };
-    }).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-
-    if (fechaFiltro) {
-      return todasLasVentas.filter(venta => venta.fecha === fechaFiltro);
-    }
-
-    return todasLasVentas.slice(-14);
+    return MESES_NOMBRES.map((mes, i) => ({
+      mes,
+      ventas: ventasPorMes[i]
+    }));
   };
 
   const getStockCategoriasReal = () => {
@@ -445,20 +450,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // --- CÁLCULOS PARA LA UI ---
   const ventasParaGrafica = getVentasFiltradas();
+  const aniosDisponibles = getAniosDisponibles();
   const stockCategoriasData = getStockCategoriasReal();
   const ventasProductosParaGrafica = getProductosVendidosFiltrados();
   const comprasParaGrafica = getComprasFiltradas();
 
-  const promedioVentas =
-    ventasParaGrafica.length > 0
-      ? ventasParaGrafica.reduce(
-        (sum, item) => sum + item.ventas,
-        0,
-      ) / ventasParaGrafica.length
-      : 0;
+  const totalVentasAnio = ventasParaGrafica.reduce((sum, item) => sum + item.ventas, 0);
 
-  const mejorDia =
-    ventasParaGrafica.length > 0
+  const mejorMes =
+    ventasParaGrafica.some(v => v.ventas > 0)
       ? ventasParaGrafica.reduce((prev, current) =>
         prev.ventas > current.ventas ? prev : current,
       )
@@ -639,9 +639,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             case 1:
               return (
                 <>
-                  {/* Página 1: Ventas Diarias */}
+                  {/* Página 1: Ventas Mensuales */}
                   <div className="bg-white rounded-lg border p-6">
-                    <h2 className="text-xl font-bold mb-4">Análisis de Ventas Diarias</h2>
+                    <h2 className="text-xl font-bold mb-4">Análisis de Ventas por Mes</h2>
 
                     <Card className="border-0 shadow-none">
                       <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
@@ -652,139 +652,94 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                             <div>
                               <CardTitle className="text-base">
-                                Ventas Diarias
+                                Ventas Mensuales
                               </CardTitle>
                               <CardDescription className="text-xs">
-                                {fechaFiltro
-                                  ? `Ventas del día ${fechaFiltro}`
-                                  : "Últimas 2 semanas"}
+                                Resumen de ventas por mes — Año {anioVentasFiltro}
                               </CardDescription>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <Input
-                              id="fecha-filtro"
-                              type="date"
-                              value={fechaFiltro}
-                              onChange={(e) =>
-                                setFechaFiltro(e.target.value)
-                              }
-                              className="w-32 h-8 text-xs border-blue-200 focus:border-blue-400"
-                            />
-                            {fechaFiltro && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setFechaFiltro("")}
-                                className="text-xs h-8 border-blue-200 hover:bg-blue-50"
-                              >
-                                Limpiar
-                              </Button>
-                            )}
+                            <Select
+                              value={anioVentasFiltro}
+                              onValueChange={setAnioVentasFiltro}
+                            >
+                              <SelectTrigger className="w-28 h-8 text-xs border-blue-200 focus:border-blue-400">
+                                <SelectValue placeholder="Año" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {aniosDisponibles.map(anio => (
+                                  <SelectItem key={anio} value={anio}>{anio}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="pt-4">
-                        {ventasParaGrafica.length === 0 ? (
+                        {totalVentasAnio === 0 ? (
                           <div className="flex items-center justify-center h-48 text-muted-foreground">
                             <div className="text-center">
                               <div className="bg-blue-100 p-4 rounded-full inline-block mb-3">
                                 <CalendarDays className="h-10 w-10 text-blue-500" />
                               </div>
                               <p className="text-sm">
-                                No hay datos para la fecha
-                                seleccionada
+                                No hay ventas registradas para el año {anioVentasFiltro}
                               </p>
                             </div>
                           </div>
                         ) : (
                           <>
-                            <ResponsiveContainer
-                              width="100%"
-                              height={200}
-                            >
-                              <LineChart data={ventasParaGrafica}>
+                            <ResponsiveContainer width="100%" height={220}>
+                              <BarChart data={ventasParaGrafica} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                                 <defs>
-                                  <linearGradient
-                                    id="colorVentas"
-                                    x1="0"
-                                    y1="0"
-                                    x2="0"
-                                    y2="1"
-                                  >
-                                    <stop
-                                      offset="5%"
-                                      stopColor="#3b82f6"
-                                      stopOpacity={0.3}
-                                    />
-                                    <stop
-                                      offset="95%"
-                                      stopColor="#3b82f6"
-                                      stopOpacity={0}
-                                    />
+                                  <linearGradient id="colorVentasMes" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9} />
+                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.5} />
                                   </linearGradient>
                                 </defs>
-                                <CartesianGrid
-                                  strokeDasharray="3 3"
-                                  stroke="#e5e7eb"
-                                />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
-                                  dataKey="dia"
-                                  tick={{ fontSize: 9 }}
-                                  angle={-45}
-                                  textAnchor="end"
-                                  height={50}
+                                  dataKey="mes"
+                                  tick={{ fontSize: 10 }}
                                   stroke="#6b7280"
                                 />
                                 <YAxis
                                   tick={{ fontSize: 9 }}
                                   tickFormatter={(value) =>
-                                    `$${(value / 1000).toFixed(0)}K`
+                                    value >= 1000000
+                                      ? `$${(value / 1000000).toFixed(1)}M`
+                                      : `$${(value / 1000).toFixed(0)}K`
                                   }
                                   stroke="#6b7280"
                                 />
                                 <Tooltip
                                   formatter={(value) => [
-                                    `$${Number(value).toLocaleString()}`,
+                                    `$${Number(value).toLocaleString('es-CO')}`,
                                     "Ventas",
                                   ]}
-                                  labelFormatter={(label) => label}
+                                  labelFormatter={(label) => `Mes: ${label}`}
+                                  cursor={{ fill: "rgba(59,130,246,0.08)" }}
                                 />
-                                <Line
-                                  type="monotone"
+                                <Bar
                                   dataKey="ventas"
-                                  stroke="#3b82f6"
-                                  strokeWidth={3}
-                                  dot={{
-                                    fill: "#3b82f6",
-                                    strokeWidth: 2,
-                                    r: 3,
-                                  }}
-                                  activeDot={{
-                                    r: 5,
-                                    stroke: "#3b82f6",
-                                    strokeWidth: 2,
-                                  }}
-                                  fill="url(#colorVentas)"
+                                  fill="url(#colorVentasMes)"
+                                  radius={[4, 4, 0, 0]}
                                 />
-                              </LineChart>
+                              </BarChart>
                             </ResponsiveContainer>
                             <div className="mt-3 pt-3 border-t flex justify-between">
                               <div className="bg-blue-50 px-3 py-2 rounded-lg">
-                                <span className="text-xs text-blue-600">
-                                  Promedio:{" "}
-                                </span>
+                                <span className="text-xs text-blue-600">Total {anioVentasFiltro}: </span>
                                 <span className="text-xs font-semibold text-blue-700">
-                                  ${promedioVentas.toLocaleString()}
+                                  ${totalVentasAnio.toLocaleString('es-CO')}
                                 </span>
                               </div>
-                              {mejorDia && (
+                              {mejorMes && mejorMes.ventas > 0 && (
                                 <div className="bg-green-50 px-3 py-2 rounded-lg">
-                                  <span className="text-xs text-green-600">
-                                    Mejor día:{" "}
-                                  </span>
+                                  <span className="text-xs text-green-600">Mejor mes: </span>
                                   <span className="text-xs font-semibold text-green-700">
-                                    {mejorDia.dia}
+                                    {mejorMes.mes}
                                   </span>
                                 </div>
                               )}

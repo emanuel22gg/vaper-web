@@ -106,6 +106,8 @@ export const Compras: React.FC = () => {
   // Estados para crear nueva orden
   const [newOrden, setNewOrden] = useState({
     proveedorId: 0,
+    numeroFactura: "",
+    fechaFactura: "",
     productos: [
       {
         id: 0,
@@ -417,7 +419,9 @@ export const Compras: React.FC = () => {
     try {
       const nuevaCompra: CompraDto = {
         numeroCompra: `COM-${Date.now()}`, // Generar número único requerido por el backend
+        numeroFactura: newOrden.numeroFactura || undefined,
         fechaCompra: new Date().toISOString(),
+        fechaRegistro: newOrden.fechaFactura ? new Date(newOrden.fechaFactura).toISOString() : undefined,
         proveedorId: newOrden.proveedorId,
         subtotal: subtotal,
         total: total,
@@ -454,6 +458,8 @@ export const Compras: React.FC = () => {
       fetchData(); // Recargar datos de la API (incluyendo el nuevo stock)
       setNewOrden({
         proveedorId: 0,
+        numeroFactura: "",
+        fechaFactura: "",
         productos: [
           {
             id: 0,
@@ -637,6 +643,36 @@ export const Compras: React.FC = () => {
                         value={new Date().toLocaleDateString('es-CO')}
                         disabled
                         className="bg-muted cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="numeroFactura">
+                        Número de Factura
+                      </Label>
+                      <Input
+                        id="numeroFactura"
+                        type="text"
+                        placeholder="Ej: FAC-2024-001"
+                        value={newOrden.numeroFactura}
+                        onChange={(e) =>
+                          setNewOrden({ ...newOrden, numeroFactura: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fechaFactura">
+                        Fecha Facturada
+                      </Label>
+                      <Input
+                        id="fechaFactura"
+                        type="date"
+                        value={newOrden.fechaFactura}
+                        onChange={(e) =>
+                          setNewOrden({ ...newOrden, fechaFactura: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -1070,6 +1106,24 @@ export const Compras: React.FC = () => {
                         : "Activa"}
                     </span>
                   </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">
+                    N° Factura
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrden.numeroFactura || "—"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">
+                    Fecha Facturada
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrden.fechaRegistro
+                      ? new Date(selectedOrden.fechaRegistro).toLocaleDateString('es-CO')
+                      : "—"}
+                  </p>
                 </div>
               </div>
 
