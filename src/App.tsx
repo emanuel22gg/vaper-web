@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { AuthProvider } from "./contexts/AuthContext";
-import { useAuth } from "./hooks/useAuth";
-import { CartProvider } from "./contexts/CartContext";
-import { LandingPage } from "./components/LandingPage";
+import { AuthProvider } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { CartProvider } from "@/shared/contexts/CartContext";
+import { LandingPage } from "@/features/public/components/LandingPage";
 import { Toaster } from "sonner";
 
 // Componente que maneja el routing principal
