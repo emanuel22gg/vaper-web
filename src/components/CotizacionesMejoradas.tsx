@@ -233,7 +233,7 @@ export const Cotizaciones: React.FC = () => {
         }));
         setProductosDisponibles(mappedProductos);
 
-        // Mapear cotizaciones desde la API al formato local y ordenar por ID ascendente
+        // Mapear cotizaciones desde la API al formato local y ordenar por ID descendente
         const mappedCotizaciones: Cotizacion[] = (cotizacionesData as CotizacionDto[]).map((c: CotizacionDto) => {
           // Intentar encontrar el usuario para tener datos completos si es posible
           const usuario = usuariosData.find(u => `${u.nombres} ${u.apellidos}` === c.nombreUsuario);
@@ -270,7 +270,7 @@ export const Cotizaciones: React.FC = () => {
             fechaCreacion: c.fecha || new Date().toISOString(),
             fechaActualizacion: c.fecha || new Date().toISOString()
           };
-        }).sort((a, b) => a.id - b.id);
+        }).sort((a, b) => b.id - a.id);
         
         setCotizaciones(mappedCotizaciones);
       } catch (error) {
@@ -429,8 +429,8 @@ export const Cotizaciones: React.FC = () => {
       result = result.filter(cotizacion => cotizacion.estado === filtroEstado);
     }
 
-    // Asegurar orden ascendente por ID (las más antiguas primero, nuevas abajo)
-    return result.sort((a, b) => a.id - b.id);
+    // Asegurar orden descendente por ID (las nuevas primero, antiguas abajo)
+    return result.sort((a, b) => b.id - a.id);
   }, [cotizaciones, searchTerm, filtroEstado]);
 
   // Paginación
@@ -767,7 +767,7 @@ export const Cotizaciones: React.FC = () => {
         fechaActualizacion: createdCotizacion.fecha || new Date().toISOString()
       };
 
-      setCotizaciones((prev) => [...prev, nuevaCotizacion]);
+      setCotizaciones((prev) => [nuevaCotizacion, ...prev]);
       toast.success("Cotización creada exitosamente");
       setIsCreateDialogOpen(false);
       resetFormData();
@@ -1368,13 +1368,13 @@ export const Cotizaciones: React.FC = () => {
                     type="date"
                     value={new Date().toISOString().split('T')[0]}
                     readOnly
-                    className="bg-muted cursor-not-allowed opacity-70"
+                    className="bg-gray-200 border-transparent text-gray-500 cursor-not-allowed w-full"
                   />
                 </div>
 
                 {/* Cliente - Buscador Directo */}
                 <div className="relative">
-                  <Label htmlFor="cliente">Cliente (Buscar por nombre o documento)</Label>
+                  <Label htmlFor="cliente">Cliente (Buscar por nombre o documento)*</Label>
                     <Popover open={openSelectorCliente && clientSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorCliente}>
                       <PopoverTrigger asChild>
                         <div className="relative mt-1">
@@ -1386,7 +1386,7 @@ export const Cotizaciones: React.FC = () => {
                               if (!openSelectorCliente) setOpenSelectorCliente(true);
                               if (e.target.value === "") setFormData(prev => ({ ...prev, clienteId: "" }));
                             }}
-                            className="bg-input-background pr-10"
+                            className="bg-white border-2 border-gray-300 pr-10"
                           />
                           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
                         </div>
@@ -1454,7 +1454,7 @@ export const Cotizaciones: React.FC = () => {
 
                 {/* Fecha de Vigencia */}
                 <div className="space-y-2">
-                  <Label htmlFor="fechaVigencia">Vigencia (Fecha de vencimiento)</Label>
+                  <Label htmlFor="fechaVigencia">Vigencia (Fecha de vencimiento)*</Label>
                   <Input
                     id="fechaVigencia"
                     type="date"
@@ -1463,7 +1463,7 @@ export const Cotizaciones: React.FC = () => {
                     onChange={(e) => {
                       setFormData(prev => ({ ...prev, fechaVigencia: e.target.value }));
                     }}
-                    className="bg-input-background"
+                    className="bg-white border-2 border-gray-300"
                   />
                 </div>
 
@@ -1483,7 +1483,7 @@ export const Cotizaciones: React.FC = () => {
                         }
                       }}
                       placeholder="0"
-                      className="w-full pr-8 bg-input-background"
+                      className="w-full pr-8 bg-white border-2 border-gray-300"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
@@ -1497,7 +1497,7 @@ export const Cotizaciones: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Producto - Buscador Directo */}
                   <div className="relative">
-                    <Label className="text-xs text-muted-foreground">Producto (Nombre o Código)</Label>
+                    <Label className="text-xs text-muted-foreground">Producto (Nombre o Código)*</Label>
                     <Popover open={openSelectorProducto && productSearchTerm.trim() !== ""} onOpenChange={setOpenSelectorProducto}>
                       <PopoverTrigger asChild>
                         <div className="relative mt-1">
@@ -1509,7 +1509,7 @@ export const Cotizaciones: React.FC = () => {
                               if (!openSelectorProducto) setOpenSelectorProducto(true);
                               // No reseteamos el ID aquí para permitir escribir y luego seleccionar
                             }}
-                            className="bg-input-background pr-10 h-10"
+                            className="bg-white border-2 border-gray-300 pr-10 h-10"
                           />
                           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
                         </div>
@@ -1586,7 +1586,7 @@ export const Cotizaciones: React.FC = () => {
 
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-2">
-                      <Label className="text-sm">Cantidad</Label>
+                      <Label className="text-sm">Cantidad*</Label>
                       <Input
                         type="number"
                         min="1"
@@ -1596,7 +1596,7 @@ export const Cotizaciones: React.FC = () => {
                             parseInt(e.target.value) || 1,
                           )
                         }
-                        className="w-full"
+                        className="w-full bg-white border-2 border-gray-300"
                       />
                     </div>
                     <Button

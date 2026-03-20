@@ -220,7 +220,8 @@ export const Ventas: React.FC = () => {
       result = result.filter(venta => venta.estado === filtroEstado);
     }
 
-    return result;
+    // Asegurar orden descendente por ID (las nuevas primero, antiguas abajo)
+    return result.sort((a, b) => b.id - a.id);
   }, [ventas, searchTerm, filtroEstado]);
   const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -408,7 +409,7 @@ export const Ventas: React.FC = () => {
           };
         });
 
-      setVentas(ventasMapeadas);
+      setVentas(ventasMapeadas.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error('Error fetching ventas:', error);
       toast.error('No se pudieron cargar las ventas de la API');
@@ -1243,7 +1244,7 @@ export const Ventas: React.FC = () => {
               {/* Cliente y Tipo de Venta */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2 relative">
-                  <Label htmlFor="clienteSearch" className="text-sm">Cliente</Label>
+                  <Label htmlFor="clienteSearch" className="text-sm">Cliente*</Label>
                   <div className="relative group">
                     {formData.clienteId && (
                       <Button
@@ -1262,8 +1263,8 @@ export const Ventas: React.FC = () => {
                       id="clienteSearch"
                       placeholder="Buscar por nombre o documento..."
                       className={cn(
-                        "h-10 transition-all border-muted-foreground/20 focus:border-primary focus:ring-1 focus:ring-primary/20",
-                        formData.clienteId ? "pl-10 bg-primary/[0.02]" : "px-4"
+                        "h-10 transition-all bg-white border-2 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary/20",
+                        formData.clienteId ? "pl-10" : "px-4"
                       )}
                       value={formData.clienteId && !clientSearchTerm
                         ? (clientesDisponibles.find(c => c.id.toString() === formData.clienteId)
@@ -1357,7 +1358,7 @@ export const Ventas: React.FC = () => {
                     value={formatDate(formData.fecha)}
                     readOnly
                     disabled
-                    className="bg-muted text-muted-foreground w-full cursor-not-allowed"
+                    className="bg-gray-200 border-transparent text-gray-500 w-full cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -1365,7 +1366,7 @@ export const Ventas: React.FC = () => {
               {/* Selector de Pedido Pendiente (Solo para Tipo Pedido) */}
               {formData.tipoVenta === 'pedido' && formData.clienteId && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Label htmlFor="pedidoId" className="text-sm font-medium text-primary">Pedido Pendiente</Label>
+                  <Label htmlFor="pedidoId" className="text-sm font-medium text-primary">Pedido Pendiente*</Label>
                   {isLoadingPedidos ? (
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground p-2 border rounded-md bg-muted/20">
                       <Clock className="h-4 w-4 animate-spin" />
@@ -1373,7 +1374,7 @@ export const Ventas: React.FC = () => {
                     </div>
                   ) : pedidosPendientes.length > 0 ? (
                     <Select value={selectedPedidoId} onValueChange={handleSelectPedido}>
-                      <SelectTrigger className="w-full border-primary/50 bg-primary/5">
+                      <SelectTrigger className="w-full bg-white border-2 border-gray-300">
                         <SelectValue placeholder="Selecciona un pedido para cargar items" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1403,7 +1404,7 @@ export const Ventas: React.FC = () => {
                       onValueChange={(value: 'Minorista' | 'Mayorista') => setFormData({ ...formData, tipoCliente: value })}
                       disabled
                     >
-                      <SelectTrigger className="w-full bg-muted/50 cursor-not-allowed">
+                      <SelectTrigger className="w-full bg-gray-200 border-transparent text-gray-500 cursor-not-allowed">
                         <SelectValue placeholder="Seleccionar tipo" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1418,9 +1419,9 @@ export const Ventas: React.FC = () => {
               {/* Método de Pago y Descuento */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="metodoPago" className="text-sm">Método de Pago</Label>
+                  <Label htmlFor="metodoPago" className="text-sm">Método de Pago*</Label>
                   <Select value={formData.metodoPago} onValueChange={(value: string) => setFormData({ ...formData, metodoPago: value })}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full bg-white border-2 border-gray-300">
                       <SelectValue placeholder="Seleccionar método" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1444,7 +1445,7 @@ export const Ventas: React.FC = () => {
                         }
                       }}
                       placeholder="0"
-                      className="w-full pr-8"
+                      className="w-full pr-8 bg-white border-2 border-gray-300"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
@@ -1459,7 +1460,7 @@ export const Ventas: React.FC = () => {
                   <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-end">
                     <div className="space-y-2 relative">
-                      <Label className="text-sm">Producto</Label>
+                      <Label className="text-sm">Producto*</Label>
                       <div className="relative group">
                         {selectedProducto && (
                           <Button
@@ -1477,8 +1478,8 @@ export const Ventas: React.FC = () => {
                         <Input
                           placeholder="Escribir nombre del producto..."
                           className={cn(
-                            "h-10 transition-all border-muted-foreground/20 focus:border-primary focus:ring-1 focus:ring-primary/20",
-                            selectedProducto ? "pl-10 bg-primary/[0.02]" : "px-4"
+                            "h-10 transition-all bg-white border-2 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary/20",
+                            selectedProducto ? "pl-10" : "px-4"
                           )}
                           value={selectedProducto && !productSearchTerm
                             ? (productosDisponibles.find(p => p.id.toString() === selectedProducto)?.nombre || productSearchTerm)
@@ -1570,13 +1571,13 @@ export const Ventas: React.FC = () => {
                     </div>
                     <div className="flex gap-2 items-end">
                       <div className="flex-1 space-y-2">
-                        <Label className="text-sm">Cantidad</Label>
+                        <Label className="text-sm">Cantidad*</Label>
                         <Input
                           type="number"
                           min="1"
                           value={cantidad}
                           onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
-                          className="w-full"
+                          className="w-full bg-white border-2 border-gray-300"
                         />
                       </div>
                       <Button
