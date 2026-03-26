@@ -86,7 +86,10 @@ import {
   Calculator,
   ChevronRight,
   ChevronsLeft,
-  Receipt
+  Receipt,
+  ShoppingCart,
+  Package,
+  Info
 } from 'lucide-react';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
@@ -1286,16 +1289,36 @@ export const Ventas: React.FC = () => {
         }
         setIsCreateDialogOpen(open);
       }}>
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-[700px] lg:max-w-[800px] h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">Nueva Venta</DialogTitle>
-            <DialogDescription className="text-sm">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
+            <DialogTitle className="text-xl font-bold text-gray-900">Nueva Venta</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
               Crea una nueva venta en el sistema
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
-            <div className="space-y-4 sm:space-y-5">
+          <Tabs defaultValue="datos" className="w-full">
+            <div className="px-8 border-b">
+              <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0">
+                <TabsTrigger 
+                  value="datos" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Datos de la Venta
+                </TabsTrigger>
+                {formData.tipoVenta === 'directa' && (
+                  <TabsTrigger 
+                    value="productos" 
+                    className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                  >
+                    Productos ({formData.items.length})
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </div>
+
+            <div className="p-8">
+              <TabsContent value="datos" className="m-0 space-y-6">
               {/* Cliente y Tipo de Venta */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2 relative">
@@ -1507,13 +1530,14 @@ export const Ventas: React.FC = () => {
                 </div>
               </div>
 
-              <Separator className="my-3 sm:my-4" />
+              </TabsContent>
 
               {/* Agregar Productos (Solo para Venta Directa) */}
               {formData.tipoVenta === 'directa' && (
-                <div className="space-y-3">
-                  <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-end">
+                <TabsContent value="productos" className="m-0 space-y-6">
+                  <div className="space-y-3">
+                    <h4 className="text-sm sm:text-base font-medium">Agregar Productos</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-end">
                     <div className="space-y-2 relative">
                       <Label className="text-sm">Producto*</Label>
                       <div className="relative group">
@@ -1646,8 +1670,6 @@ export const Ventas: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              )}
-
               {/* Productos Seleccionados */}
               {formData.items.length > 0 && (
                 <div className="space-y-3 sm:space-y-4">
@@ -1740,10 +1762,12 @@ export const Ventas: React.FC = () => {
                   <p className="text-xs sm:text-sm mt-1">Selecciona un producto para comenzar</p>
                 </div>
               )}
+                </TabsContent>
+              )}
             </div>
-          </div>
+          </Tabs>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t shrink-0 bg-background">
+          <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
             <Button variant="outline" onClick={() => {
               handleRestoreStock();
               setIsCreateDialogOpen(false);
@@ -1754,7 +1778,7 @@ export const Ventas: React.FC = () => {
             <Button
               onClick={handleCreateVenta}
               disabled={!formData.nombreCliente || formData.items.length === 0}
-              className="bg-black hover:bg-gray-800 text-white border-none w-full sm:w-auto"
+              className="bg-black hover:bg-gray-800 text-white border-none min-w-[120px]"
             >
               Crear Venta
             </Button>
@@ -1764,99 +1788,182 @@ export const Ventas: React.FC = () => {
 
       {/* Modal de detalle de venta */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] modal-scroll">
-          <DialogHeader>
-            <DialogTitle>Detalles de la Venta</DialogTitle>
-            <DialogDescription>
-              Información completa de la venta {selectedVenta?.numeroVenta}
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
           {selectedVenta && (
-            <ScrollArea className="max-h-[600px] pr-4">
-              <div className="space-y-6">
-                {/* Información general */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div><strong>Número:</strong> {selectedVenta.numeroVenta}</div>
-                    <div><strong>Fecha:</strong> {formatDate(selectedVenta.fecha)}</div>
-                    <div><strong>Cliente:</strong> {selectedVenta.nombreCliente}</div>
-                    <div><strong>Tipo de Cliente:</strong> {selectedVenta.tipoCliente || 'Minorista'}</div>
+            <>
+              <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles de la Venta</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Información completa de la venta y productos.
+                    </DialogDescription>
                   </div>
-                  <div className="space-y-2">
-                    <div><strong>Tipo:</strong> {selectedVenta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}</div>
-                    <div><strong>Estado:</strong> {getEstadoBadge(selectedVenta.estado)}</div>
-                    <div><strong>Método de Pago:</strong> {selectedVenta.metodoPago}</div>
-                    {selectedVenta.motivoAnulacion && (
-                      <div><strong>Motivo Anulación:</strong> {selectedVenta.motivoAnulacion}</div>
-                    )}
+                  <Badge 
+                    variant={selectedVenta.estado === 'aceptada' ? "default" : selectedVenta.estado === 'anulada' ? "destructive" : "secondary"}
+                    className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                      selectedVenta.estado === 'aceptada'
+                        ? "bg-green-50 text-green-700 border-green-100"
+                        : selectedVenta.estado === 'anulada'
+                        ? "bg-red-50 text-red-700 border-red-100"
+                        : "bg-blue-50 text-blue-700 border-blue-100"
+                    }`}
+                  >
+                    {selectedVenta.estado.charAt(0).toUpperCase() + selectedVenta.estado.slice(1)}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="p-8 space-y-10">
+                {/* Cabecera */}
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                    <Receipt className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {selectedVenta.numeroVenta}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                      <span className="font-mono text-gray-400">{formatDate(selectedVenta.fecha)}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {selectedVenta.nombreCliente}
+                      </span>
+                    </p>
                   </div>
                 </div>
 
-                <Separator />
+                <Tabs defaultValue="info" className="w-full">
+                  <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                    <TabsTrigger 
+                      value="info" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <Info className="h-4 w-4" /> Información General
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="productos" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <ShoppingCart className="h-4 w-4" /> Productos ({selectedVenta.items.length})
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Productos */}
-                <div>
-                  <h4>Productos</h4>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Producto</TableHead>
-                          <TableHead>Cantidad</TableHead>
-                          <TableHead>Precio Unitario</TableHead>
-                          <TableHead>Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedVenta.items.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>{item.nombreProducto}</TableCell>
-                            <TableCell>{item.cantidad}</TableCell>
-                            <TableCell>${item.precioUnitario.toLocaleString()}</TableCell>
-                            <TableCell>${item.subtotal.toLocaleString()}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Resumen financiero */}
-                <div className="space-y-4">
-                  <div className="max-w-md ml-auto">
-                    <h4 className="border-b pb-2 mb-3">Resumen Financiero</h4>
-                    <div className="space-y-2">
-                      {selectedVenta.descuento > 0 && (
-                        <div className="flex justify-between">
-                          <span>Descuento:</span>
-                          <span>-${selectedVenta.descuento.toLocaleString()}</span>
+                  <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles de la Transacción</h4>
+                      <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Número de Referencia</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedVenta.numeroVenta}</p>
                         </div>
-                      )}
-                      {(selectedVenta.envio || 0) > 0 && selectedVenta.tipoVenta === 'pedido' && (
-                        <div className="flex justify-between">
-                          <span>Envío:</span>
-                          <span>+${(selectedVenta.envio || 0).toLocaleString()}</span>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Cliente</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedVenta.nombreCliente}</p>
                         </div>
-                      )}
-                      <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                        <span>Total:</span>
-                        <span>${selectedVenta.total.toLocaleString()}</span>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Tipo de Venta</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedVenta.tipoVenta === 'pedido' ? 'Pedido' : 'Directa'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Método de Pago</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedVenta.metodoPago}</p>
+                        </div>
+                        {selectedVenta.motivoAnulacion && (
+                          <div className="space-y-1 col-span-2">
+                            <Label className="text-xs font-medium text-gray-500">Motivo de Anulación</Label>
+                            <p className="text-sm font-medium text-red-600">{selectedVenta.motivoAnulacion}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-          )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-              Cerrar
-            </Button>
-          </DialogFooter>
+                    <Separator className="bg-gray-100" />
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Resumen Financiero</h4>
+                      <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Subtotal</span>
+                          <span className="font-medium text-gray-900">${selectedVenta.subtotal.toLocaleString()}</span>
+                        </div>
+                        {selectedVenta.descuento > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Descuento</span>
+                            <span className="font-medium text-red-600">-${selectedVenta.descuento.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {(selectedVenta.envio || 0) > 0 && selectedVenta.tipoVenta === 'pedido' && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Envío</span>
+                            <span className="font-medium text-gray-900">+${(selectedVenta.envio || 0).toLocaleString()}</span>
+                          </div>
+                        )}
+                        <Separator className="bg-gray-200" />
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-gray-900">Total</span>
+                          <span className="text-xl font-black text-blue-600">${selectedVenta.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos ({selectedVenta.items.length})</h4>
+                        <div className="text-xs font-bold text-gray-900">
+                          Total: <span className="text-blue-600 font-black">${selectedVenta.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="border border-gray-100 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                              <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant.</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">Precio</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">Subtotal</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedVenta.items.map((item) => (
+                              <TableRow key={item.id} className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                                <TableCell className="text-xs font-medium text-gray-900">{item.nombreProducto}</TableCell>
+                                <TableCell className="text-xs text-center text-gray-600">{item.cantidad}</TableCell>
+                                <TableCell className="text-right text-xs text-gray-600">${item.precioUnitario.toLocaleString()}</TableCell>
+                                <TableCell className="text-right text-sm font-bold text-gray-900">${item.subtotal.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <DialogFooter className="p-8 border-t border-gray-100 flex items-center gap-3 bg-white">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDetailDialogOpen(false)}
+                  className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Cerrar Detalle
+                </Button>
+                <Button 
+                  className="h-10 px-6 bg-gray-900 text-white font-medium hover:bg-black transition-all" 
+                  onClick={() => {
+                    downloadVentaPDF(selectedVenta);
+                  }}
+                >
+                  Descargar PDF
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

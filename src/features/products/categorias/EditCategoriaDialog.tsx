@@ -148,7 +148,7 @@ export const EditCategoriaDialog: React.FC<EditCategoriaDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !formData.nombreCategoria.trim()}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || !formData.nombreCategoria.trim()} className="bg-black hover:bg-gray-800 text-white border-none">
             {isSubmitting ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </DialogFooter>

@@ -354,7 +354,7 @@ export const UserProfile: React.FC = () => {
 
               {isEditing && (
                 <div className="flex space-x-3 pt-6">
-                  <Button onClick={handleProfileUpdate} className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
+                  <Button onClick={handleProfileUpdate} className="bg-black hover:bg-gray-800 text-white font-semibold">
                     <Save className="h-4 w-4 mr-2" />
                     Guardar Cambios
                   </Button>
@@ -442,7 +442,7 @@ export const UserProfile: React.FC = () => {
               </div>
 
               <div className="pt-4">
-                <Button onClick={handlePasswordUpdate} className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
+                <Button onClick={handlePasswordUpdate} className="bg-black hover:bg-gray-800 text-white font-semibold">
                   <Shield className="h-4 w-4 mr-2" />
                   Actualizar Contraseña
                 </Button>
@@ -541,7 +541,7 @@ export const UserProfile: React.FC = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmPasswordUpdate}
-              className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+              className="bg-black text-white hover:bg-gray-800 font-semibold"
             >
               Confirmar Cambio
             </AlertDialogAction>

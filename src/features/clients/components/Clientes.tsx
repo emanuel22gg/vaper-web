@@ -425,7 +425,7 @@ export const Clientes: React.FC = () => {
 
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full lg:w-auto">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Nuevo Cliente
                 </Button>
@@ -722,7 +722,7 @@ export const Clientes: React.FC = () => {
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleCreateCliente} disabled={!newCliente.nombres || !newCliente.apellidos || !newCliente.correo || loading}>
+                  <Button className="bg-black hover:bg-gray-800 text-white border-none" onClick={handleCreateCliente} disabled={!newCliente.nombres || !newCliente.apellidos || !newCliente.correo || loading}>
                     {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Crear Cliente
                   </Button>

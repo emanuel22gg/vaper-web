@@ -48,7 +48,6 @@ import {
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import { TablePagination } from '@/shared/ui/TablePagination';
-import { DetalleDevolucion } from "./DetalleDevolucion";
 import { toast } from "sonner";
 import {
   Search,
@@ -76,7 +75,9 @@ import {
   CheckCircle,
   Check,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  ShoppingCart,
+  Info
 } from "lucide-react";
 import { cn } from "@/shared/ui/utils";
 import { Separator } from "@/shared/ui/separator";
@@ -599,9 +600,8 @@ export const Devoluciones: React.FC = () => {
 
   const defectiveDetails = detallesDevolucion.filter(det => true);
 
-  if (currentView === "detail" && selectedDevolucion) {
-    return <DetalleDevolucion devolucion={selectedDevolucion} onBack={() => setCurrentView("list")} />;
-  }
+  // Remover el early return de `currentView === "detail"`
+
 
   return (
     <div className="space-y-6">
@@ -782,20 +782,39 @@ export const Devoluciones: React.FC = () => {
         }
         setIsNewDialogOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Registrar Nueva Devolución</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
+            <DialogTitle className="text-xl font-bold text-gray-900">Registrar Nueva Devolución</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
               Siga los pasos para localizar la venta y detallar los productos a devolver.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="venta">Localizar venta</TabsTrigger>
-              <TabsTrigger value="devolucion">Devolución</TabsTrigger>
-              <TabsTrigger value="reposicion">Reposición</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="px-8 border-b">
+              <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0">
+                <TabsTrigger 
+                  value="venta" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Localizar venta
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="devolucion" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Devolución
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="reposicion" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Reposición
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="p-8">
 
               <TabsContent value="venta" className="space-y-4">
                 {/* Buscador */}
@@ -1285,11 +1304,12 @@ export const Devoluciones: React.FC = () => {
                   </>
                 )}
               </TabsContent>
+            </div>
           </Tabs>
 
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-between items-center gap-3 shrink-0">
             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsNewDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsNewDialogOpen(false)} className="min-w-[100px]">
                 Cancelar
               </Button>
               {activeTab !== "venta" && (
@@ -1310,7 +1330,7 @@ export const Devoluciones: React.FC = () => {
             <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
               {activeTab !== "reposicion" ? (
                 <Button
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black border-none flex-1 sm:flex-initial"
+                  className="bg-black hover:bg-gray-800 text-white min-w-[120px]"
                   onClick={() => {
                     if (activeTab === "venta") setActiveTab("devolucion");
                     else if (activeTab === "devolucion") setActiveTab("reposicion");
@@ -1325,7 +1345,7 @@ export const Devoluciones: React.FC = () => {
                 </Button>
               ) : (
                 <Button
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black border-none flex-1 sm:flex-initial"
+                  className="bg-black hover:bg-gray-800 text-white min-w-[180px]"
                   onClick={() => setShowConfirmDialog(true)}
                   disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid || totalReposicionCant > totalDevueltoCant}
                 >
@@ -1334,7 +1354,7 @@ export const Devoluciones: React.FC = () => {
                 </Button>
               )}
             </div>
-          </DialogFooter>
+          </div>
 
           {/* Dialogo de Confirmación de Impacto */}
           <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
@@ -1440,6 +1460,176 @@ export const Devoluciones: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Devolucion Dialog */}
+      <Dialog
+        open={currentView === "detail" && selectedDevolucion !== null}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setCurrentView("list");
+            setSelectedDevolucion(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          {selectedDevolucion && (
+            <>
+              <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles de Devolución</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Información completa del ticket y artículos devueltos.
+                    </DialogDescription>
+                  </div>
+                  <Badge 
+                    variant="outline"
+                    className={cn(
+                      "px-3 py-1 rounded-full text-[12px] font-bold border-none text-white",
+                      selectedDevolucion.estadoId === 5 ? "bg-black" :
+                        (selectedDevolucion.estadoId === 3 || selectedDevolucion.estadoId === 4) ? "bg-red-600" : "bg-amber-500"
+                    )}
+                  >
+                    {getStatusText(selectedDevolucion.estadoId)}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="p-8 space-y-10">
+                {/* Cabecera */}
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                    <Receipt className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      Ticket DEV-{String(selectedDevolucion.id).padStart(3, '0')}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                      <span className="font-mono text-gray-400">{new Date(selectedDevolucion.fechaDevolucion).toLocaleDateString('es-CO')}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {(() => {
+                          const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                          return userVenta ? getClienteInfo(userVenta.usuarioId) : "N/A";
+                        })()}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <Tabs defaultValue="info" className="w-full">
+                  <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                    <TabsTrigger 
+                      value="info" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <Info className="h-4 w-4" /> Información General
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="productos" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <ShoppingCart className="h-4 w-4" /> Artículos Devueltos
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles de la Transacción Original</h4>
+                      <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Venta Relacionada</Label>
+                          <p className="text-sm font-medium text-gray-900">VEN-{String(selectedDevolucion.ventaPedidoId).padStart(3, '0')}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Cliente</Label>
+                          <p className="text-sm font-medium text-gray-900">
+                            {(() => {
+                              const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                              return userVenta ? getClienteInfo(userVenta.usuarioId) : "N/A";
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator className="bg-gray-100" />
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Motivo de Devolución</h4>
+                      <div className="bg-red-50 rounded-lg p-6 space-y-4 border border-red-100">
+                         <p className="text-sm text-red-900 leading-relaxed font-medium">
+                           {selectedDevolucion.motivo || "Sin observaciones registradas."}
+                         </p>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
+                    <div className="space-y-4">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles del Retorno</h4>
+                      <div className="border border-gray-100 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                              <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant. Devuelta</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {detallesDevolucion.filter(det => Number(det.devolucionId) === Number(selectedDevolucion.id)).map((detalle, idx) => {
+                               const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                               const dVenta = userVenta?.detalleVenta_Pedido?.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
+                               const pData = productos.find(p => Number(p.id) === Number(dVenta?.productoId));
+                               return (
+                                <TableRow key={detalle.id || idx} className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                                  <TableCell className="text-xs font-medium text-gray-900">
+                                    {pData?.nombreProducto || `Producto ID #${dVenta?.productoId || "N/A"}`}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-center text-gray-600">{detalle.cantidad}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            {detallesDevolucion.filter(det => Number(det.devolucionId) === Number(selectedDevolucion.id)).length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={2} className="text-center py-8 text-muted-foreground text-sm">
+                                  No hay artículos registrados para esta devolución.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <DialogFooter className="p-8 border-t border-gray-100 flex items-center gap-3 bg-white">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setCurrentView("list");
+                    setSelectedDevolucion(null);
+                  }}
+                  className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Cerrar Detalle
+                </Button>
+                <Button 
+                  className="h-10 px-6 bg-gray-900 text-white font-medium hover:bg-black transition-all" 
+                  onClick={() => handleExportPDF(selectedDevolucion)}
+                  disabled={selectedDevolucion.estadoId !== 5}
+                >
+                  Descargar PDF
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

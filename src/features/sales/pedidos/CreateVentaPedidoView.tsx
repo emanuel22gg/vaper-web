@@ -908,7 +908,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                         <Button
                             onClick={() => setActiveTab("productos")}
                             disabled={!clienteEncontrado}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none"
+                            className="bg-black hover:bg-gray-800 text-white border-none"
                         >
                             Siguiente: productos
                             <ChevronRight className="h-4 w-4 ml-2" />
@@ -918,7 +918,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                         <Button
                             onClick={() => setActiveTab("vigencia")}
                             disabled={carrito.length === 0}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none"
+                            className="bg-black hover:bg-gray-800 text-white border-none"
                         >
                             Siguiente: garantía
                             <ChevronRight className="h-4 w-4 ml-2" />
@@ -927,7 +927,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                     {activeTab === "vigencia" && (
                         <Button
                             onClick={() => setActiveTab("entrega")}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none"
+                            className="bg-black hover:bg-gray-800 text-white border-none"
                         >
                             Siguiente: entrega y pago
                             <ChevronRight className="h-4 w-4 ml-2" />
@@ -937,7 +937,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                         <Button
                             onClick={handleGuardarPedido}
                             disabled={guardando || !direccionEntrega || !ciudadEntrega}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none"
+                            className="bg-black hover:bg-gray-800 text-white border-none"
                         >
                             {guardando ? "Guardando…" : "Finalizar pedido"}
                         </Button>

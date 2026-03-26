@@ -317,12 +317,12 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                   Registrar Abono
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nuevo Abono para Pedido #{pedido.id}</DialogTitle>
-                  <DialogDescription>Ingrese los detalles del pago recibido.</DialogDescription>
+              <DialogContent className="sm:max-w-[500px] border-none shadow-lg p-0 overflow-hidden">
+                <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white">
+                  <DialogTitle className="text-xl font-bold text-gray-900">Nuevo Abono para Pedido #{pedido.id}</DialogTitle>
+                  <DialogDescription className="text-sm text-gray-500 mt-1">Ingrese los detalles del pago recibido.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="p-8 space-y-6">
                   <div className="space-y-2">
                     <Label>Monto a Abonar (COP)</Label>
                     <div className="relative">
@@ -362,19 +362,19 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                     </Select>
                   </div>
                 </div>
-                <DialogFooter className="flex gap-2">
+                <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3">
                   <Button variant="outline" onClick={() => {
                     setIsAddDialogOpen(false);
                     setNewAbono({ monto: '', metodoPago: '' });
-                  }}>Cancelar</Button>
+                  }} className="min-w-[100px]">Cancelar</Button>
                   <Button
                     onClick={handleAddAbono}
                     disabled={!newAbono.monto || getRawNumber(newAbono.monto) <= 0 || getRawNumber(newAbono.monto) > saldoPendiente || !newAbono.metodoPago || isSavingAbono}
-                    className="bg-blue-600 hover:bg-blue-700 font-bold"
+                    className="bg-black hover:bg-gray-800 text-white font-bold min-w-[150px]"
                   >
                     {isSavingAbono ? "Guardando..." : "Guardar Abono"}
                   </Button>
-                </DialogFooter>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -465,60 +465,60 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
 
       {/* Modal de Detalle de Abono */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-blue-600" />
+        <DialogContent className="sm:max-w-[500px] border-none shadow-lg p-0 overflow-hidden">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white">
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-[rgb(21,93,252)]" />
               Detalle del Abono #{selectedAbono?.id}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
               Información completa del pago registrado.
             </DialogDescription>
           </DialogHeader>
           {selectedAbono && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-6 text-sm">
                 <div className="space-y-1">
-                  <p className="text-muted-foreground font-medium">Pedido ID</p>
-                  <p className="font-bold">#{pedido.id}</p>
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Pedido ID</p>
+                  <p className="font-bold text-gray-900 text-base">#{pedido.id}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-muted-foreground font-medium">Fecha de Registro</p>
-                  <p className="font-bold">{new Date(selectedAbono.fecha).toLocaleDateString()}</p>
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Fecha de Registro</p>
+                  <p className="font-bold text-gray-900 text-base">{new Date(selectedAbono.fecha).toLocaleDateString()}</p>
                 </div>
-                <div className="space-y-1 col-span-2 border-t pt-2 mt-2">
-                  <p className="text-muted-foreground font-medium">Cliente</p>
-                  <p className="font-bold">{usuarios.find(u => u.id === pedido.usuarioId) ? `${usuarios.find(u => u.id === pedido.usuarioId)?.nombres} ${usuarios.find(u => u.id === pedido.usuarioId)?.apellidos}` : 'N/A'}</p>
+                <div className="space-y-1 col-span-2 border-t pt-4 mt-2">
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Cliente</p>
+                  <p className="font-bold text-gray-900 text-base">{usuarios.find(u => u.id === pedido.usuarioId) ? `${usuarios.find(u => u.id === pedido.usuarioId)?.nombres} ${usuarios.find(u => u.id === pedido.usuarioId)?.apellidos}` : 'N/A'}</p>
                   <p className="text-xs text-muted-foreground">Doc: {usuarios.find(u => u.id === pedido.usuarioId)?.numeroDocumento}</p>
                 </div>
-                <div className="space-y-1 border-t pt-2">
-                  <p className="text-muted-foreground font-medium">Monto Abonado</p>
-                  <p className="font-bold text-blue-600 text-lg">${selectedAbono.monto.toLocaleString()}</p>
+                <div className="space-y-1 border-t pt-4 mt-2">
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Monto Abonado</p>
+                  <p className="font-black text-[rgb(21,93,252)] text-xltracking-tight tabular-nums">${selectedAbono.monto.toLocaleString()}</p>
                 </div>
-                <div className="space-y-1 border-t pt-2">
-                  <p className="text-muted-foreground font-medium">Saldo al Momento</p>
-                  <p className="font-bold text-gray-700 text-lg">${selectedAbono.saldoRestante.toLocaleString()}</p>
+                <div className="space-y-1 border-t pt-4 mt-2">
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Saldo al Momento</p>
+                  <p className="font-bold text-gray-500 text-lg tabular-nums">${selectedAbono.saldoRestante.toLocaleString()}</p>
                 </div>
-                <div className="space-y-1 border-t pt-2">
-                  <p className="text-muted-foreground font-medium">Método de Pago</p>
-                  <Badge variant="outline" className="font-bold">{selectedAbono.metodoPago}</Badge>
+                <div className="space-y-1 border-t pt-4 mt-2">
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Método de Pago</p>
+                  <Badge variant="outline" className="font-bold border-blue-100 bg-blue-50 text-blue-700">{selectedAbono.metodoPago}</Badge>
                 </div>
-                <div className="space-y-1 border-t pt-2">
-                  <p className="text-muted-foreground font-medium">Estado</p>
-                  <Badge className={selectedAbono.estado === true ? 'bg-green-500' : 'bg-red-500'}>
+                <div className="space-y-1 border-t pt-4 mt-2">
+                  <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Estado</p>
+                  <Badge className={selectedAbono.estado === true ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}>
                     {selectedAbono.estado === true ? 'Registrado' : 'Anulado'}
                   </Badge>
                 </div>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Cerrar</Button>
-            <Button className="bg-blue-600" onClick={() => selectedAbono && handleExportarPDF(selectedAbono)}>
+          <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)} className="min-w-[100px]">Cerrar</Button>
+            <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700 text-white min-w-[150px]" onClick={() => selectedAbono && handleExportarPDF(selectedAbono)}>
               <Download className="h-4 w-4 mr-2" />
               Descargar Receipt
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

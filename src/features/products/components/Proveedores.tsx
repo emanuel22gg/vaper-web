@@ -490,292 +490,233 @@ export const Proveedores: React.FC = () => {
                   Nuevo Proveedor
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto no-scrollbar">
-                <DialogHeader>
-                  <DialogTitle>
-                    Registrar Nuevo Proveedor
-                  </DialogTitle>
-                  <DialogDescription>
-                    Selecciona el tipo de proveedor y completa
-                    la información correspondiente.
-                  </DialogDescription>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+                <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">
+                      Registrar Nuevo Proveedor
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Selecciona el tipo de proveedor y completa la información.
+                    </DialogDescription>
+                  </div>
                 </DialogHeader>
 
-                {/* Selector de tipo de proveedor */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Tipo de Proveedor</Label>
-                    <Select
-                      value={tipoProveedorSeleccionado}
-                      onValueChange={(
-                        value: "natural" | "juridica",
-                      ) => {
-                        setTipoProveedorSeleccionado(value);
-                        setNewProveedor({
-                          ...newProveedor,
-                          tipoPersona: value,
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="natural">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-2" />
-                            Persona Natural
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="juridica">
-                          <div className="flex items-center">
-                            <Building2 className="h-4 w-4 mr-2" />
-                            Persona Jurídica
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="p-8 space-y-10">
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                      <TabsTrigger 
+                        value="basic" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                      >
+                        <User className="h-4 w-4" /> Básico
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="contact" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                      >
+                        <MapPin className="h-4 w-4" /> Contacto y Domicilio
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <Separator />
-
-                  {/* Formulario para Persona Natural */}
-                  {tipoProveedorSeleccionado === "natural" && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium flex items-center">
-                        <User className="h-5 w-5 mr-2 text-blue-500" />
-                        Información de Persona Natural
-                      </h3>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="nombres">
-                            Nombres *
-                          </Label>
-                          <Input
-                            id="nombres"
-                            value={newProveedor.nombres || ""}
-                            onChange={(e) =>
-                              setNewProveedor({
-                                ...newProveedor,
-                                nombres: e.target.value,
-                              })
-                            }
-                            placeholder="María González"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="apellidos">
-                            Apellidos *
-                          </Label>
-                          <Input
-                            id="apellidos"
-                            value={newProveedor.apellidos || ""}
-                            onChange={(e) =>
-                              setNewProveedor({
-                                ...newProveedor,
-                                apellidos: e.target.value,
-                              })
-                            }
-                            placeholder="Rodríguez Castro"
-                          />
-                        </div>
-                      </div>
-
+                    <TabsContent value="basic" className="space-y-8 animate-in fade-in-50 duration-500">
                       <div className="space-y-2">
-                        <Label htmlFor="cedula">Documento de identidad *</Label>
-                        <Input
-                          id="cedula"
-                          value={newProveedor.cedula || ""}
-                          onChange={(e) =>
+                        <Label>Tipo de Proveedor</Label>
+                        <Select
+                          value={tipoProveedorSeleccionado}
+                          onValueChange={(value: "natural" | "juridica") => {
+                            setTipoProveedorSeleccionado(value);
                             setNewProveedor({
                               ...newProveedor,
-                              cedula: e.target.value,
-                            })
-                          }
-                          placeholder="43123456"
-                        />
+                              tipoPersona: value,
+                            });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="natural">
+                              <div className="flex items-center">
+                                <User className="h-4 w-4 mr-2" /> Persona Natural
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="juridica">
+                              <div className="flex items-center">
+                                <Building2 className="h-4 w-4 mr-2" /> Persona Jurídica
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Formulario para Persona Jurídica */}
-                  {tipoProveedorSeleccionado === "juridica" && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium flex items-center">
-                        <Building2 className="h-5 w-5 mr-2 text-purple-500" />
-                        Información de Persona Jurídica
-                      </h3>
+                      {/* Formulario para Persona Natural */}
+                      {tipoProveedorSeleccionado === "natural" && (
+                        <div className="space-y-4 pt-4 border-t border-gray-100 mt-4">
+                          <h3 className="text-sm font-medium flex items-center text-gray-700">
+                            <User className="h-4 w-4 mr-2 text-blue-500" />
+                            Información de Persona Natural
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="nombres">Nombres *</Label>
+                              <Input
+                                id="nombres"
+                                value={newProveedor.nombres || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, nombres: e.target.value })}
+                                placeholder="María González"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="apellidos">Apellidos *</Label>
+                              <Input
+                                id="apellidos"
+                                value={newProveedor.apellidos || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, apellidos: e.target.value })}
+                                placeholder="Rodríguez Castro"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="cedula">Documento de identidad *</Label>
+                            <Input
+                              id="cedula"
+                              value={newProveedor.cedula || ""}
+                              onChange={(e) => setNewProveedor({ ...newProveedor, cedula: e.target.value })}
+                              placeholder="43123456"
+                            />
+                          </div>
+                        </div>
+                      )}
 
+                      {/* Formulario para Persona Jurídica */}
+                      {tipoProveedorSeleccionado === "juridica" && (
+                        <div className="space-y-4 pt-4 border-t border-gray-100 mt-4">
+                          <h3 className="text-sm font-medium flex items-center text-gray-700">
+                            <Building2 className="h-4 w-4 mr-2 text-purple-500" />
+                            Información de Persona Jurídica
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="razonSocial">Razón Social *</Label>
+                              <Input
+                                id="razonSocial"
+                                value={newProveedor.razonSocial || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, razonSocial: e.target.value })}
+                                placeholder="VapeMax Distribuciones SAS"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="nit">NIT *</Label>
+                              <Input
+                                id="nit"
+                                value={newProveedor.nit || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, nit: e.target.value })}
+                                placeholder="900123456-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="representanteLegal">Representante Legal *</Label>
+                            <Input
+                              id="representanteLegal"
+                              value={newProveedor.representanteLegal || ""}
+                              onChange={(e) => setNewProveedor({ ...newProveedor, representanteLegal: e.target.value })}
+                              placeholder="Juan Pérez"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="contact" className="space-y-8 animate-in fade-in-50 duration-500">
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="razonSocial">
-                              Razón Social *
-                            </Label>
-                            <Input
-                              id="razonSocial"
-                              value={
-                                newProveedor.razonSocial || ""
-                              }
-                              onChange={(e) =>
-                                setNewProveedor({
-                                  ...newProveedor,
-                                  razonSocial: e.target.value,
-                                })
-                              }
-                              placeholder="VapeMax Distribuciones SAS"
-                            />
+                            <Label htmlFor="email">Email *</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="email"
+                                type="email"
+                                value={newProveedor.email || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, email: e.target.value })}
+                                placeholder="contacto@ejemplo.com"
+                                className="pl-9"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="nit">NIT *</Label>
+                            <Label htmlFor="telefono">Teléfono *</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="telefono"
+                                value={newProveedor.telefono || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, telefono: e.target.value })}
+                                placeholder="+57 300 123 4567"
+                                className="pl-9"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="direccion">Dirección *</Label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="direccion"
+                                value={newProveedor.direccion || ""}
+                                onChange={(e) => setNewProveedor({ ...newProveedor, direccion: e.target.value })}
+                                placeholder="Calle 45 #23-15"
+                                className="pl-9"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="ciudad">Ciudad *</Label>
                             <Input
-                              id="nit"
-                              value={newProveedor.nit || ""}
-                              onChange={(e) =>
-                                setNewProveedor({
-                                  ...newProveedor,
-                                  nit: e.target.value,
-                                })
-                              }
-                              placeholder="900123456-1"
+                              id="ciudad"
+                              value={newProveedor.ciudad || ""}
+                              onChange={(e) => setNewProveedor({ ...newProveedor, ciudad: e.target.value })}
+                              placeholder="Medellín"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="representanteLegal">
-                            Representante Legal *
-                          </Label>
-                          <Input
-                            id="representanteLegal"
-                            value={
-                              newProveedor.representanteLegal ||
-                              ""
-                            }
-                            onChange={(e) =>
-                              setNewProveedor({
-                                ...newProveedor,
-                                representanteLegal:
-                                  e.target.value,
-                              })
-                            }
-                            placeholder="Juan Pérez"
+                          <Label htmlFor="observaciones">Observaciones</Label>
+                          <Textarea
+                            id="observaciones"
+                            value={newProveedor.observaciones || ""}
+                            onChange={(e) => setNewProveedor({ ...newProveedor, observaciones: e.target.value })}
+                            placeholder="Notas adicionales sobre el proveedor..."
+                            rows={3}
+                            className="resize-none"
                           />
                         </div>
                       </div>
-                    </div>
-                  )}
+                    </TabsContent>
+                  </Tabs>
 
-                  <Separator />
-
-                  {/* Información de contacto común */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">
-                      Información de Contacto
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={newProveedor.email || ""}
-                          onChange={(e) =>
-                            setNewProveedor({
-                              ...newProveedor,
-                              email: e.target.value,
-                            })
-                          }
-                          placeholder="contacto@ejemplo.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="telefono">
-                          Teléfono *
-                        </Label>
-                        <Input
-                          id="telefono"
-                          value={newProveedor.telefono || ""}
-                          onChange={(e) =>
-                            setNewProveedor({
-                              ...newProveedor,
-                              telefono: e.target.value,
-                            })
-                          }
-                          placeholder="+57 300 123 4567"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="direccion">
-                          Dirección *
-                        </Label>
-                        <Input
-                          id="direccion"
-                          value={newProveedor.direccion || ""}
-                          onChange={(e) =>
-                            setNewProveedor({
-                              ...newProveedor,
-                              direccion: e.target.value,
-                            })
-                          }
-                          placeholder="Calle 45 #23-15"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="ciudad">Ciudad *</Label>
-                        <Input
-                          id="ciudad"
-                          value={newProveedor.ciudad || ""}
-                          onChange={(e) =>
-                            setNewProveedor({
-                              ...newProveedor,
-                              ciudad: e.target.value,
-                            })
-                          }
-                          placeholder="Medellín"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="observaciones">
-                        Observaciones
-                      </Label>
-                      <Textarea
-                        id="observaciones"
-                        value={newProveedor.observaciones || ""}
-                        onChange={(e) =>
-                          setNewProveedor({
-                            ...newProveedor,
-                            observaciones: e.target.value,
-                          })
-                        }
-                        placeholder="Notas adicionales sobre el proveedor..."
-                        rows={2}
-                      />
-                    </div>
-                  </div>
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-0 mt-8">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsCreateDialogOpen(false)}
+                      className="w-full sm:w-auto sm:mr-3 h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleValidateAndShowConfirmation}
+                      className="w-full sm:w-auto h-10 px-6 bg-black hover:bg-gray-800 text-white font-medium border-none transition-all"
+                    >
+                      Crear Proveedor
+                    </Button>
+                  </DialogFooter>
                 </div>
-
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleValidateAndShowConfirmation}
-                  >
-                    Crear Proveedor
-                  </Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -1522,7 +1463,7 @@ export const Proveedores: React.FC = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleUpdateProveedor}>
+            <Button onClick={handleUpdateProveedor} className="bg-black hover:bg-gray-800 text-white">
               Actualizar Proveedor
             </Button>
           </DialogFooter>

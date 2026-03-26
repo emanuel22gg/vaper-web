@@ -60,6 +60,7 @@ import {
 import { Separator } from "@/shared/ui/separator";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { TablePagination } from "@/shared/ui/TablePagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -85,7 +86,9 @@ import {
   Phone,
   Mail,
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  ShoppingCart,
+  Info
 } from "lucide-react";
 import logoImage from "@/assets/da58514cc4a62145203981edd12b890ba8690130.png";
 import { cn } from "@/shared/ui/utils";
@@ -1186,126 +1189,145 @@ export const Cotizaciones: React.FC = () => {
 
           {selectedCotizacion && (
             <div className="p-8 space-y-10">
-              {/* Información General y Cliente */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-6">
-                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información del Cliente</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-lg font-bold text-gray-900 leading-tight">{selectedCotizacion.cliente.nombre}</p>
-                      <p className="text-sm text-gray-500 mt-1 font-mono">Doc: {selectedCotizacion.cliente.documento}</p>
-                    </div>
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-center gap-3">
-                        <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
-                          <Mail className="h-3.5 w-3.5" />
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                  <TabsTrigger 
+                    value="info" 
+                    className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                  >
+                    <Info className="h-4 w-4" /> Información General
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="productos" 
+                    className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                  >
+                    <ShoppingCart className="h-4 w-4" /> Artículos Cotizados
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                  {/* Información General y Cliente */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información del Cliente</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900 leading-tight">{selectedCotizacion.cliente.nombre}</p>
+                          <p className="text-sm text-gray-500 mt-1 font-mono">Doc: {selectedCotizacion.cliente.documento}</p>
                         </div>
-                        <p className="text-sm font-medium text-gray-600 truncate">{selectedCotizacion.cliente.email}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
-                          <Phone className="h-3.5 w-3.5" />
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center gap-3">
+                            <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <Mail className="h-3.5 w-3.5" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600 truncate">{selectedCotizacion.cliente.email}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                              <Phone className="h-3.5 w-3.5" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600">{selectedCotizacion.cliente.telefono}</p>
+                          </div>
                         </div>
-                        <p className="text-sm font-medium text-gray-600">{selectedCotizacion.cliente.telefono}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Vigencia y Control</h4>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                          <Calendar className="h-4 w-4 text-blue-500" />
+                          <div>
+                            <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Fecha Emisión</Label>
+                            <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaCotizacion).toLocaleDateString('es-CO')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                          <Receipt className="h-4 w-4 text-orange-500" />
+                          <div>
+                            <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Válida Hasta</Label>
+                            <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaVigencia).toLocaleDateString('es-CO')}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-6">
-                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Vigencia y Control</h4>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
-                      <Calendar className="h-4 w-4 text-blue-500" />
-                      <div>
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Fecha Emisión</Label>
-                        <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaCotizacion).toLocaleDateString('es-CO')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
-                      <Receipt className="h-4 w-4 text-orange-500" />
-                      <div>
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase leading-none block mb-1">Válida Hasta</Label>
-                        <p className="text-xs font-bold text-gray-900">{new Date(selectedCotizacion.fechaVigencia).toLocaleDateString('es-CO')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="bg-gray-100" />
-
-              {/* Productos */}
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos Cotizados</h4>
-                  <Badge variant="secondary" className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100">
-                    {selectedCotizacion.productos.length} Items
-                  </Badge>
-                </div>
-                
-                <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="bg-gray-50 sticky top-0">
-                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Cant</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Unitario</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {selectedCotizacion.productos.map((producto, index) => (
-                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-5">
-                            <p className="text-sm font-semibold text-gray-900">{producto.nombre}</p>
-                            <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase">{producto.codigo}</p>
-                          </td>
-                          <td className="px-6 py-5 text-center">
-                            <span className="inline-flex h-7 px-2 items-center justify-center bg-gray-100 text-gray-700 font-bold rounded-lg text-xs min-w-[32px]">
-                              {producto.cantidad}
-                            </span>
-                          </td>
-                          <td className="px-6 py-5 text-right text-sm text-gray-500 font-medium font-mono">
-                            ${producto.precioUnitario.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-5 text-right text-sm font-bold text-gray-900 font-mono">
-                            ${producto.subtotal.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Resumen Financiero */}
-              <div className="flex justify-end pt-4">
-                <div className="w-full md:w-72 space-y-4 pr-6">
-                  <div className="flex justify-between items-center text-sm font-medium text-gray-400">
-                    <span>Subtotal Bruto</span>
-                    <span className="font-mono">${selectedCotizacion.subtotal.toLocaleString()}</span>
-                  </div>
-                  {selectedCotizacion.descuento > 0 && (
-                    <div className="flex justify-between items-center text-sm font-medium text-red-500">
-                      <span>Descuento Aplicado</span>
-                      <span className="font-mono">-${selectedCotizacion.descuento.toLocaleString()}</span>
+                  {selectedCotizacion.observaciones && (
+                    <div className="p-4 bg-blue-50/30 rounded-xl border border-blue-100/30 mt-6">
+                      <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Comentarios Adicionales</h4>
+                      <p className="text-sm text-gray-600 leading-relaxed italic">"{selectedCotizacion.observaciones}"</p>
                     </div>
                   )}
-                  <div className="h-px bg-gray-100 w-full" />
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Importe Neto</span>
-                    <span className="text-3xl font-black text-gray-900 tracking-tighter leading-none">${selectedCotizacion.total.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
+                </TabsContent>
 
-              {selectedCotizacion.observaciones && (
-                <div className="p-4 bg-blue-50/30 rounded-xl border border-blue-100/30">
-                  <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Comentarios Adicionales</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed italic">"{selectedCotizacion.observaciones}"</p>
-                </div>
-              )}
+                <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
+                  {/* Productos */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos Cotizados</h4>
+                      <Badge variant="secondary" className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100">
+                        {selectedCotizacion.productos.length} Items
+                      </Badge>
+                    </div>
+                    
+                    <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="bg-gray-50 sticky top-0">
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Cant</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Unitario</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {selectedCotizacion.productos.map((producto, index) => (
+                            <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-6 py-5">
+                                <p className="text-sm font-semibold text-gray-900">{producto.nombre}</p>
+                                <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase">{producto.codigo}</p>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <span className="inline-flex h-7 px-2 items-center justify-center bg-gray-100 text-gray-700 font-bold rounded-lg text-xs min-w-[32px]">
+                                  {producto.cantidad}
+                                </span>
+                              </td>
+                              <td className="px-6 py-5 text-right text-sm text-gray-500 font-medium font-mono">
+                                ${producto.precioUnitario.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-5 text-right text-sm font-bold text-gray-900 font-mono">
+                                ${producto.subtotal.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Resumen Financiero */}
+                  <div className="flex justify-end pt-4">
+                    <div className="w-full md:w-72 space-y-4 pr-6">
+                      <div className="flex justify-between items-center text-sm font-medium text-gray-400">
+                        <span>Subtotal Bruto</span>
+                        <span className="font-mono">${selectedCotizacion.subtotal.toLocaleString()}</span>
+                      </div>
+                      {selectedCotizacion.descuento > 0 && (
+                        <div className="flex justify-between items-center text-sm font-medium text-red-500">
+                          <span>Descuento Aplicado</span>
+                          <span className="font-mono">-${selectedCotizacion.descuento.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="h-px bg-gray-100 w-full" />
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Importe Neto</span>
+                        <span className="text-3xl font-black text-gray-900 tracking-tighter leading-none">${selectedCotizacion.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
@@ -1342,22 +1364,36 @@ export const Cotizaciones: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {isCreateDialogOpen
-                ? "Nueva Cotización"
-                : "Editar Cotización"}
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              {isCreateDialogOpen ? "Nueva Cotización" : "Editar Cotización"}
             </DialogTitle>
-            <DialogDescription>
-              {isCreateDialogOpen
-                ? "Crea una nueva cotización en el sistema"
-                : "Modifica la información de la cotización"}
+            <DialogDescription className="text-sm text-gray-500 mt-1">
+              {isCreateDialogOpen ? "Crea una nueva cotización en el sistema" : "Modifica la información de la cotización"}
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 overflow-y-auto pr-4">
-            <div className="space-y-4 sm:space-y-6 py-2 px-1">
+          <Tabs defaultValue="info" className="w-full">
+            <div className="px-8 border-b">
+              <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0">
+                <TabsTrigger 
+                  value="info" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Información General
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="productos" 
+                  className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                >
+                  Productos ({formData.productos.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="p-8">
+              <TabsContent value="info" className="m-0 space-y-6">
               {/* Grid de campos principales */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Fecha (No editable) */}
@@ -1489,10 +1525,11 @@ export const Cotizaciones: React.FC = () => {
                   </div>
                 </div>
 
-              </div>
+                </div>
+              </TabsContent>
 
-              {/* Sección de agregar productos - ocupa todo el ancho */}
-              <div className="space-y-3 pt-2 border-t">
+              <TabsContent value="productos" className="m-0 space-y-6">
+                <div className="space-y-3 pt-2">
                 <Label>Agregar Productos</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Producto - Buscador Directo */}
@@ -1717,10 +1754,11 @@ export const Cotizaciones: React.FC = () => {
                   </div>
                 </div>
               )}
+              </TabsContent>
             </div>
-          </ScrollArea>
+          </Tabs>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+          <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -1729,7 +1767,7 @@ export const Cotizaciones: React.FC = () => {
                 setSelectedCotizacion(null);
                 resetFormData();
               }}
-              className="w-full sm:w-auto"
+              className="min-w-[100px]"
             >
               Cancelar
             </Button>
@@ -1739,13 +1777,13 @@ export const Cotizaciones: React.FC = () => {
                 !formData.clienteId ||
                 formData.productos.length === 0
               }
-              className="w-full sm:w-auto"
+              className="min-w-[150px] bg-black hover:bg-gray-800 text-white"
             >
               {isCreateDialogOpen
                 ? "Crear Cotización"
                 : "Actualizar Cotización"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

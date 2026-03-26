@@ -475,7 +475,7 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancelar
                     </Button>
-                    <Button className="bg-yellow-400 hover:bg-yellow-500 text-black border-none" onClick={handleUpdate} disabled={loading}>
+                    <Button className="bg-black hover:bg-gray-800 text-white border-none" onClick={handleUpdate} disabled={loading}>
                         {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                         Actualizar Cliente
                     </Button>

@@ -35,8 +35,8 @@ import {
 } from "@/shared/ui/dialog";
 import { Label } from "@/shared/ui/label";
 import { Separator } from "@/shared/ui/separator";
-import { DetallePedido } from "./DetallePedido";
 import { TablePagination } from '@/shared/ui/TablePagination';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { VentaPedidoDto, UsuarioDto, Producto } from "@/shared/types";
 import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados, getDetalleVentaPedidos } from "@/shared/services/api";
 import { CreateVentaPedidoView } from "../pedidos/CreateVentaPedidoView";
@@ -54,6 +54,11 @@ import {
   Edit3,
   Search,
   Package,
+  ShoppingCart,
+  Info,
+  User,
+  MapPin,
+  CreditCard
 } from "lucide-react";
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
@@ -468,41 +473,33 @@ export const Pedidos: React.FC<PedidosProps> = ({
     setShowCreateView(true);
   };
 
-  if (showDetallePedido && selectedPedido) {
-    return (
-      <DetallePedido
-        pedido={selectedPedido}
-        onVolver={() => {
-          setShowDetallePedido(false);
-          setSelectedPedido(null);
-        }}
-      />
-    );
-  }
+
 
   return (
     <div className="space-y-6 p-6">
       <Dialog
         open={showCreateView}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) setShowCreateView(false);
         }}
       >
-        <DialogContent className="w-[min(100%,calc(100vw-2rem))] max-w-4xl max-h-[90vh] overflow-y-auto gap-4 p-5 sm:p-6">
-          <DialogHeader className="space-y-1.5 pb-0 shrink-0">
-            <DialogTitle className="text-lg">Nuevo pedido</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
+            <DialogTitle className="text-xl font-bold text-gray-900">Nuevo pedido</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
               Complete cada paso para registrar el pedido en el sistema.
             </DialogDescription>
           </DialogHeader>
-          <CreateVentaPedidoView
-            embedInDialog
-            onBack={() => setShowCreateView(false)}
-            onSuccess={() => {
-              setShowCreateView(false);
-              fetchData();
-            }}
-          />
+          <div className="p-8 pt-6">
+            <CreateVentaPedidoView
+              embedInDialog
+              onBack={() => setShowCreateView(false)}
+              onSuccess={() => {
+                setShowCreateView(false);
+                fetchData();
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -710,6 +707,210 @@ export const Pedidos: React.FC<PedidosProps> = ({
         </DialogContent>
       </Dialog>
 
+      {/* View Order Dialog */}
+      <Dialog
+        open={showDetallePedido}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setShowDetallePedido(false);
+            setSelectedPedido(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+          {selectedPedido && (
+            <>
+              <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles del Pedido</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Información completa del pedido y artículos.
+                    </DialogDescription>
+                  </div>
+                  <Badge 
+                    variant={getStatusVariant(getStatusName(selectedPedido.estadoId))}
+                    className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                      getStatusVariant(getStatusName(selectedPedido.estadoId)) === "default"
+                        ? "bg-green-50 text-green-700 border-green-100"
+                        : getStatusVariant(getStatusName(selectedPedido.estadoId)) === "destructive"
+                        ? "bg-red-50 text-red-700 border-red-100"
+                        : "bg-blue-50 text-blue-700 border-blue-100"
+                    }`}
+                  >
+                    <span className="capitalize">{getStatusName(selectedPedido.estadoId)}</span>
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="p-8 space-y-10">
+                {/* Cabecera */}
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                    <Receipt className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      Pedido #{selectedPedido.id}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                      <span className="font-mono text-gray-400">{selectedPedido.fechaCreacion ? new Date(selectedPedido.fechaCreacion).toLocaleDateString() : 'N/A'}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {getUsuarioName(selectedPedido.usuarioId)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <Tabs defaultValue="info" className="w-full">
+                  <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                    <TabsTrigger 
+                      value="info" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <Info className="h-4 w-4" /> Información General
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="productos" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <ShoppingCart className="h-4 w-4" /> Productos ({(selectedPedido as any).detalleVenta_Pedido?.length || 0})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles del Cliente</h4>
+                      <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500 flex items-center gap-1"><User className="h-3 w-3" /> Cliente</Label>
+                          <p className="text-sm font-medium text-gray-900">{getUsuarioName(selectedPedido.usuarioId)}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Documento</Label>
+                          <p className="text-sm font-medium text-gray-900">{getUsuarioDocument(selectedPedido.usuarioId)}</p>
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                          <Label className="text-xs font-medium text-gray-500 flex items-center gap-1"><MapPin className="h-3 w-3" /> Dirección de Entrega</Label>
+                          <p className="text-sm font-medium text-gray-900">
+                            {selectedPedido.direccionEntrega ? (
+                              <>{selectedPedido.direccionEntrega}, {selectedPedido.ciudadEntrega || ''}, {selectedPedido.departamentoEntrega || ''}</>
+                            ) : "No especificada (Regístrate)"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator className="bg-gray-100" />
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Pago y Envío</h4>
+                      <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500 flex items-center gap-1"><CreditCard className="h-3 w-3" /> Método de Pago</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedPedido.metodoPago || "N/A"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Referencia Pago</Label>
+                          <p className="text-sm font-medium text-gray-900">{(selectedPedido as any).referenciaPago || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Tipo de Venta</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedPedido.tipoVenta || "Venta"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator className="bg-gray-100" />
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Resumen Financiero</h4>
+                      <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Subtotal</span>
+                          <span className="font-medium text-gray-900">${(selectedPedido.subtotal || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Envío</span>
+                          <span className="font-medium text-gray-900">${(selectedPedido.envio || 0).toLocaleString()}</span>
+                        </div>
+                        <Separator className="bg-gray-200" />
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-gray-900">Total</span>
+                          <span className="text-xl font-black text-blue-600">${selectedPedido.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos</h4>
+                        <div className="text-xs font-bold text-gray-900">
+                          Total: <span className="text-blue-600 font-black">${selectedPedido.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="border border-gray-100 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                              <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant.</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">P. Unitario</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">Subtotal</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(selectedPedido as any).detalleVenta_Pedido?.map((detalle: any, idx: number) => (
+                              <TableRow key={detalle.id || idx} className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                                <TableCell className="text-xs font-medium text-gray-900">
+                                  {productos.find(p => p.id === detalle.productoId)?.nombreProducto || "Producto"}
+                                </TableCell>
+                                <TableCell className="text-xs text-center text-gray-600">{detalle.cantidad}</TableCell>
+                                <TableCell className="text-right text-xs text-gray-600">${(detalle.precioUnitario || 0).toLocaleString()}</TableCell>
+                                <TableCell className="text-right text-sm font-bold text-gray-900">${(detalle.subtotal || 0).toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                            {(!(selectedPedido as any).detalleVenta_Pedido || (selectedPedido as any).detalleVenta_Pedido.length === 0) && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">
+                                  No hay productos registrados en este pedido
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <DialogFooter className="p-8 border-t border-gray-100 flex items-center gap-3 bg-white">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowDetallePedido(false);
+                    setSelectedPedido(null);
+                  }}
+                  className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Cerrar Detalle
+                </Button>
+                <Button 
+                  className="h-10 px-6 bg-gray-900 text-white font-medium hover:bg-black transition-all" 
+                  onClick={() => handleExportToPDF(selectedPedido)}
+                >
+                  Descargar PDF
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -16,6 +16,8 @@ import { Categoria, CategoriaFormData } from '@/shared/types';
 import { uploadImage, createCategoria } from '@/shared/services/api';
 import { ImageSelector } from '@/shared/components/ImageSelector';
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { Hash, FileText, ImageIcon, Loader2 } from 'lucide-react';
 
 interface CreateCategoriaDialogProps {
   open: boolean;
@@ -94,88 +96,127 @@ export const CreateCategoriaDialog: React.FC<CreateCategoriaDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Nueva Categoría</DialogTitle>
-          <DialogDescription>
-            Crea una nueva categoría.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+        <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+          <div>
+            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Nueva Categoría</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
+              Complete los datos para registrar una nueva categoría.
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="w-full">
-            <Label htmlFor="nombreCategoria">Nombre de Categoría *</Label>
-            <div className="h-2"></div>
-            <Input
-              id="nombreCategoria"
-              value={formData.nombreCategoria}
-              onChange={(e) => setFormData({ ...formData, nombreCategoria: e.target.value })}
-              placeholder="Nombre"
-              className="w-full"
-            />
-          </div>
+        <div className="p-8 space-y-10">
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+              <TabsTrigger 
+                value="basic" 
+                className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+              >
+                <Hash className="h-4 w-4" /> Información Básica
+              </TabsTrigger>
+              <TabsTrigger 
+                value="visuals" 
+                className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+              >
+                <ImageIcon className="h-4 w-4" /> Elementos Visuales
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="w-full">
-            <Label htmlFor="descripcion">Descripción</Label>
-            <div className="h-2"></div>
-            <Textarea
-              id="descripcion"
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              placeholder="Descripción"
-              rows={3}
-              className="w-full resize-none"
-            />
-          </div>
+            <TabsContent value="basic" className="space-y-8 animate-in fade-in-50 duration-500">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="nombreCategoria">Nombre de Categoría *</Label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="nombreCategoria"
+                      value={formData.nombreCategoria}
+                      onChange={(e) => setFormData({ ...formData, nombreCategoria: e.target.value })}
+                      placeholder="Ej: Accesorios Vapers"
+                      className="pl-9 w-full"
+                    />
+                  </div>
+                </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="descripcion">Descripción</Label>
+                  <div className="relative">
+                    <Textarea
+                      id="descripcion"
+                      value={formData.descripcion}
+                      onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                      placeholder="Breve descripción de los productos que incluye esta categoría..."
+                      rows={4}
+                      className="w-full resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
 
-          <div className="w-full">
-            <ImageSelector
-              selectedImageId={formData.idImagen}
-              previewUrl={formData.previewUrl}
-              onImageSelect={(id, url) => setFormData({
-                ...formData,
-                idImagen: id,
-                previewUrl: url,
-                imageFile: undefined // Clear file if selecting from gallery
-              })}
-              onFileSelect={(file) => {
-                // Validar que solo se permitan imágenes PNG o JPG
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-                if (!allowedTypes.includes(file.type)) {
-                  toast.error("Solo se permiten archivos con formato PNG o JPG");
-                  return;
-                }
-                
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  setFormData({
-                    ...formData,
-                    imageFile: file,
-                    previewUrl: reader.result as string,
-                    idImagen: undefined // Clear ID if uploading new
-                  });
-                };
-                reader.readAsDataURL(file);
-              }}
-              onClear={() => setFormData({
-                ...formData,
-                imageFile: undefined,
-                previewUrl: undefined,
-                idImagen: undefined
-              })}
-            />
-          </div>
+            <TabsContent value="visuals" className="space-y-8 animate-in fade-in-50 duration-500">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-gray-500" /> Imagen de la Categoría
+                  </Label>
+                  <ImageSelector
+                    selectedImageId={formData.idImagen}
+                    previewUrl={formData.previewUrl}
+                    onImageSelect={(id, url) => setFormData({
+                      ...formData,
+                      idImagen: id,
+                      previewUrl: url,
+                      imageFile: undefined
+                    })}
+                    onFileSelect={(file) => {
+                      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                      if (!allowedTypes.includes(file.type)) {
+                        toast.error("Solo se permiten archivos con formato PNG o JPG");
+                        return;
+                      }
+                      
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setFormData({
+                          ...formData,
+                          imageFile: file,
+                          previewUrl: reader.result as string,
+                          idImagen: undefined
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    onClear={() => setFormData({
+                      ...formData,
+                      imageFile: undefined,
+                      previewUrl: undefined,
+                      idImagen: undefined
+                    })}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Esta imagen se mostrará en el catálogo para representar la categoría.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-0 mt-8">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto sm:mr-3 h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting || !formData.nombreCategoria.trim()} 
+              className="w-full sm:w-auto h-10 px-6 bg-black hover:bg-gray-800 text-white font-medium border-none transition-all"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSubmitting ? "Guardando..." : "Crear Categoría"}
+            </Button>
+          </DialogFooter>
         </div>
-
-        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !formData.nombreCategoria.trim()} className="w-full sm:w-auto">
-            {isSubmitting ? "Guardando..." : "Crear Categoría"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

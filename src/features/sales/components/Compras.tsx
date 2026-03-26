@@ -56,6 +56,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/shared/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { toast } from "sonner";
 import { getCompras, createCompra, updateCompra, getProductos, getProveedores, updateProducto } from "@/shared/services/api";
 import { CompraDto, DetalleCompraDto, Producto, Proveedor } from "@/shared/types";
@@ -75,6 +76,9 @@ import {
   FileText,
   AlertTriangle,
   Download,
+  ShoppingCart,
+  Receipt,
+  Info
 } from "lucide-react";
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
@@ -595,18 +599,36 @@ export const Compras: React.FC = () => {
                   Nueva Compra
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
+              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+                <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10 shrink-0">
+                  <DialogTitle className="text-xl font-bold text-gray-900">
                     Crear Nueva Orden de Compra
                   </DialogTitle>
-                  <DialogDescription>
-                    Completa la información para crear una nueva
-                    orden de compra.
+                  <DialogDescription className="text-sm text-gray-500 mt-1">
+                    Completa la información para crear una nueva orden de compra.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
+                <Tabs defaultValue="info" className="w-full">
+                  <div className="px-8 border-b">
+                    <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0">
+                      <TabsTrigger 
+                        value="info" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                      >
+                        Información Básica
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="productos" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-[rgb(21,93,252)] data-[state=active]:bg-transparent data-[state=active]:text-[rgb(21,93,252)] rounded-none transition-all"
+                      >
+                        Productos ({newOrden.productos.length})
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <div className="p-8">
+                    <TabsContent value="info" className="m-0 space-y-6">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="proveedor">
@@ -676,7 +698,9 @@ export const Compras: React.FC = () => {
                       />
                     </div>
                   </div>
+                </TabsContent>
 
+                <TabsContent value="productos" className="m-0 space-y-6">
                   <div className="space-y-3">
                     <Label>Productos</Label>
                     <div className="border rounded-lg p-4 space-y-3 max-h-64 overflow-y-auto">
@@ -836,9 +860,11 @@ export const Compras: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                </div>
+                </TabsContent>
+              </div>
+            </Tabs>
 
-                <DialogFooter>
+                <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
                   <Button
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
@@ -851,11 +877,11 @@ export const Compras: React.FC = () => {
                       !newOrden.proveedorId ||
                       newOrden.productos.every((p) => !p.id)
                     }
-
+                    className="min-w-[120px] bg-black hover:bg-gray-800 text-white"
                   >
                     Crear Orden
                   </Button>
-                </DialogFooter>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -1057,145 +1083,170 @@ export const Compras: React.FC = () => {
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
       >
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalles de la Orden</DialogTitle>
-            <DialogDescription>
-              Información completa de la orden de compra
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
           {selectedOrden && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">
-                    Número de Orden
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrden.numeroCompra || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Proveedor
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {proveedores.find(p => p.id === selectedOrden.proveedorId)?.nombreCompletoORazonSocial || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Fecha de Compra
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(selectedOrden.fechaCompra).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Estado
-                  </Label>
-                  <Badge
-                    className={`${getStatusColor(selectedOrden.estado)} mt-1 text-white`}
+            <>
+              <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Detalles de la Orden de Compra</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Información completa de la compra y productos.
+                    </DialogDescription>
+                  </div>
+                  <Badge 
+                    variant={selectedOrden.estado === 1 ? "default" : "destructive"}
+                    className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                      selectedOrden.estado === 1
+                        ? "bg-green-50 text-green-700 border-green-100"
+                        : "bg-red-50 text-red-700 border-red-100"
+                    }`}
                   >
-                    {getStatusIcon(selectedOrden.estado)}
-                    <span className="ml-1">
-                      {selectedOrden.estado === 0
-                        ? "Anulada"
-                        : "Activa"}
-                    </span>
+                    {selectedOrden.estado === 1 ? "Activa" : "Anulada"}
                   </Badge>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    N° Factura
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrden.numeroFactura || "—"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Fecha Facturada
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrden.fechaRegistro
-                      ? new Date(selectedOrden.fechaRegistro).toLocaleDateString('es-CO')
-                      : "—"}
-                  </p>
-                </div>
-              </div>
+              </DialogHeader>
 
-              {selectedOrden.estado === 0 && selectedOrden.observaciones && (
-                <>
-                  <Separator />
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <Label className="text-sm font-medium text-red-800">
-                      Observaciones / Razón de Anulación
-                    </Label>
-                    <p className="text-sm text-red-700 mt-2">
-                      {selectedOrden.observaciones}
+              <div className="p-8 space-y-10">
+                {/* Cabecera */}
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                    <Receipt className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {selectedOrden.numeroCompra || `COMPRA-${selectedOrden.id}`}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                      <span className="font-mono text-gray-400">{new Date(selectedOrden.fechaCompra).toLocaleDateString()}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {proveedores.find(p => p.id === selectedOrden.proveedorId)?.nombreCompletoORazonSocial || "Proveedor"}
+                      </span>
                     </p>
                   </div>
-                </>
-              )}
+                </div>
 
-              <Separator />
-
-              <div>
-                <Label className="text-sm font-medium mb-3 block">
-                  Productos
-                </Label>
-                <div className="space-y-2">
-                  {selectedOrden.detalleCompras?.map((detalle, idx) => (
-                    <div
-                      key={detalle.id || idx}
-                      className="flex justify-between items-center p-3 border rounded-lg"
+                <Tabs defaultValue="info" className="w-full">
+                  <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                    <TabsTrigger 
+                      value="info" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
                     >
-                      <div>
-                        <p className="font-medium">
-                          {productos.find(p => p.id === detalle.productoId)?.nombreProducto || "Producto"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          ID: {detalle.productoId}
-                        </p>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className="flex flex-col text-xs text-muted-foreground">
-                          <span>Cantidad: {detalle.cantidad}</span>
-                          <span>Precio Unit: ${detalle.precioUnitario.toLocaleString()}</span>
+                      <Info className="h-4 w-4" /> Información General
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="productos" 
+                      className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                    >
+                      <ShoppingCart className="h-4 w-4" /> Productos ({selectedOrden.detalleCompras?.length || 0})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles de la Transacción</h4>
+                      <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Número de Orden</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedOrden.numeroCompra || "N/A"}</p>
                         </div>
-                        <p className="font-semibold text-sm">
-                          Subtotal: ${detalle.subtotal.toLocaleString()}
-                        </p>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Proveedor</Label>
+                          <p className="text-sm font-medium text-gray-900">{proveedores.find(p => p.id === selectedOrden.proveedorId)?.nombreCompletoORazonSocial || "N/A"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">N° Factura</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedOrden.numeroFactura || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-500">Fecha Facturada</Label>
+                          <p className="text-sm font-medium text-gray-900">{selectedOrden.fechaRegistro ? new Date(selectedOrden.fechaRegistro).toLocaleDateString('es-CO') : "—"}</p>
+                        </div>
+                        {selectedOrden.estado === 0 && selectedOrden.observaciones && (
+                          <div className="space-y-1 col-span-2">
+                            <Label className="text-xs font-medium text-gray-500">Motivo de Anulación</Label>
+                            <p className="text-sm font-medium text-red-600">{selectedOrden.observaciones}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <Separator className="bg-gray-100" />
+
+                    <div className="space-y-6">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Resumen Financiero</h4>
+                      <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Subtotal Compra</span>
+                          <span className="font-medium text-gray-900">${selectedOrden.total.toLocaleString()}</span>
+                        </div>
+                        <Separator className="bg-gray-200" />
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-gray-900">Total</span>
+                          <span className="text-xl font-black text-blue-600">${selectedOrden.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Artículos ({selectedOrden.detalleCompras?.length || 0})</h4>
+                        <div className="text-xs font-bold text-gray-900">
+                          Total: <span className="text-blue-600 font-black">${selectedOrden.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="border border-gray-100 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                              <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant.</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">P. Unitario</TableHead>
+                              <TableHead className="text-right text-[10px] font-bold uppercase tracking-tight h-10">Subtotal</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedOrden.detalleCompras?.map((detalle, idx) => (
+                              <TableRow key={detalle.id || idx} className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                                <TableCell className="text-xs font-medium text-gray-900">
+                                  {productos.find(p => p.id === detalle.productoId)?.nombreProducto || "Producto"}
+                                </TableCell>
+                                <TableCell className="text-xs text-center text-gray-600">{detalle.cantidad}</TableCell>
+                                <TableCell className="text-right text-xs text-gray-600">${detalle.precioUnitario.toLocaleString()}</TableCell>
+                                <TableCell className="text-right text-sm font-bold text-gray-900">${detalle.subtotal.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
 
-              <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between font-medium text-lg border-t pt-2">
-                  <span>Total:</span>
-                  <span>
-                    ${selectedOrden.total.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
+              <DialogFooter className="p-8 border-t border-gray-100 flex items-center gap-3 bg-white">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsViewDialogOpen(false)}
+                  className="h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Cerrar Detalle
+                </Button>
+                <Button 
+                  className="h-10 px-6 bg-gray-900 text-white font-medium hover:bg-black transition-all" 
+                  onClick={() => {
+                    exportToPDF(selectedOrden);
+                  }}
+                >
+                  Descargar PDF
+                </Button>
+              </DialogFooter>
+            </>
           )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-            >
-              Cerrar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

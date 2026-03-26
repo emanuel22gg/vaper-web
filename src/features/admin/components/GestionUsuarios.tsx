@@ -25,6 +25,7 @@ import {
   PaginationPrevious,
 } from '@/shared/ui/pagination';
 import { ScrollArea } from '@/shared/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
   Users,
   Shield,
@@ -42,6 +43,7 @@ import {
   Info,
   MapPin,
   Phone,
+  Mail,
   User as UserIcon
 } from 'lucide-react';
 import { Separator } from '@/shared/ui/separator';
@@ -500,165 +502,212 @@ export const GestionUsuarios: React.FC = () => {
                   Nuevo Usuario
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                  <DialogDescription>
-                    Completa los datos básicos para crear un nuevo usuario en el sistema.
-                  </DialogDescription>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+                <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Crear Nuevo Usuario</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Completa los datos para crear un nuevo usuario en el sistema.
+                    </DialogDescription>
+                  </div>
                 </DialogHeader>
 
-                <ScrollArea className="max-h-[60vh] pr-4">
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="create-tipoDocumento">Tipo de Documento *</Label>
-                        <Select
-                          value={newUser.tipoDocumento}
-                          onValueChange={(value: 'T.I' | 'C.C') => setNewUser({ ...newUser, tipoDocumento: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
-                            <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="create-documento">Número de Documento *</Label>
-                        <Input
-                          id="create-documento"
-                          value={newUser.documento}
-                          onChange={(e) => setNewUser({ ...newUser, documento: e.target.value })}
-                          placeholder="Número de documento"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="create-firstName">Nombre *</Label>
-                        <Input
-                          id="create-firstName"
-                          value={newUser.firstName}
-                          onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="create-lastName">Apellido *</Label>
-                        <Input
-                          id="create-lastName"
-                          value={newUser.lastName}
-                          onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-fechaNacimiento">Fecha de Nacimiento *</Label>
-                      <Input
-                        id="create-fechaNacimiento"
-                        type="date"
-                        value={newUser.fechaNacimiento}
-                        onChange={(e) => setNewUser({ ...newUser, fechaNacimiento: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-email">Email *</Label>
-                      <Input
-                        id="create-email"
-                        type="email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        placeholder="correo@ejemplo.com"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-telefono">Teléfono *</Label>
-                      <Input
-                        id="create-telefono"
-                        value={newUser.telefono}
-                        onChange={(e) => setNewUser({ ...newUser, telefono: e.target.value })}
-                        placeholder="Número de teléfono"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-ciudad">Ciudad *</Label>
-                      <Input
-                        id="create-ciudad"
-                        value={newUser.ciudad}
-                        onChange={(e) => setNewUser({ ...newUser, ciudad: e.target.value })}
-                        placeholder="Ciudad"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-direccion">Dirección *</Label>
-                      <Input
-                        id="create-direccion"
-                        value={newUser.direccion}
-                        onChange={(e) => setNewUser({ ...newUser, direccion: e.target.value })}
-                        placeholder="Dirección"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-barrio">Barrio *</Label>
-                      <Input
-                        id="create-barrio"
-                        value={newUser.barrio}
-                        onChange={(e) => setNewUser({ ...newUser, barrio: e.target.value })}
-                        placeholder="Barrio"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="create-role">Rol *</Label>
-                      <Select
-                        value={newUser.role}
-                        onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value })}
+                <div className="p-8 space-y-10">
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                      <TabsTrigger 
+                        value="basic" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un rol" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.filter(role => role.isActive && role.name !== 'Cliente' && role.name !== 'Super Administrador').map((role) => (
-                            <SelectItem key={role.id} value={role.name as UserRole}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[10px] text-gray-500 mt-1 px-1">
-                        * Los clientes se gestionan desde el módulo de Clientes.
-                      </p>
-                    </div>
+                        <UserIcon className="h-4 w-4" /> Información Personal
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="contact" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                      >
+                        <MapPin className="h-4 w-4" /> Contactos y Rol
+                      </TabsTrigger>
+                    </TabsList>
 
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="create-active"
-                        checked={newUser.isActive}
-                        onCheckedChange={(checked: boolean) => setNewUser({ ...newUser, isActive: checked })}
-                      />
-                      <Label htmlFor="create-active">Usuario Activo</Label>
-                    </div>
+                    <TabsContent value="basic" className="space-y-8 animate-in fade-in-50 duration-500">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="create-firstName">Nombres *</Label>
+                            <Input
+                              id="create-firstName"
+                              value={newUser.firstName}
+                              onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="create-lastName">Apellidos *</Label>
+                            <Input
+                              id="create-lastName"
+                              value={newUser.lastName}
+                              onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                            />
+                          </div>
+                        </div>
 
-                  </div>
-                </ScrollArea>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="create-tipoDocumento">Tipo de Documento *</Label>
+                            <Select
+                              value={newUser.tipoDocumento}
+                              onValueChange={(value: 'T.I' | 'C.C') => setNewUser({ ...newUser, tipoDocumento: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
+                                <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="create-documento">Número de Documento *</Label>
+                            <Input
+                              id="create-documento"
+                              value={newUser.documento}
+                              onChange={(e) => setNewUser({ ...newUser, documento: e.target.value })}
+                              placeholder="Número de documento"
+                            />
+                          </div>
+                        </div>
 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isLoading}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCreateUser} disabled={isLoading}>
-                    {isLoading ? "Creando..." : "Crear Usuario"}
-                  </Button>
-                </DialogFooter>
+                        <div className="space-y-2">
+                          <Label htmlFor="create-fechaNacimiento">Fecha de Nacimiento *</Label>
+                          <Input
+                            id="create-fechaNacimiento"
+                            type="date"
+                            value={newUser.fechaNacimiento}
+                            onChange={(e) => setNewUser({ ...newUser, fechaNacimiento: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="contact" className="space-y-8 animate-in fade-in-50 duration-500">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="create-email">Email *</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="create-email"
+                                type="email"
+                                value={newUser.email}
+                                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                placeholder="correo@ejemplo.com"
+                                className="pl-9"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="create-telefono">Teléfono *</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="create-telefono"
+                                value={newUser.telefono}
+                                onChange={(e) => setNewUser({ ...newUser, telefono: e.target.value })}
+                                placeholder="Número de teléfono"
+                                className="pl-9"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="create-ciudad">Ciudad *</Label>
+                            <Input
+                              id="create-ciudad"
+                              value={newUser.ciudad}
+                              onChange={(e) => setNewUser({ ...newUser, ciudad: e.target.value })}
+                              placeholder="Medellín"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="create-direccion">Dirección *</Label>
+                            <Input
+                              id="create-direccion"
+                              value={newUser.direccion}
+                              onChange={(e) => setNewUser({ ...newUser, direccion: e.target.value })}
+                              placeholder="Calle..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="create-barrio">Barrio *</Label>
+                            <Input
+                              id="create-barrio"
+                              value={newUser.barrio}
+                              onChange={(e) => setNewUser({ ...newUser, barrio: e.target.value })}
+                              placeholder="Barrio"
+                            />
+                          </div>
+                        </div>
+                        
+                        <Separator />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="create-role">Rol *</Label>
+                            <Select
+                              value={newUser.role}
+                              onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un rol" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {roles.filter(role => role.isActive && role.name !== 'Cliente' && role.name !== 'Super Administrador').map((role) => (
+                                  <SelectItem key={role.id} value={role.name as UserRole}>
+                                    {role.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-gray-500 mt-1 px-1">
+                              * Los clientes se gestionan desde el módulo de Clientes.
+                            </p>
+                          </div>
+                          <div className="space-y-2 flex flex-col justify-center">
+                            <div className="flex items-center space-x-2 mt-4">
+                              <Switch
+                                id="create-active"
+                                checked={newUser.isActive}
+                                onCheckedChange={(checked: boolean) => setNewUser({ ...newUser, isActive: checked })}
+                              />
+                              <Label htmlFor="create-active">Usuario Activo</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-0 mt-8">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsCreateDialogOpen(false)} 
+                      disabled={isLoading}
+                      className="w-full sm:w-auto sm:mr-3 h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleCreateUser} 
+                      disabled={isLoading}
+                      className="w-full sm:w-auto h-10 px-6 bg-black hover:bg-gray-800 text-white font-medium border-none transition-all"
+                    >
+                      {isLoading ? "Creando..." : "Crear Usuario"}
+                    </Button>
+                  </DialogFooter>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -1061,19 +1110,18 @@ export const GestionUsuarios: React.FC = () => {
             <div className="p-8 space-y-10">
               {/* Perfil Principal */}
               <div className="flex items-center gap-6">
-                <div className="h-20 w-20 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                <div className="h-20 w-20 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
                   <UserIcon className="h-10 w-10 text-gray-300" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">
+                  <h3 className="text-2xl font-bold text-gray-900 leading-tight">
                     {selectedUser.firstName} {selectedUser.lastName}
                   </h3>
-                  <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-3 mt-2">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md text-[11px] font-bold text-gray-600 uppercase tracking-tight">
                       {getRoleIcon(selectedUser.role.name)}
                       {selectedUser.role.name}
                     </div>
-                    <span className="text-gray-300">•</span>
                     <span className="text-sm font-mono text-gray-400">
                       ID: {selectedUser.numeroDocumento || selectedUser.username}
                     </span>
@@ -1081,57 +1129,80 @@ export const GestionUsuarios: React.FC = () => {
                 </div>
               </div>
 
-              {/* Información Personal */}
-              <div className="space-y-6">
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información Personal e Identidad</h4>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Tipo de Documento</Label>
-                    <p className="text-sm font-medium text-gray-900">
-                      {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
-                        selectedUser.tipoDocumento === 'C.C' ? 'Cédula de Ciudadanía (C.C)' : 'Cédula de Ciudadanía'}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Fecha de Nacimiento</Label>
-                    <p className="text-sm font-medium text-gray-900">
-                      {selectedUser.fechaNacimiento ? new Date(selectedUser.fechaNacimiento).toLocaleDateString() : 'No registrada'}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Correo Electrónico</Label>
-                    <p className="text-sm font-medium text-gray-900 truncate">{selectedUser.email}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Teléfono</Label>
-                    <p className="text-sm font-medium text-gray-900">{selectedUser.telefono || 'No registrado'}</p>
-                  </div>
-                </div>
-              </div>
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                  <TabsTrigger 
+                    value="info" 
+                    className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                  >
+                    <Info className="h-4 w-4" /> Información Personal
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="ubicacion" 
+                    className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                  >
+                    <MapPin className="h-4 w-4" /> Ubicación
+                  </TabsTrigger>
+                </TabsList>
 
-              <Separator className="bg-gray-100" />
+                <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
+                  <div className="space-y-6">
+                    <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <UserCircle className="h-3.5 w-3.5" /> Identidad y Contacto
+                    </h4>
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Tipo de Documento</Label>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
+                            selectedUser.tipoDocumento === 'C.C' ? 'Cédula de Ciudadanía (C.C)' : 'Cédula de Ciudadanía'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Fecha de Nacimiento</Label>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedUser.fechaNacimiento ? new Date(selectedUser.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Correo Electrónico</Label>
+                        <p className="text-sm font-medium text-gray-900 truncate">{selectedUser.email}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Teléfono</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedUser.telefono || 'No registrado'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
 
-              {/* Ubicación */}
-              <div className="space-y-6">
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ubicación y Domicilio</h4>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Ciudad</Label>
-                    <p className="text-sm font-medium text-gray-900">{selectedUser.ciudad || 'No registrada'}</p>
+                <TabsContent value="ubicacion" className="space-y-8 animate-in fade-in-50 duration-500">
+                  <div className="space-y-6">
+                    <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5" /> Domicilio
+                    </h4>
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Ciudad</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedUser.ciudad || 'No registrada'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-500">Barrio</Label>
+                        <p className="text-sm font-medium text-gray-900">{selectedUser.barrio || 'No registrado'}</p>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-gray-500">Dirección</Label>
+                        <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100 mt-1">
+                          <MapPin className="h-5 w-5 text-gray-400" />
+                          <p className="text-sm font-medium text-gray-900">
+                            {selectedUser.direccion || 'No registrada'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Barrio</Label>
-                    <p className="text-sm font-medium text-gray-900">{selectedUser.barrio || 'No registrado'}</p>
-                  </div>
-                  <div className="space-y-1 col-span-2">
-                    <Label className="text-xs font-medium text-gray-500">Dirección</Label>
-                    <p className="text-sm font-medium text-gray-900 flex items-start gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5" />
-                      {selectedUser.direccion || 'No registrada'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

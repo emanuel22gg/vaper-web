@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { Package, Hash, DollarSign, ImageIcon, FileText, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
 import { ImageSelector } from '@/shared/components/ImageSelector';
 import { uploadImage } from '@/shared/services/api';
@@ -173,137 +175,172 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Agregar Nuevo Producto</DialogTitle>
+          <DialogTitle className="text-xl">Agregar Nuevo Producto</DialogTitle>
           <DialogDescription>
             Complete los datos del nuevo producto para agregarlo al inventario.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombreProducto">Nombre del Producto *</Label>
-            <Input
-              id="nombreProducto"
-              value={formData.nombreProducto}
-              onChange={(e) => handleInputChange('nombreProducto', e.target.value)}
-              placeholder="Ej: Vape Desechable Cherry"
-              required
-            />
-          </div>
+          <Tabs defaultValue="basic" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic" className="flex items-center gap-2">
+                <Package className="h-4 w-4" /> Básico
+              </TabsTrigger>
+              <TabsTrigger value="details" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Detalles e Imagen
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="categoria">Categoría *</Label>
-            <Select
-              value={formData.categoriaId}
-              onValueChange={(value: string) => handleInputChange('categoriaId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione una categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {categorias.filter(c => c.estado).map((categoria) => (
-                  <SelectItem key={categoria.id} value={categoria.id.toString()}>
-                    {categoria.nombreCategoria}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <TabsContent value="basic" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="nombreProducto">Nombre del Producto *</Label>
+                <div className="relative">
+                  <Package className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="nombreProducto"
+                    value={formData.nombreProducto}
+                    onChange={(e) => handleInputChange('nombreProducto', e.target.value)}
+                    placeholder="Ej: Vape Desechable Cherry"
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="precio">Precio</Label>
-              <Input
-                id="precio"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.precio}
-                onChange={(e) => handleInputChange('precio', e.target.value)}
-                placeholder="25000"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="categoria">Categoría *</Label>
+                <Select
+                  value={formData.categoriaId}
+                  onValueChange={(value: string) => handleInputChange('categoriaId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione una categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorias.filter(c => c.estado).map((categoria) => (
+                      <SelectItem key={categoria.id} value={categoria.id.toString()}>
+                        {categoria.nombreCategoria}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="stock">Stock (Opcional)</Label>
-              <Input
-                id="stock"
-                type="number"
-                min="0"
-                value={formData.stock}
-                onChange={(e) => handleInputChange('stock', e.target.value)}
-                placeholder="0"
-              />
-              <p className="text-xs text-muted-foreground">Si no se ingresa, el stock será 0</p>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="precio">Precio *</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="precio"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.precio}
+                      onChange={(e) => handleInputChange('precio', e.target.value)}
+                      placeholder="25000"
+                      className="pl-9"
+                      required
+                    />
+                  </div>
+                </div>
 
-          <div className="space-y-2">
-            <ImageSelector
-              selectedImageId={formData.idImagen}
-              previewUrl={formData.previewUrl}
-              onImageSelect={(id, url) => setFormData({
-                ...formData,
-                idImagen: id,
-                previewUrl: url,
-                imageFile: undefined,
-                imagen: url
-              })}
-              onFileSelect={(file) => {
-                // Validar que solo se permitan imágenes PNG o JPG
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-                if (!allowedTypes.includes(file.type)) {
-                  toast.error("Solo se permiten archivos con formato PNG o JPG");
-                  return;
-                }
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Stock (Opcional)</Label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={formData.stock}
+                      onChange={(e) => handleInputChange('stock', e.target.value)}
+                      placeholder="0"
+                      className="pl-9"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Si no se ingresa, el stock será 0</p>
+                </div>
+              </div>
+            </TabsContent>
 
-                // Validar tamaño (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                  toast.error("La imagen no debe superar 5MB");
-                  return;
-                }
-
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  setFormData({
+            <TabsContent value="details" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-gray-500" /> Imagen del Producto
+                </Label>
+                <ImageSelector
+                  selectedImageId={formData.idImagen}
+                  previewUrl={formData.previewUrl}
+                  onImageSelect={(id, url) => setFormData({
                     ...formData,
-                    imageFile: file,
-                    previewUrl: reader.result as string,
+                    idImagen: id,
+                    previewUrl: url,
+                    imageFile: undefined,
+                    imagen: url
+                  })}
+                  onFileSelect={(file) => {
+                    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                    if (!allowedTypes.includes(file.type)) {
+                      toast.error("Solo se permiten archivos con formato PNG o JPG");
+                      return;
+                    }
+
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("La imagen no debe superar 5MB");
+                      return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setFormData({
+                        ...formData,
+                        imageFile: file,
+                        previewUrl: reader.result as string,
+                        idImagen: undefined,
+                        imagen: reader.result as string
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  onClear={() => setFormData({
+                    ...formData,
+                    imageFile: undefined,
+                    previewUrl: undefined,
                     idImagen: undefined,
-                    imagen: reader.result as string
-                  });
-                };
-                reader.readAsDataURL(file);
-              }}
-              onClear={() => setFormData({
-                ...formData,
-                imageFile: undefined,
-                previewUrl: undefined,
-                idImagen: undefined,
-                imagen: ''
-              })}
-            />
-          </div>
+                    imagen: ''
+                  })}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descripcion">Descripción *</Label>
-            <Textarea
-              id="descripcion"
-              value={formData.descripcion}
-              onChange={(e) => handleInputChange('descripcion', e.target.value)}
-              placeholder="Describe las características del producto..."
-              rows={3}
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="descripcion">Descripción *</Label>
+                <Textarea
+                  id="descripcion"
+                  value={formData.descripcion}
+                  onChange={(e) => handleInputChange('descripcion', e.target.value)}
+                  placeholder="Describe las características del producto..."
+                  rows={4}
+                  className="resize-none"
+                  required
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
 
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t mt-6">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="bg-black hover:bg-gray-800 text-white border-none"
+              disabled={isLoading || !formData.nombreProducto || !formData.categoriaId || !formData.precio || !formData.descripcion}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isLoading ? 'Creando...' : 'Crear Producto'}
             </Button>
           </DialogFooter>

@@ -31,6 +31,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { ConfirmDeleteDialog } from '@/shared/components/ConfirmDeleteDialog';
 import { RoleDetailDialog } from './RoleDetailDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Settings, ShieldCheck } from 'lucide-react';
 
 export const GestionRoles: React.FC = () => {
   const {
@@ -370,101 +372,137 @@ export const GestionRoles: React.FC = () => {
                   Nuevo Rol
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Rol</DialogTitle>
-                  <DialogDescription>
-                    Define un nuevo rol y asigna los permisos correspondientes.
-                  </DialogDescription>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-lg">
+                <DialogHeader className="p-8 pb-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">Crear Nuevo Rol</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-500 mt-1">
+                      Define un nuevo rol y asigna los permisos correspondientes.
+                    </DialogDescription>
+                  </div>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="role-name">Nombre del Rol *</Label>
-                    <Input
-                      id="role-name"
-                      value={newRole.name}
-                      onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                      placeholder="Ej: Supervisor, Gerente, etc."
-                    />
-                  </div>
+                <div className="p-8 space-y-10">
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="w-full justify-start bg-transparent border-b border-gray-100 rounded-none h-auto p-0 mb-8">
+                      <TabsTrigger 
+                        value="basic" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                      >
+                        <Settings className="h-4 w-4" /> Información Básica
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="permissions" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                      >
+                        <ShieldCheck className="h-4 w-4" /> Permisos
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="role-description">Descripción</Label>
-                    <Input
-                      id="role-description"
-                      value={newRole.description}
-                      onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                      placeholder="Describe las responsabilidades de este rol"
-                    />
-                  </div>
+                    <TabsContent value="basic" className="space-y-6 animate-in fade-in-50 duration-500">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="role-name">Nombre del Rol *</Label>
+                          <Input
+                            id="role-name"
+                            value={newRole.name}
+                            onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                            placeholder="Ej: Supervisor, Gerente, etc."
+                          />
+                        </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="role-active"
-                      checked={newRole.isActive}
-                      onCheckedChange={(checked: boolean) => setNewRole({ ...newRole, isActive: checked })}
-                    />
-                    <Label htmlFor="role-active">Rol activo</Label>
-                  </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="role-description">Descripción</Label>
+                          <Input
+                            id="role-description"
+                            value={newRole.description}
+                            onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                            placeholder="Describe las responsabilidades de este rol"
+                          />
+                        </div>
 
-                  <div className="space-y-3">
-                    <Label>Permisos del Rol</Label>
+                        <div className="flex items-center space-x-2 pt-2">
+                          <Switch
+                            id="role-active"
+                            checked={newRole.isActive}
+                            onCheckedChange={(checked: boolean) => setNewRole({ ...newRole, isActive: checked })}
+                          />
+                          <Label htmlFor="role-active">Rol activo</Label>
+                        </div>
+                      </div>
+                    </TabsContent>
 
-                    {/* Búsqueda de permisos */}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Buscar permisos..."
-                        value={permissionSearchTerm}
-                        onChange={(e) => setPermissionSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+                    <TabsContent value="permissions" className="space-y-6 animate-in fade-in-50 duration-500">
+                      <div className="space-y-4">
+                        <Label>Asignación de Permisos</Label>
 
-                    <div className="max-h-60 overflow-y-auto border rounded-lg p-3 space-y-3">
-                      {Object.keys(filteredCreatePermissions).length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
-                          No se encontraron permisos que coincidan con la búsqueda
-                        </p>
-                      ) : (
-                        Object.entries(filteredCreatePermissions).map(([module, perms]) => (
-                          <div key={module}>
-                            <h4 className="font-medium text-sm text-gray-700 mb-2 capitalize">{module}</h4>
-                            <div className="grid grid-cols-1 gap-2 ml-3">
-                              {perms.map((permission) => (
-                                <div key={permission.id} className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`new-${permission.id}`}
-                                    checked={newRole.permissions.includes(permission.id)}
-                                    onChange={() => handleTogglePermission(permission.id, true)}
-                                    className="rounded"
-                                  />
-                                  <Label htmlFor={`new-${permission.id}`} className="text-sm">
-                                    {permission.name}
-                                  </Label>
-                                </div>
-                              ))}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input
+                            placeholder="Buscar permisos..."
+                            value={permissionSearchTerm}
+                            onChange={(e) => setPermissionSearchTerm(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+
+                        <div className="h-[300px] overflow-y-auto border border-gray-100 rounded-xl p-4 space-y-4 bg-gray-50/50">
+                          {Object.keys(filteredCreatePermissions).length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-2">
+                              <Shield className="h-8 w-8 text-gray-300" />
+                              <p className="text-sm">No se encontraron permisos</p>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
+                          ) : (
+                            Object.entries(filteredCreatePermissions).map(([module, perms]) => (
+                              <div key={module} className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                                <h4 className="font-medium text-sm text-gray-900 mb-3 capitalize flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                  {module}
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-3">
+                                  {perms.map((permission) => (
+                                    <div key={permission.id} className="flex items-start space-x-3 group cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors">
+                                      <input
+                                        type="checkbox"
+                                        id={`new-${permission.id}`}
+                                        checked={newRole.permissions.includes(permission.id)}
+                                        onChange={() => handleTogglePermission(permission.id, true)}
+                                        className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                      />
+                                      <div className="space-y-1 cursor-pointer" onClick={() => handleTogglePermission(permission.id, true)}>
+                                        <Label htmlFor={`new-${permission.id}`} className="text-sm font-medium text-gray-700 group-hover:text-gray-900 cursor-pointer">
+                                          {permission.name}
+                                        </Label>
+                                        {/* Assumes permission has description if we ever add it, will be graceful fallback */}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateRoleDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleCreateRole}
-                    disabled={isLoading || !newRole.name.trim()}
-                  >
-                    {isLoading ? "Creando..." : "Crear Rol"}
-                  </Button>
-                </DialogFooter>
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-0 mt-8 pt-6 border-t border-gray-100">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsCreateRoleDialogOpen(false)}
+                      className="w-full sm:w-auto sm:mr-3 h-10 px-6 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreateRole}
+                      disabled={isLoading || !newRole.name.trim()}
+                      className="w-full sm:w-auto h-10 px-6 bg-black hover:bg-gray-800 text-white font-medium border-none transition-all"
+                    >
+                      {isLoading ? "Creando..." : "Crear Rol"}
+                    </Button>
+                  </DialogFooter>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -719,7 +757,7 @@ export const GestionRoles: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              className="bg-yellow-400 hover:bg-yellow-500 text-black border-none"
+              className="bg-black hover:bg-gray-800 text-white border-none"
               onClick={handleUpdateRole}
               disabled={isLoading || !editRole.name.trim()}
             >

@@ -225,7 +225,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               <CardFooter className="flex flex-col space-y-3">
                 <Button
                   type="submit"
-                  className="w-full bg-yellow-400 hover:bg-yellow-600 text-black"
+                  className="w-full bg-black hover:bg-gray-800 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
@@ -290,7 +290,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               <CardFooter className="flex flex-col space-y-2">
                 <Button
                   type="submit"
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                  className="w-full bg-black hover:bg-gray-800 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Enviando...' : 'Enviar Instrucciones'}
