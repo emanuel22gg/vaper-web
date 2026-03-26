@@ -103,6 +103,9 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
   const [isAnularDialogOpen, setIsAnularDialogOpen] = useState(false);
   const [abonoToAnular, setAbonoToAnular] = useState<AbonoIndividual | null>(null);
 
+  // Estados de guardado
+  const [isSavingAbono, setIsSavingAbono] = useState(false);
+
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -147,8 +150,19 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
       return;
     }
 
+    if (montoAbono < 10000 && saldoPendiente >= 10000) {
+      toast.error("El abono mínimo permitido es de $10.000 COP.");
+      return;
+    }
+
+    const nuevoSaldo = saldoPendiente - montoAbono;
+    if (nuevoSaldo > 0 && nuevoSaldo < 10000) {
+      toast.error(`No puede dejar un saldo pendiente inferior a $10.000 COP. Cancele la totalidad o ajuste el abono.`);
+      return;
+    }
+
     try {
-      const nuevoSaldo = saldoPendiente - montoAbono;
+      setIsSavingAbono(true);
 
       await createAbono({
         id: 0,
@@ -176,6 +190,8 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
     } catch (error) {
       console.error("Error creating abono:", error);
       toast.error("No se pudo registrar el abono");
+    } finally {
+      setIsSavingAbono(false);
     }
   };
 
@@ -280,7 +296,7 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Pedidos
+          Volver a Ventas
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Abonos del Pedido #{pedido.id}</h1>
@@ -353,10 +369,10 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                   }}>Cancelar</Button>
                   <Button
                     onClick={handleAddAbono}
-                    disabled={!newAbono.monto || getRawNumber(newAbono.monto) <= 0 || getRawNumber(newAbono.monto) > saldoPendiente || !newAbono.metodoPago}
+                    disabled={!newAbono.monto || getRawNumber(newAbono.monto) <= 0 || getRawNumber(newAbono.monto) > saldoPendiente || !newAbono.metodoPago || isSavingAbono}
                     className="bg-blue-600 hover:bg-blue-700 font-bold"
                   >
-                    Guardar Abono
+                    {isSavingAbono ? "Guardando..." : "Guardar Abono"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

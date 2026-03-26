@@ -35,7 +35,6 @@ import {
 } from "@/shared/ui/dialog";
 import { Label } from "@/shared/ui/label";
 import { Separator } from "@/shared/ui/separator";
-import { AbonosIndividuales } from "./AbonosIndividuales";
 import { DetallePedido } from "./DetallePedido";
 import { TablePagination } from '@/shared/ui/TablePagination';
 import { VentaPedidoDto, UsuarioDto, Producto } from "@/shared/types";
@@ -83,10 +82,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const [pedidoToUpdate, setPedidoToUpdate] = useState<VentaPedidoDto | null>(null);
   const [newStatusId, setNewStatusId] = useState<number>(0);
 
-  // Estados para navegación a abonos individuales
-  const [showAbonosIndividuales, setShowAbonosIndividuales] = useState(false);
-  const [selectedPedidoForAbonos, setSelectedPedidoForAbonos] = useState<VentaPedidoDto | null>(null);
-
   // Estados para mostrar detalle completo del pedido
   const [showDetallePedido, setShowDetallePedido] = useState(false);
 
@@ -119,7 +114,9 @@ export const Pedidos: React.FC<PedidosProps> = ({
       // Mapear detalles a sus respectivos pedidos
       const pedidosConDetalles = pedidosData.map(pedido => ({
         ...pedido,
-        detalleVenta_Pedido: detallesData.filter((d: any) => d.ventaPedidoId === pedido.id)
+        detalleVenta_Pedido: detallesData.filter(
+          (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId) === Number(pedido.id)
+        )
       }));
 
       setPedidos(pedidosConDetalles);
@@ -463,11 +460,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
     }
   };
 
-  const handleVerAbonos = (pedido: VentaPedidoDto) => {
-    setSelectedPedidoForAbonos(pedido);
-    setShowAbonosIndividuales(true);
-  };
-
   const getPedidoNumeroDisplay = (pedido: VentaPedidoDto) => {
     return `Pedido #${pedido.id}`;
   };
@@ -475,18 +467,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const handleCreatePedido = () => {
     setShowCreateView(true);
   };
-
-  if (showAbonosIndividuales && selectedPedidoForAbonos) {
-    return (
-      <AbonosIndividuales
-        pedido={selectedPedidoForAbonos}
-        onBack={() => {
-          setShowAbonosIndividuales(false);
-          setSelectedPedidoForAbonos(null);
-        }}
-      />
-    );
-  }
 
   if (showDetallePedido && selectedPedido) {
     return (
@@ -500,22 +480,32 @@ export const Pedidos: React.FC<PedidosProps> = ({
     );
   }
 
-  if (showCreateView) {
-    return (
-      <div className="p-6">
-        <CreateVentaPedidoView
-          onBack={() => setShowCreateView(false)}
-          onSuccess={() => {
-            setShowCreateView(false);
-            fetchData();
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 p-6">
+      <Dialog
+        open={showCreateView}
+        onOpenChange={(open) => {
+          if (!open) setShowCreateView(false);
+        }}
+      >
+        <DialogContent className="w-[min(100%,calc(100vw-2rem))] max-w-4xl max-h-[90vh] overflow-y-auto gap-4 p-5 sm:p-6">
+          <DialogHeader className="space-y-1.5 pb-0 shrink-0">
+            <DialogTitle className="text-lg">Nuevo pedido</DialogTitle>
+            <DialogDescription>
+              Complete cada paso para registrar el pedido en el sistema.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateVentaPedidoView
+            embedInDialog
+            onBack={() => setShowCreateView(false)}
+            onSuccess={() => {
+              setShowCreateView(false);
+              fetchData();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -653,16 +643,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
                             title="Exportar PDF"
                           >
                             <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleVerAbonos(pedido)}
-                            title="Ver abonos"
-                            disabled={pedido.estadoId !== 6}
-                            className={pedido.estadoId === 6 ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
-                          >
-                            <Receipt className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

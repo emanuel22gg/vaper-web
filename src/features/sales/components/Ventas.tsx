@@ -58,6 +58,7 @@ import { Separator } from '@/shared/ui/separator';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { TablePagination } from '@/shared/ui/TablePagination';
+import { AbonosIndividuales } from './AbonosIndividuales';
 import { toast } from "sonner";
 import {
   Plus,
@@ -230,6 +231,10 @@ export const Ventas: React.FC = () => {
   const [ventaToDelete, setVentaToDelete] = useState<Venta | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
+  // Estados para abonos
+  const [showAbonosIndividuales, setShowAbonosIndividuales] = useState(false);
+  const [selectedVentaForAbonos, setSelectedVentaForAbonos] = useState<any>(null);
+
   // Estados para pedidos pendientes
   const [pedidosPendientes, setPedidosPendientes] = useState<any[]>([]);
   const [isLoadingPedidos, setIsLoadingPedidos] = useState(false);
@@ -370,11 +375,14 @@ export const Ventas: React.FC = () => {
       const ventasMapeadas: Venta[] = ventasRaw
         .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || v.estadoId === idAbonos || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
         .map(v => {
-          const cliente = clients.find(c => c.id === v.usuarioId);
-          const detallesVenta = detallesRaw.filter(d => d.ventaPedidoId === v.id);
+          const vid = Number(v.id);
+          const cliente = clients.find(c => Number(c.id) === Number(v.usuarioId));
+          const detallesVenta = detallesRaw.filter(
+            (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId) === vid
+          );
 
           return {
-            id: v.id || 0,
+            id: vid || 0,
             numeroVenta: `VNT-${String(v.id).padStart(3, '0')}`,
             fecha: v.fechaCreacion?.split('T')[0] || new Date().toISOString().split('T')[0],
             clienteId: v.usuarioId,
@@ -382,15 +390,19 @@ export const Ventas: React.FC = () => {
             documentoCliente: cliente?.numeroDocumento || '',
             telefonoCliente: cliente?.telefono || '',
             emailCliente: cliente?.correo || '',
-            items: detallesVenta.map(d => {
-              const prod = prods.find(p => p.id === d.productoId);
+            items: detallesVenta.map((d: any) => {
+              const pid = Number(d.productoId ?? d.ProductoId ?? 0);
+              const prod = prods.find(p => Number(p.id) === pid);
+              const pUnit = Number(d.precioUnitario ?? d.PrecioUnitario ?? d.precio ?? prod?.precio ?? 0);
+              const qty = Number(d.cantidad ?? d.Cantidad ?? 0);
+              const sub = Number(d.subtotal ?? d.Subtotal ?? pUnit * qty);
               return {
-                id: d.id || 0,
-                productoId: d.productoId,
-                nombreProducto: prod?.nombre || 'Producto Desconocido',
-                cantidad: d.cantidad,
-                precioUnitario: d.precioUnitario,
-                subtotal: d.subtotal
+                id: Number(d.id ?? d.Id) || 0,
+                productoId: pid,
+                nombreProducto: prod?.nombre || d.nombreProducto || `Producto #${pid}`,
+                cantidad: qty,
+                precioUnitario: pUnit,
+                subtotal: sub
               };
             }),
             subtotal: v.subtotal,
@@ -495,17 +507,20 @@ export const Ventas: React.FC = () => {
       const itemsVenta: ItemVenta[] = [];
 
       detallesRaw.forEach((detalle: any, index: number) => {
-        const producto = productosDisponibles.find(p => p.id === detalle.productoId);
-        if (producto) {
-          itemsVenta.push({
-            id: index + 1,
-            productoId: detalle.productoId,
-            nombreProducto: producto.nombre,
-            cantidad: detalle.cantidad,
-            precioUnitario: detalle.precioUnitario || detalle.precio || producto.precio || 0,
-            subtotal: detalle.subtotal || ((detalle.precioUnitario || detalle.precio || producto.precio || 0) * detalle.cantidad)
-          });
-        }
+        const pid = Number(detalle.productoId ?? detalle.ProductoId ?? 0);
+        const producto = productosDisponibles.find(p => Number(p.id) === pid);
+        const pUnit =
+          Number(detalle.precioUnitario ?? detalle.PrecioUnitario ?? detalle.precio ?? producto?.precio ?? 0);
+        const qty = Number(detalle.cantidad ?? detalle.Cantidad ?? 0);
+        if (!pid || qty <= 0) return;
+        itemsVenta.push({
+          id: Number(detalle.id ?? detalle.Id) || index + 1,
+          productoId: pid,
+          nombreProducto: producto?.nombre || detalle.nombreProducto || `Producto #${pid}`,
+          cantidad: qty,
+          precioUnitario: pUnit,
+          subtotal: Number(detalle.subtotal ?? detalle.Subtotal ?? pUnit * qty)
+        });
       });
 
       // NO SINCRONIZAMOS EN EL SERVIDOR TODAVÍA PARA EVITAR 503
@@ -751,6 +766,22 @@ export const Ventas: React.FC = () => {
         console.error('Error al anular venta:', error);
         toast.error('Hubo un error al restaurar el inventario.', { id: loadingToast });
       }
+    }
+  };
+
+  const handleVerAbonos = async (venta: Venta) => {
+    const loadingToast = toast.loading("Cargando detalles de abonos...");
+    try {
+      const pedidoInfo = await getVentaPedidoById(venta.pedidoId || venta.id);
+      if (pedidoInfo) {
+        setSelectedVentaForAbonos(pedidoInfo);
+        setShowAbonosIndividuales(true);
+      }
+    } catch (error) {
+      console.error("Error al cargar abonos:", error);
+      toast.error("Error al cargar la información del pedido");
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -1093,6 +1124,20 @@ export const Ventas: React.FC = () => {
     return rangeWithDots;
   };
 
+  if (showAbonosIndividuales && selectedVentaForAbonos) {
+    return (
+      <AbonosIndividuales
+        pedido={selectedVentaForAbonos}
+        onBack={() => {
+          setShowAbonosIndividuales(false);
+          setSelectedVentaForAbonos(null);
+          // Refrescar ventas al volver por si cambió el estado
+          fetchVentas(); 
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header con título, filtros y botón - TODO EN UNO */}
@@ -1199,6 +1244,16 @@ export const Ventas: React.FC = () => {
                         title="Anular venta"
                       >
                         <XCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleVerAbonos(venta)}
+                        title="Ver abonos"
+                        disabled={venta.estado !== 'en abonos'}
+                        className={venta.estado === 'en abonos' ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
+                      >
+                        <Receipt className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

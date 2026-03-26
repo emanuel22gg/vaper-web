@@ -168,8 +168,8 @@ export const Devoluciones: React.FC = () => {
 
       // Mapear nombres de clientes para facilitar filtrado
       const devsWithClient = (devs || []).map(d => {
-        const venta = vts.find(v => v.id === d.ventaPedidoId);
-        const cliente = venta ? usr.find(u => u.id === venta.usuarioId) : null;
+        const venta = vts.find(v => Number(v.id) === Number(d.ventaPedidoId ?? (d as any).VentaPedidoId));
+        const cliente = venta ? usr.find(u => Number(u.id) === Number(venta.usuarioId)) : null;
         return {
           ...d,
           clienteNombre: cliente ? `${cliente.nombres} ${cliente.apellidos}` : "Desconocido"
@@ -214,16 +214,47 @@ export const Devoluciones: React.FC = () => {
         const venda = await getVentaPedidoById(parseInt(query));
 
       if (venda) {
-        // Traer detalles de la venta desde el endpoint correspondiente
+        const ventaId = Number((venda as any).id ?? (venda as any).Id ?? 0);
+        if (!ventaId) {
+          toast.error("La venta no tiene un ID válido");
+          setVentaEncontrada(null);
+          setSaleValidity(null);
+          return;
+        }
+
+        // Traer detalles: la API a veces envía ventaPedidoId como string o PascalCase; a veces solo vienen en el objeto venta
         const todosLosDetalles = await getDetalleVentaPedidos();
-        const detallesVenta = todosLosDetalles.filter((d: any) => d.ventaPedidoId === venda.id);
+        const detalleFk = (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId ?? 0);
+        let detallesVenta = todosLosDetalles.filter((d: any) => detalleFk(d) === ventaId);
+
+        if (detallesVenta.length === 0) {
+          const embebidos =
+            (venda as any).detalleVenta_Pedido ||
+            (venda as any).detalleVentaPedidos ||
+            (venda as any).DetalleVentaPedidos ||
+            [];
+          detallesVenta = Array.isArray(embebidos) ? [...embebidos] : [];
+        }
+
+        detallesVenta = detallesVenta.map((d: any) => ({
+          ...d,
+          id: d.id ?? d.Id,
+          ventaPedidoId: ventaId,
+          productoId: Number(d.productoId ?? d.ProductoId ?? 0),
+          cantidad: Number(d.cantidad ?? d.Cantidad ?? 0),
+          precioUnitario: Number(
+            d.precioUnitario ?? d.PrecioUnitario ?? d.precio ?? 0
+          ),
+          subtotal: Number(d.subtotal ?? d.Subtotal ?? 0),
+        }));
 
         // Población dinámica de productos si faltan en caché
         for (let det of detallesVenta) {
-            let prod = productos.find(p => Number(p.id) === Number(det.productoId));
+            const prodId = Number(det.productoId ?? det.ProductoId ?? 0);
+            let prod = productos.find(p => Number(p.id) === prodId);
             if (!prod) {
                 try {
-                    const data = await getProductoById(det.productoId);
+                    const data = await getProductoById(prodId);
                     // Fetch directly from API
                     prod = data;
                 } catch (e) {
@@ -250,7 +281,7 @@ export const Devoluciones: React.FC = () => {
         };
 
         setVentaEncontrada(vendaConDetalles);
-        setFormData(prev => ({ ...prev, ventaPedidoId: venda.id || 0 }));
+        setFormData(prev => ({ ...prev, ventaPedidoId: ventaId }));
 
         // Calcular vigencia real (ahora usando el nuevo campo)
         if (venda.fechaCreacion) {
@@ -489,7 +520,7 @@ export const Devoluciones: React.FC = () => {
         estadoId: 3 // Anulado
       });
       const detallesTicket = detallesDevolucion.filter(det => det.devolucionId === dev.id);
-      const ventaOriginal = ventas.find(v => v.id === dev.ventaPedidoId);
+      const ventaOriginal = ventas.find(v => Number(v.id) === Number(dev.ventaPedidoId));
       for (const det of detallesTicket) {
         const detalleVenta = ventaOriginal?.detalleVenta_Pedido?.find(d => d.id === det.detalleVentaPedidoId);
         const productoIdReal = detalleVenta?.productoId;
@@ -540,9 +571,10 @@ export const Devoluciones: React.FC = () => {
 
   const getProductoNombre = (p: any) => {
     if (p.producto && p.producto.nombreProducto) return p.producto.nombreProducto;
-    const prd = productos.find(prod => Number(prod.id) === Number(p.productoId));
+    const pid = Number(p.productoId ?? p.ProductoId ?? 0);
+    const prd = productos.find(prod => Number(prod.id) === pid);
     if (prd) return prd.nombreProducto;
-    return `Item #${p.productoId}`;
+    return pid ? `Item #${pid}` : "Producto";
   };
 
   const handleVerDetalle = (dev: DevolucionDto) => {
@@ -551,7 +583,7 @@ export const Devoluciones: React.FC = () => {
   };
 
   const filteredDevoluciones = devoluciones.filter(d => {
-    const userVenta = ventas.find(v => v.id === d.ventaPedidoId);
+    const userVenta = ventas.find(v => Number(v.id) === Number(d.ventaPedidoId));
     const clienteNombre = userVenta ? getClienteInfo(userVenta.usuarioId) : "";
     const matchesSearch = clienteNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       d.id?.toString().includes(searchTerm);
@@ -652,7 +684,7 @@ export const Devoluciones: React.FC = () => {
                 </TableRow>
               ) : (
                 paginatedDevoluciones.map((dev) => {
-                  const userVenta = ventas.find(v => v.id === dev.ventaPedidoId);
+                  const userVenta = ventas.find(v => Number(v.id) === Number(dev.ventaPedidoId));
                   const usuario = userVenta ? usuarios.find(u => u.id === userVenta.usuarioId) : null;
 
                   return (
@@ -750,87 +782,68 @@ export const Devoluciones: React.FC = () => {
         }
         setIsNewDialogOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-hidden p-0 border shadow-2xl rounded-2xl bg-white flex flex-col">
-          <DialogHeader className="p-6 pb-2 shrink-0 bg-white border-none">
-            <DialogTitle className="text-xl font-black text-gray-900 leading-tight">Registrar Nueva Devolución</DialogTitle>
-            <DialogDescription className="text-[10px] text-gray-400 font-medium tracking-tight mt-0.5">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Registrar Nueva Devolución</DialogTitle>
+            <DialogDescription>
               Siga los pasos para localizar la venta y detallar los productos a devolver.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-6 mt-4 shrink-0">
-              <div className="flex items-center p-1 bg-gray-100 rounded-2xl gap-1 border border-gray-200">
-                {[
-                  { id: "venta", label: "Localizar Venta", icon: Search },
-                  { id: "devolucion", label: "Devolución", icon: RefreshCw },
-                  { id: "reposicion", label: "Reposición", icon: Package },
-                ].map((step) => (
-                  <button
-                    key={step.id}
-                    onClick={() => setActiveTab(step.id)}
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-2 py-1.5 rounded-xl transition-all duration-200 font-bold text-[10px] uppercase tracking-wider",
-                      activeTab === step.id 
-                        ? "bg-white text-gray-900 shadow-sm" 
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
-                    )}
-                  >
-                    <step.icon className={cn("h-3.5 w-3.5", activeTab === step.id ? "text-blue-600" : "text-gray-400")} />
-                    {step.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="venta">Localizar venta</TabsTrigger>
+              <TabsTrigger value="devolucion">Devolución</TabsTrigger>
+              <TabsTrigger value="reposicion">Reposición</TabsTrigger>
+            </TabsList>
 
-            <div className="flex-1 overflow-y-auto p-6 modal-scroll">
-              <TabsContent value="venta" className="mt-0 space-y-4 animate-in fade-in duration-300">
+              <TabsContent value="venta" className="space-y-4">
                 {/* Buscador */}
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="venta-id" className="text-[10px] uppercase font-black text-gray-900 tracking-widest mb-2.5 block">Referencia de Venta / Pedido</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="venta-search-input">Referencia de venta / pedido</Label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1 group">
-                        <Search className="h-3.5 w-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <div className="relative flex-1">
+                        <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
                         <Input
                           id="venta-search-input"
-                          placeholder="Ingrese el ID (Ej: 145)..."
-                          className="h-10 pl-10 rounded-xl border-gray-200 focus-visible:ring-gray-900/10 font-bold text-xs bg-gray-50/50"
+                          placeholder="Ingrese el ID (ej: 145)..."
+                          className="pl-9"
                           onKeyPress={(e) => e.key === 'Enter' && handleBuscarVenta((e.target as HTMLInputElement).value)}
                         />
                       </div>
                       <Button
-                        className="rounded-xl bg-gray-900 hover:bg-black text-white w-32 h-10 font-black text-[11px] shadow-md transition-all active:scale-95 whitespace-nowrap"
+                        className="bg-[rgb(21,93,252)] hover:bg-blue-700 shrink-0"
                         onClick={() => {
                           const el = document.getElementById('venta-search-input') as HTMLInputElement;
                           handleBuscarVenta(el.value);
                         }}
                         disabled={buscandoVenta}
                       >
-                        {buscandoVenta ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-2" /> : <Search className="h-3.5 w-3.5 mr-2" />}
+                        {buscandoVenta ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                         Localizar
                       </Button>
                     </div>
                   </div>
 
                 {ventaEncontrada && (
-                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pt-1">
-                    <div className="flex items-center gap-3 p-3 bg-white border rounded-2xl shadow-sm">
-                      <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
+                  <div className="space-y-4 pt-1">
+                    <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50/80">
+                      <div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
                         <User className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-black text-gray-700">{getClienteInfo(ventaEncontrada.usuarioId)}</h3>
-                          <Badge className="bg-gray-100 text-gray-600 border-none font-black text-[9px] h-5 shadow-none">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-medium text-gray-900">{getClienteInfo(ventaEncontrada.usuarioId)}</h3>
+                          <Badge variant="outline" className="shrink-0 text-xs font-normal">
                             #{ventaEncontrada.id}
                           </Badge>
                         </div>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Información del Cliente</p>
+                        <p className="text-xs text-muted-foreground">Información del cliente</p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {(() => {
                         const u = usuarios.find(usr => Number(usr.id) === Number(ventaEncontrada.usuarioId)) || (ventaEncontrada as any).usuario;
                         const stats = [
@@ -841,15 +854,12 @@ export const Devoluciones: React.FC = () => {
                         ];
 
                         return stats.map((stat, i) => (
-                          <div key={i} className="flex flex-col">
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <stat.icon className="h-3 w-3 text-gray-900" />
-                              <span className="text-[10px] uppercase font-black tracking-widest text-gray-900">{stat.label}</span>
+                          <div key={i} className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <stat.icon className="h-3.5 w-3.5 shrink-0" />
+                              <span>{stat.label}</span>
                             </div>
-                            <p className={cn(
-                              "text-sm font-medium text-gray-500",
-                              stat.highlight && "text-gray-500"
-                            )}>{stat.val}</p>
+                            <p className="text-sm text-gray-900">{stat.val}</p>
                           </div>
                         ));
                       })()}
@@ -859,47 +869,47 @@ export const Devoluciones: React.FC = () => {
               </div>
             </TabsContent>
 
-              <TabsContent value="devolucion" className="mt-0 space-y-4 animate-in fade-in duration-300">
+              <TabsContent value="devolucion" className="space-y-4">
                 {ventaEncontrada && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className={cn(
-                        "p-2 rounded-xl border flex items-center gap-3",
-                        saleValidity?.isValid ? "bg-emerald-50 border-emerald-100 text-emerald-900" : "bg-red-50 border-red-100 text-red-900"
+                        "p-3 rounded-lg border flex items-center gap-3",
+                        saleValidity?.isValid ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100"
                       )}>
                         <div className={cn(
-                          "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+                          "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
                           saleValidity?.isValid ? "bg-emerald-100" : "bg-red-100"
                         )}>
                           {saleValidity?.isValid ? <ShieldCheck className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
                         </div>
-                        <div>
-                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-900">Garantía</p>
-                          <p className="text-[10px] font-medium text-gray-500 line-clamp-1">{saleValidity?.message}</p>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-gray-900">Garantía</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{saleValidity?.message}</p>
                         </div>
                       </div>
 
-                      <div className="p-2 bg-white border rounded-xl shadow-sm space-y-0.5">
-                        <Label className="text-[8px] uppercase font-black text-gray-900 block ml-1">Fecha Registro</Label>
+                      <div className="space-y-2 p-3 border rounded-lg">
+                        <Label htmlFor="fecha-devolucion">Fecha de registro</Label>
                         <Input
+                          id="fecha-devolucion"
                           type="date"
                           value={formData.fechaDevolucion}
                           onChange={(e) => setFormData(p => ({ ...p, fechaDevolucion: e.target.value }))}
-                          className="h-7 rounded-lg border-transparent font-bold text-[11px] bg-gray-50/50 focus:bg-white"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-[9px] uppercase font-black text-gray-900 tracking-widest ml-1">Productos a Retornar</Label>
-                      <div className="border rounded-2xl overflow-hidden bg-white shadow-sm">
+                    <div className="space-y-2">
+                      <Label>Productos a retornar</Label>
+                      <div className="border rounded-lg overflow-hidden">
                         <Table>
-                          <TableHeader className="bg-gray-50/50">
-                            <TableRow className="h-8 hover:bg-transparent border-none">
-                              <TableHead className="w-[30px]"></TableHead>
-                              <TableHead className="text-[8px] font-black uppercase py-1 text-gray-900">Producto</TableHead>
-                              <TableHead className="text-center text-[8px] font-black uppercase py-1 text-gray-900">Original</TableHead>
-                              <TableHead className="text-center text-[8px] font-black uppercase py-1 w-[100px] text-gray-900">Retorno</TableHead>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40px]" />
+                              <TableHead>Producto</TableHead>
+                              <TableHead className="text-center">Original</TableHead>
+                              <TableHead className="text-center w-[100px]">Retorno</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -908,12 +918,12 @@ export const Devoluciones: React.FC = () => {
                               const isSelected = !!selectedItem;
 
                               return (
-                                <TableRow key={p.productoId} className={cn("h-10 transition-colors border-slate-50", isSelected ? "bg-blue-50/20" : "")}>
-                                  <TableCell className="text-center py-1">
+                                <TableRow key={p.productoId} className={cn(isSelected ? "bg-blue-50/50" : "")}>
+                                  <TableCell className="text-center py-2">
                                     <div
                                       className={cn(
-                                        "h-4 w-4 mx-auto rounded-md border flex items-center justify-center cursor-pointer transition-all",
-                                        isSelected ? "bg-blue-600 border-blue-600 text-white shadow-sm" : "bg-white border-slate-200"
+                                        "h-4 w-4 mx-auto rounded border flex items-center justify-center cursor-pointer",
+                                        isSelected ? "bg-[rgb(21,93,252)] border-[rgb(21,93,252)] text-white" : "bg-background border-input"
                                       )}
                                       onClick={() => {
                                         if (isSelected) {
@@ -929,16 +939,17 @@ export const Devoluciones: React.FC = () => {
                                       {isSelected && <Check className="h-2.5 w-2.5" />}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="py-1">
-                                    <p className="font-bold text-gray-700 text-[11px] truncate max-w-[180px]">{getProductoNombre(p)}</p>
-                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight">${p.precioUnitario.toLocaleString()}</p>
+                                  <TableCell className="py-2">
+                                    <p className="text-sm font-medium truncate max-w-[180px]">{getProductoNombre(p)}</p>
+                                    <p className="text-xs text-muted-foreground">${p.precioUnitario.toLocaleString()}</p>
                                   </TableCell>
-                                  <TableCell className="text-center font-bold text-gray-400 text-[11px] py-1">{p.cantidad}</TableCell>
-                                  <TableCell className="text-center py-1">
+                                  <TableCell className="text-center text-sm py-2">{p.cantidad}</TableCell>
+                                  <TableCell className="text-center py-2">
                                     {isSelected ? (
-                                      <div className="flex items-center justify-center bg-white rounded-lg border border-gray-200 p-0.5 h-7">
+                                      <div className="flex items-center justify-center rounded-md border border-input p-0.5 h-8 max-w-[110px] mx-auto">
                                         <button
-                                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-gray-50 text-gray-400"
+                                          type="button"
+                                          className="h-7 w-7 flex items-center justify-center rounded-sm hover:bg-muted text-muted-foreground"
                                           onClick={() => {
                                             const newVal = Math.max(1, (selectedItem?.cantidad || 1) - 1);
                                             setFormData(prev => ({
@@ -952,7 +963,7 @@ export const Devoluciones: React.FC = () => {
                                           <Minus className="h-2.5 w-2.5" />
                                         </button>
                                         <Input
-                                          className="w-8 h-5 text-center text-[11px] font-black text-gray-800 bg-transparent border-none p-0 focus-visible:ring-0"
+                                          className="w-8 h-6 text-center text-sm border-0 shadow-none p-0 focus-visible:ring-0"
                                           type="number"
                                           min="1"
                                           max={p.cantidad}
@@ -970,7 +981,8 @@ export const Devoluciones: React.FC = () => {
                                           }}
                                         />
                                         <button
-                                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-gray-50 text-gray-400"
+                                          type="button"
+                                          className="h-7 w-7 flex items-center justify-center rounded-sm hover:bg-muted text-muted-foreground"
                                           onClick={() => {
                                             const newVal = Math.min(p.cantidad, (selectedItem?.cantidad || 1) + 1);
                                             setFormData(prev => ({
@@ -985,7 +997,7 @@ export const Devoluciones: React.FC = () => {
                                         </button>
                                       </div>
                                     ) : (
-                                      <span className="text-[8px] font-bold text-gray-300 uppercase italic">Esperando...</span>
+                                      <span className="text-xs text-muted-foreground italic">Seleccione</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
@@ -996,39 +1008,41 @@ export const Devoluciones: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="motivo" className="text-[9px] uppercase font-black text-gray-900 tracking-widest ml-1">Observaciones / Motivo</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="motivo">Observaciones / motivo</Label>
                       <Textarea
                         id="motivo"
                         placeholder="Describa el estado del producto..."
                         value={formData.motivo}
                         onChange={(e) => setFormData(prev => ({ ...prev, motivo: e.target.value }))}
-                        className="min-h-[50px] rounded-2xl border-gray-200 focus-visible:ring-blue-600/20 text-[11px] font-medium p-3"
+                        className="min-h-[80px]"
                       />
                     </div>
                   </>
                 )}
               </TabsContent>
 
-              <TabsContent value="reposicion" className="mt-0 space-y-5 animate-in fade-in duration-300">
+              <TabsContent value="reposicion" className="space-y-4">
                 {ventaEncontrada && (
                   <>
-                    {/* Buscador de Productos en Catálogo */}
-                    <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-2">
-                      <Label className="text-[9px] uppercase font-black text-gray-900 tracking-widest flex items-center justify-between gap-2 px-1">
-                        <span className="flex items-center gap-1.5"><Plus className="h-3 w-3" /> Catálogo de Reposición</span>
+                    <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <Plus className="h-4 w-4" />
+                          Catálogo de reposición
+                        </Label>
                         <Badge variant="outline" className={cn(
-                          "ml-auto text-[10px] font-black tracking-tight h-5",
-                          totalReposicionCant === totalDevueltoCant ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-100 text-gray-600 border-gray-200"
+                          "text-xs font-normal",
+                          totalReposicionCant === totalDevueltoCant ? "border-amber-200 bg-amber-50 text-amber-800" : ""
                         )}>
                           Reposición: {totalReposicionCant} / {totalDevueltoCant} uds.
                         </Badge>
-                      </Label>
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                      <div className="relative z-10">
+                        <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground pointer-events-none" />
                         <Input
                           placeholder="Buscar por nombre..."
-                          className="h-8 pl-9 rounded-xl border-blue-100 focus-visible:ring-blue-600/20 text-[11px] bg-white"
+                          className="pl-9"
                           value={busquedaReposicion}
                           onChange={async (e) => {
                               setBusquedaReposicion(e.target.value);
@@ -1045,16 +1059,14 @@ export const Devoluciones: React.FC = () => {
                               }
                           }}
                         />
-                      </div>
-
-                      {busquedaReposicion && (
-                        <div className="bg-white border rounded-xl shadow-xl max-h-[140px] overflow-y-auto absolute w-[calc(100%-48px)] z-50 mt-1 border-gray-100">
+                        {busquedaReposicion && (
+                        <div className="bg-popover border rounded-md shadow-md max-h-[140px] overflow-y-auto absolute top-full left-0 right-0 z-50 mt-1">
                           {productos
                             .filter(p => p.nombreProducto.toLowerCase().includes(busquedaReposicion.toLowerCase()) && p.estado && p.stock > 0)
                             .map(p => (
                               <div
                                 key={p.id}
-                                className="p-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b last:border-0 border-gray-50 transition-colors"
+                                className="p-2 hover:bg-muted/80 cursor-pointer flex justify-between items-center border-b last:border-0"
                                 onClick={() => {
                                   if (totalReposicionCant >= totalDevueltoCant) {
                                     toast.error("Límite alcanzado", { description: `Máximo ${totalDevueltoCant} unidades.` });
@@ -1079,44 +1091,48 @@ export const Devoluciones: React.FC = () => {
                                 }}
                               >
                                 <div>
-                                  <p className="text-[11px] font-bold text-gray-700">{p.nombreProducto}</p>
-                                  <p className="text-[8px] text-gray-400 uppercase font-black tracking-wider">${p.precio.toLocaleString()} • STOCK: {p.stock}</p>
+                                  <p className="text-sm font-medium">{p.nombreProducto}</p>
+                                  <p className="text-xs text-muted-foreground">${p.precio.toLocaleString()} · Stock: {p.stock}</p>
                                 </div>
-                                <Plus className="h-3 w-3 text-blue-500" />
+                                <Plus className="h-4 w-4 text-[rgb(21,93,252)] shrink-0" />
                               </div>
                             ))}
                         </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-[9px] uppercase font-black text-gray-900 tracking-widest ml-1">Resumen de Cambio</Label>
-                      <div className="border rounded-2xl bg-white shadow-sm overflow-hidden">
+                    <div className="space-y-2">
+                      <Label>Resumen de cambio</Label>
+                      <div className="border rounded-lg overflow-hidden">
                         <div className="max-h-[150px] overflow-y-auto">
                           <Table>
-                            <TableHeader className="bg-gray-50/50 sticky top-0 z-10">
-                              <TableRow className="h-8 hover:bg-transparent border-none">
-                                <TableHead className="text-[8px] font-black uppercase py-1 px-4 text-gray-900">Producto</TableHead>
-                                <TableHead className="text-center text-[8px] font-black uppercase py-1 w-[80px] text-gray-900">Cantidad</TableHead>
-                                <TableHead className="text-right text-[8px] font-black uppercase py-1 px-4 text-gray-900">Subtotal</TableHead>
+                            <TableHeader className="sticky top-0 z-10 bg-muted/50">
+                              <TableRow>
+                                <TableHead className="px-4">Producto</TableHead>
+                                <TableHead className="text-center w-[100px]">Cantidad</TableHead>
+                                <TableHead className="text-right px-4">Subtotal</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {formData.productosReposicion.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={3} className="text-center py-6 text-slate-300 italic text-[11px]">Agregue productos desde el buscador.</TableCell>
+                                  <TableCell colSpan={3} className="text-center py-6 text-muted-foreground text-sm italic">
+                                    Agregue productos desde el buscador.
+                                  </TableCell>
                                 </TableRow>
                               ) : (
                                 formData.productosReposicion.map((p) => (
-                                  <TableRow key={p.productoId} className="h-10 hover:bg-gray-50/50 border-gray-50 transition-colors">
-                                    <TableCell className="px-4 py-1">
-                                      <p className="font-bold text-gray-700 text-[11px] truncate max-w-[200px]">{getProductoNombre(p)}</p>
-                                      <p className="text-[8px] text-gray-400 font-black tracking-tight">${p.precioUnitario.toLocaleString()}</p>
+                                  <TableRow key={p.productoId}>
+                                    <TableCell className="px-4 py-2">
+                                      <p className="text-sm font-medium truncate max-w-[200px]">{getProductoNombre(p)}</p>
+                                      <p className="text-xs text-muted-foreground">${p.precioUnitario.toLocaleString()}</p>
                                     </TableCell>
-                                      <TableCell className="text-center py-1">
-                                        <div className="flex items-center justify-center bg-white rounded-lg border border-gray-200 h-6 w-[84px] mx-auto overflow-hidden">
+                                      <TableCell className="text-center py-2">
+                                        <div className="flex items-center justify-center rounded-md border border-input h-8 w-[96px] mx-auto overflow-hidden">
                                           <button 
-                                              className="h-6 w-6 flex items-center justify-center text-gray-400 hover:bg-gray-50" 
+                                              type="button"
+                                              className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:bg-muted shrink-0" 
                                               onClick={() => {
                                                 setFormData(prev => ({
                                                   ...prev,
@@ -1130,7 +1146,7 @@ export const Devoluciones: React.FC = () => {
                                           </button>
                                           
                                           <Input
-                                            className="w-10 h-6 text-center text-xs font-black text-gray-700 bg-transparent border-none p-0 focus-visible:ring-0 [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [appearance:textfield]"
+                                            className="w-10 h-6 text-center text-sm border-0 shadow-none p-0 focus-visible:ring-0 [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [appearance:textfield]"
                                             type="number"
                                             min="1"
                                             value={p.cantidad || ''}
@@ -1178,7 +1194,8 @@ export const Devoluciones: React.FC = () => {
                                           />
 
                                           <button 
-                                              className="h-6 w-6 flex items-center justify-center text-gray-400 hover:bg-gray-50" 
+                                              type="button"
+                                              className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:bg-muted shrink-0" 
                                               onClick={() => {
                                                 const stock = productos.find(pr => pr.id === p.productoId)?.stock || 0;
                                                 if (p.cantidad < stock) {
@@ -1201,13 +1218,14 @@ export const Devoluciones: React.FC = () => {
                                           </button>
                                         </div>
                                       </TableCell>
-                                      <TableCell className="text-right px-4 py-1">
+                                      <TableCell className="text-right px-4 py-2">
                                         <div className="flex items-center justify-end gap-2">
-                                          <span className="font-bold text-gray-500 text-[11px]">
+                                          <span className="text-sm text-gray-900">
                                             ${(p.cantidad * p.precioUnitario).toLocaleString()}
                                           </span>
                                           <button
-                                            className="h-6 w-6 flex items-center justify-center text-red-300 hover:text-red-500 rounded-md transition-colors"
+                                            type="button"
+                                            className="h-8 w-8 flex items-center justify-center text-red-400 hover:text-red-600 rounded-md"
                                             onClick={() => {
                                               setFormData(prev => ({
                                                 ...prev,
@@ -1228,30 +1246,30 @@ export const Devoluciones: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-2 pt-2 border-t border-gray-100 mt-auto">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2 bg-gray-50/80 rounded-xl border border-gray-100 flex justify-between items-baseline px-3">
-                          <span className="font-black text-gray-900 uppercase text-[8px] tracking-tighter">Sale:</span>
-                          <span className="font-black text-red-500 text-xs">
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-muted/40 rounded-lg border flex justify-between items-baseline gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">Sale</span>
+                          <span className="text-sm font-semibold text-red-600">
                             -${formData.productosSeleccionados.reduce((acc, ps) => {
                               const prod = productos.find(p => p.id === ps.productoId);
                               return acc + (prod?.precio || 0) * ps.cantidad;
                             }, 0).toLocaleString()}
                           </span>
                         </div>
-                        <div className="p-2 bg-gray-50/80 rounded-xl border border-gray-100 flex justify-between items-baseline px-3">
-                          <span className="font-black text-gray-900 uppercase text-[8px] tracking-tighter">Entra:</span>
-                          <span className="font-black text-emerald-500 text-xs">
+                        <div className="p-3 bg-muted/40 rounded-lg border flex justify-between items-baseline gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">Entra</span>
+                          <span className="text-sm font-semibold text-emerald-600">
                             +${formData.productosReposicion.reduce((acc, pr) => acc + pr.cantidad * pr.precioUnitario, 0).toLocaleString()}
                           </span>
                         </div>
                       </div>
-                      <div className="p-3 bg-gray-100 border border-gray-200 rounded-2xl flex justify-between items-center text-gray-900 shadow-sm">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-900 leading-none mb-1">Diferencial de Ajuste</span>
-                          <span className="text-[9px] text-gray-500 font-medium">Balance neto al pedido</span>
+                      <div className="p-3 bg-muted/50 border rounded-lg flex justify-between items-center gap-3">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-sm font-semibold text-gray-900">Diferencial de ajuste</span>
+                          <span className="text-xs text-muted-foreground">Balance neto al pedido</span>
                         </div>
-                        <span className="text-base font-black tracking-tight">
+                        <span className="text-lg font-semibold tabular-nums shrink-0">
                           {(() => {
                             const totalDev = formData.productosSeleccionados.reduce((acc, ps) => {
                               const prod = productos.find(p => p.id === ps.productoId);
@@ -1267,37 +1285,32 @@ export const Devoluciones: React.FC = () => {
                   </>
                 )}
               </TabsContent>
-            </div>
           </Tabs>
 
-          <DialogFooter className="p-5 border-t shrink-0 flex items-center justify-between gap-3 bg-gray-50/50">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="font-bold border-gray-200 text-xs h-9 px-4 rounded-xl"
-                onClick={() => setIsNewDialogOpen(false)}
-              >
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsNewDialogOpen(false)}>
                 Cancelar
               </Button>
               {activeTab !== "venta" && (
                 <Button
                   variant="ghost"
-                  className="font-bold text-xs h-9 px-4 rounded-xl text-gray-500"
+                  className="text-muted-foreground"
                   onClick={() => {
                     if (activeTab === "reposicion") setActiveTab("devolucion");
                     else if (activeTab === "devolucion") setActiveTab("venta");
                   }}
                 >
-                  <ArrowLeft className="h-3.5 w-3.5 mr-2" />
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Regresar
                 </Button>
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
               {activeTab !== "reposicion" ? (
                 <Button
-                  className="bg-gray-900 text-white hover:bg-black px-8 h-10 font-black rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-30 text-xs"
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black border-none flex-1 sm:flex-initial"
                   onClick={() => {
                     if (activeTab === "venta") setActiveTab("devolucion");
                     else if (activeTab === "devolucion") setActiveTab("reposicion");
@@ -1308,16 +1321,16 @@ export const Devoluciones: React.FC = () => {
                   }
                 >
                   Siguiente
-                  <ArrowRight className="h-3.5 w-3.5 ml-2" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
                 <Button
-                  className="bg-amber-100 border border-amber-200 text-amber-700 hover:bg-amber-200 px-8 h-10 font-black rounded-xl transition-all active:scale-95 disabled:opacity-30 text-xs"
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black border-none flex-1 sm:flex-initial"
                   onClick={() => setShowConfirmDialog(true)}
                   disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid || totalReposicionCant > totalDevueltoCant}
                 >
-                  <CheckCircle className="h-3.5 w-3.5 mr-2" />
-                  Procesar Devolución
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Procesar devolución
                 </Button>
               )}
             </div>
@@ -1400,7 +1413,7 @@ export const Devoluciones: React.FC = () => {
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Cliente</p>
                           <p className="text-sm font-black text-gray-900 leading-none">
                             {(() => {
-                                const userVenta = ventas.find(v => v.id === devolucionToAnular.ventaPedidoId);
+                                const userVenta = ventas.find(v => Number(v.id) === Number(devolucionToAnular.ventaPedidoId));
                                 const usuario = userVenta ? usuarios.find(u => u.id === userVenta.usuarioId) : null;
                                 return usuario ? `${usuario.nombres} ${usuario.apellidos}` : "N/A";
                             })()}

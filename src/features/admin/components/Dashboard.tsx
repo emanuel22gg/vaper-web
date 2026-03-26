@@ -141,7 +141,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         // Unir detalles con pedidos
         const pedidosConDetalles = pedidosData.map(pedido => ({
           ...pedido,
-          detalleVenta_Pedido: detallesData.filter((d: any) => d.ventaPedidoId === pedido.id)
+          detalleVenta_Pedido: detallesData.filter(
+            (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId) === Number(pedido.id)
+          )
         }));
 
         setRealPedidos(pedidosConDetalles);
