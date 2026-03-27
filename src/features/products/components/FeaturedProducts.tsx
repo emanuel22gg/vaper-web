@@ -36,48 +36,50 @@ const FeaturedProductCard: React.FC<{ product: Producto, categoryName: string }>
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
-      <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1">
+      <div className="relative h-56 bg-gray-50 flex items-center justify-center overflow-hidden">
         {product.imagen ? (
           <ImageWithFallback 
             src={product.imagen}
             alt={product.nombreProducto}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
-          <Package className="h-10 w-10 text-gray-400" />
+          <Package className="h-10 w-10 text-gray-300 group-hover:text-yellow-500 transition-colors" />
         )}
-        <Badge className="absolute top-3 left-3 bg-yellow-500 text-black hover:bg-yellow-400">
-          Destacado
+        <Badge className="absolute top-3 left-3 bg-red-500 text-white border-0 px-3 py-1 shadow-md font-semibold tracking-wide hover:bg-red-600">
+          🔥 TOP VENTAS
         </Badge>
       </div>
       
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="p-5 flex-1 flex flex-col">
         <div className="mb-2">
-          <span className="text-sm text-gray-500">{categoryName}</span>
+          <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">{categoryName}</span>
         </div>
-        <h3 className="font-semibold text-lg mb-2 line-clamp-2" title={product.nombreProducto}>
+        <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 mt-2 group-hover:text-yellow-600 transition-colors min-h-[3.5rem]" title={product.nombreProducto}>
           {product.nombreProducto}
         </h3>
-        <div className="mt-auto">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
+        <div className="mt-auto pt-4 border-t border-gray-50">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
           </div>
           
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-center gap-3 w-full">
+            <div className="flex items-center justify-between gap-2 w-full bg-gray-50 p-1 rounded-lg border border-gray-100">
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
                 <Minus className="w-4 h-4" />
               </Button>
-              <span className="text-lg font-semibold w-12 text-center">{quantity}</span>
+              <span className="text-base font-semibold w-8 text-center">{quantity}</span>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={incrementQuantity}
                 disabled={product.stock <= quantity}
               >
@@ -87,12 +89,12 @@ const FeaturedProductCard: React.FC<{ product: Producto, categoryName: string }>
 
             <Button 
               size="sm" 
-              className="w-full text-[rgb(0,0,0)] bg-[rgb(240,177,0,100)] hover:bg-gray-400 disabled:opacity-50"
+              className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-5 rounded-xl transition-all shadow-md shadow-yellow-500/20"
               onClick={handleAddToCart}
               disabled={product.stock === 0}
             >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              {product.stock === 0 ? "Agotado" : "Agregar al carrito"}
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              {product.stock === 0 ? "Agotado" : "Agregar al Carrito"}
             </Button>
           </div>
         </div>
@@ -115,7 +117,15 @@ export function FeaturedProducts() {
           getAllImages()
         ]);
         
-        const productsWithImages = prods.filter(p => p.estado).slice(0, 4).map(p => {
+        const targetNames = ["encendedor zippo", "encendedor clipper", "pipa metalica premium"];
+        const filteredProds = prods.filter(p => {
+          if (!p.estado) return false;
+          // Normalize to avoid accent issues
+          const n = p.nombreProducto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return n.includes("zippo") || n.includes("clipper") || n.includes("pipa metalica");
+        }).slice(0, 3);
+
+        const productsWithImages = filteredProds.map(p => {
           const matchingImage = images.find(img => img.idImagen === p.idImagen);
           return {
             ...p,
@@ -143,8 +153,8 @@ export function FeaturedProducts() {
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-black mb-4">
-            Productos <span className="text-yellow-500">Destacados</span>
+          <h2 className="text-3xl md:text-5xl font-black text-black mb-4 tracking-tight">
+            Nuestros <span className="text-yellow-500">Top Ventas</span>
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Descubre nuestra selección de vaporizadores más populares, 
@@ -161,7 +171,7 @@ export function FeaturedProducts() {
             No hay productos destacados por ahora.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <FeaturedProductCard
                 key={product.id}

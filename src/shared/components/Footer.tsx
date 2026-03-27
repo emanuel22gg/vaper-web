@@ -3,8 +3,12 @@ import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png'
 
 export function Footer() {
   return (
-    <footer className="bg-black text-white">
-      <div className="max-w-7xl mx-auto px-4 py-12">
+    <footer className="bg-black text-white relative pt-4">
+      {/* Decorative Top Border Glow */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-24 bg-yellow-500/5 blur-[50px] rounded-full pointer-events-none"></div>
+
+      <div className="max-w-7xl mx-auto px-4 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Logo y descripción */}
           <div className="space-y-4">

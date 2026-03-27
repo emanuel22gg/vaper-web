@@ -403,29 +403,38 @@ export const TiendaCliente: React.FC = () => {
                 return (
                   <Card 
                     key={category.id} 
-                    className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 overflow-hidden flex flex-col"
+                    className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                     onClick={() => setSelectedCategory(category.nombreCategoria)}
                   >
-                    <div className="h-48 relative bg-gray-100 flex items-center justify-center border-b">
+                    {/* Image Section */}
+                    <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-50 flex items-center justify-center">
                       {category.imagen ? (
                         <ImageWithFallback 
                           src={category.imagen} 
                           alt={category.nombreCategoria}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
-                          <Package className="h-8 w-8 text-yellow-500" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+                          <Package className="h-16 w-16 text-gray-300 group-hover:text-yellow-500 transition-colors duration-300" />
                         </div>
                       )}
                     </div>
                     
-                    <CardHeader className="text-center p-6 bg-white flex-1 flex flex-col justify-center">
-                      <CardTitle className="text-xl">{category.nombreCategoria}</CardTitle>
-                      <p className="text-muted-foreground mt-2 text-sm line-clamp-2">
-                        {category.descripcion || `Explora productos de ${category.nombreCategoria}`}
+                    {/* Content Section */}
+                    <div className="p-6 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
+                        {category.nombreCategoria}
+                      </h3>
+                      <p className="text-gray-500 text-sm line-clamp-2 mt-1 flex-1">
+                        {category.descripcion || `Explora nuestros productos de ${category.nombreCategoria}`}
                       </p>
-                    </CardHeader>
+
+                      <div className="mt-4 flex items-center text-yellow-600 font-medium">
+                        <span className="text-sm uppercase tracking-wider">Ver Productos</span>
+                        <ArrowRight className="h-4 w-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                    </div>
                   </Card>
                 );
               })}
@@ -435,79 +444,81 @@ export const TiendaCliente: React.FC = () => {
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredProducts.map((product) => (
-                    <Card
+                    <div
                       key={product.id}
-                      className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 relative"
                     >
-                      <div className="relative">
+                      {/* Image section */}
+                      <div className="relative h-56 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer" onClick={() => setSelectedProduct(product)}>
                         <ImageWithFallback
                           src={product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"}
                           alt={product.nombreProducto}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-
                         {/* Stock badge */}
-                        <div className="absolute top-2 right-2">
-                          <Badge
-                            variant={
-                              product.stock > 10
-                                ? "default"
-                                : "destructive"
-                            }
-                          >
-                            {product.stock} disponibles
+                        <div className="absolute top-3 right-3 z-10">
+                          <Badge variant={product.stock > 10 ? "secondary" : "destructive"} className="shadow-sm font-semibold">
+                            {product.stock} disp.
                           </Badge>
                         </div>
-
                         {/* Wishlist */}
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute bottom-2 right-2 rounded-full h-8 w-8 p-0"
+                          variant="secondary"
+                          size="icon"
+                          className="absolute top-3 left-3 rounded-full h-8 w-8 z-10 bg-white/80 hover:bg-white text-gray-500 hover:text-red-500 transition-colors shadow-sm"
                         >
                           <Heart className="h-4 w-4" />
                         </Button>
                       </div>
 
-                      <CardHeader className="pb-3 flex-1">
-                        <CardTitle className="text-lg line-clamp-2">
+                      {/* Content Section */}
+                      <div className="p-5 flex-1 flex flex-col">
+                        <div className="mb-2">
+                          <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                            {product.categoria?.nombreCategoria || "Sin Categoría"}
+                          </span>
+                        </div>
+                        
+                        <h3 
+                          className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 mt-2 group-hover:text-yellow-600 transition-colors min-h-[3.5rem] cursor-pointer" 
+                          title={product.nombreProducto}
+                          onClick={() => setSelectedProduct(product)}
+                        >
                           {product.nombreProducto}
-                        </CardTitle>
+                        </h3>
 
-                        <CardDescription className="line-clamp-2 mt-2">
-                          {product.descripcion}
-                        </CardDescription>
-                      </CardHeader>
-
-                      <CardContent className="pt-0 border-t mt-auto">
-                        <div className="space-y-3 pt-3">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-2xl font-bold text-green-600">
-                              ${product.precio.toLocaleString()}
-                            </span>
+                        <div className="mt-auto pt-4 border-t border-gray-50">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
                           </div>
-
-                          <div className="flex gap-2">
+                          
+                          <div className="flex gap-2 w-full">
                             <Button
-                              className="flex-1 bg-[rgb(240,177,0)] hover:bg-yellow-600 text-black border border-yellow-700"
-                              onClick={() => addToCart(product)}
+                              className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold transition-all shadow-sm"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                addToCart(product);
+                              }}
                               disabled={product.stock === 0}
                             >
-                              <ShoppingCart className="h-4 w-4 mr-2" />
-                              {product.stock === 0
-                                ? "Agotado"
-                                : "Agregar"}
+                              <ShoppingCart className="h-4 w-4 mx-auto sm:mr-2 sm:mx-0 inline-block" />
+                              <span className="hidden sm:inline-block">{product.stock === 0 ? "Agotado" : "Agregar"}</span>
                             </Button>
+                            
                             <Button
                               variant="outline"
-                              onClick={() => setSelectedProduct(product)}
+                              className="hover:bg-gray-50 border-gray-200"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                              }}
                             >
                               Ver
                             </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (

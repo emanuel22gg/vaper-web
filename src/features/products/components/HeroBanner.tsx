@@ -15,16 +15,8 @@ export function HeroBanner({ onNavigate }: HeroBannerProps) {
               La Mejor Experiencia en 
               <span className="text-yellow-500"> Vapeo</span>
             </h1>
-            <p className="text-lg text-gray-300 leading-relaxed">
-              Somos Vaper One Medellín, una empresa líder en el mercado de vaporizadores, 
-              comprometida con ofrecer productos de la más alta calidad. Con años de 
-              experiencia en el sector, nos especializamos en brindar una amplia gama 
-              de dispositivos desechables, recargables y accesorios premium.
-            </p>
-            <p className="text-gray-300">
-              Nuestra misión es proporcionar a nuestros clientes la mejor experiencia de vapeo, 
-              con productos seguros, innovadores y de calidad superior que satisfacen las 
-              necesidades de todos los usuarios, desde principiantes hasta expertos.
+            <p className="text-lg text-gray-300 leading-relaxed font-light mt-4">
+              Descubre dispositivos premium, desechables y accesorios de vapeo con envío rápido en Medellín. ¿Listo para elevar el nivel?
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button 

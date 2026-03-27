@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Button } from '@/shared/ui/button';
 import {
   Card,
@@ -28,184 +28,129 @@ import {
   User,
   Phone,
   Mail,
+  CreditCard,
+  Store,
+  Loader2,
 } from 'lucide-react';
+import { AuthContext } from '@/shared/contexts/AuthContext';
+import { getVentaPedidos, getDetalleVentaPedidos, getProductos, getEstados, getAllImages } from '@/shared/services/api';
 
-// Datos simulados de pedidos
-const pedidosData = [
-  {
-    id: 1,
-    numeroPedido: 'PED-001',
-    fecha: new Date('2024-02-10'),
-    estado: 'Entregado',
-    total: 385000,
-    productos: [
-      {
-        id: '1',
-        nombre: 'Vape Desechable 2000 puffs',
-        cantidad: 3,
-        precio: 25000,
-        imagen: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-      },
-      {
-        id: '2',
-        nombre: 'Pod System Premium',
-        cantidad: 1,
-        precio: 180000,
-        imagen: 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop',
-      },
-      {
-        id: '3',
-        nombre: 'Líquido Premium 60ml',
-        cantidad: 4,
-        precio: 35000,
-        imagen: 'https://images.unsplash.com/photo-1607734834519-d8576ae60ea4?w=300&h=300&fit=crop',
-      },
-    ],
-    direccionEnvio: {
-      direccion: 'Calle 50 #45-23',
-      ciudad: 'Medellín',
-      departamento: 'Antioquia',
-      telefono: '3001234567',
-    },
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '3001234567',
-    },
-  },
-  {
-    id: 2,
-    numeroPedido: 'PED-002',
-    fecha: new Date('2024-02-12'),
-    estado: 'En Proceso',
-    total: 320000,
-    productos: [
-      {
-        id: '4',
-        nombre: 'Mod Avanzado 100W',
-        cantidad: 1,
-        precio: 320000,
-        imagen: 'https://images.unsplash.com/photo-1607734834519-d8576ae60ea4?w=300&h=300&fit=crop',
-      },
-    ],
-    direccionEnvio: {
-      direccion: 'Carrera 70 #34-12',
-      ciudad: 'Medellín',
-      departamento: 'Antioquia',
-      telefono: '3001234567',
-    },
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '3001234567',
-    },
-  },
-  {
-    id: 3,
-    numeroPedido: 'PED-003',
-    fecha: new Date('2024-02-14'),
-    estado: 'Pendiente',
-    total: 195000,
-    productos: [
-      {
-        id: '6',
-        nombre: 'Kit Iniciación Completo',
-        cantidad: 1,
-        precio: 150000,
-        imagen: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-      },
-      {
-        id: '5',
-        nombre: 'Bobinas de Repuesto Pack x5',
-        cantidad: 1,
-        precio: 45000,
-        imagen: 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop',
-      },
-    ],
-    direccionEnvio: {
-      direccion: 'Calle 10 Sur #30-50',
-      ciudad: 'Medellín',
-      departamento: 'Antioquia',
-      telefono: '3001234567',
-    },
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '3001234567',
-    },
-  },
-  {
-    id: 4,
-    numeroPedido: 'PED-004',
-    fecha: new Date('2024-02-08'),
-    estado: 'Cancelado',
-    total: 180000,
-    productos: [
-      {
-        id: '2',
-        nombre: 'Pod System Premium',
-        cantidad: 1,
-        precio: 180000,
-        imagen: 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop',
-      },
-    ],
-    direccionEnvio: {
-      direccion: 'Avenida 80 #45-12',
-      ciudad: 'Medellín',
-      departamento: 'Antioquia',
-      telefono: '3001234567',
-    },
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '3001234567',
-    },
-  },
-  {
-    id: 5,
-    numeroPedido: 'PED-005',
-    fecha: new Date('2024-02-15'),
-    estado: 'Enviado',
-    total: 215000,
-    productos: [
-      {
-        id: '1',
-        nombre: 'Vape Desechable 2000 puffs',
-        cantidad: 2,
-        precio: 25000,
-        imagen: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-      },
-      {
-        id: '3',
-        nombre: 'Líquido Premium 60ml',
-        cantidad: 3,
-        precio: 35000,
-        imagen: 'https://images.unsplash.com/photo-1607734834519-d8576ae60ea4?w=300&h=300&fit=crop',
-      },
-      {
-        id: '5',
-        nombre: 'Bobinas de Repuesto Pack x5',
-        cantidad: 2,
-        precio: 45000,
-        imagen: 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=300&h=300&fit=crop',
-      },
-    ],
-    direccionEnvio: {
-      direccion: 'Calle 50 #45-23',
-      ciudad: 'Medellín',
-      departamento: 'Antioquia',
-      telefono: '3001234567',
-    },
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '3001234567',
-    },
-  },
-];
+interface PedidoUI {
+  id: number;
+  numeroPedido: string;
+  fecha: Date;
+  estado: string;
+  total: number;
+  productos: {
+    id: string;
+    nombre: string;
+    cantidad: number;
+    precio: number;
+    imagen: string;
+  }[];
+  direccionEnvio: {
+    direccion: string;
+    barrio: string;
+    ciudad: string;
+    departamento: string;
+    telefono: string;
+    envio: number;
+    metodoPago: string;
+  };
+  cliente: {
+    nombre: string;
+    email: string;
+    telefono: string;
+    cedula: string;
+  };
+}
 
 export const PedidosCliente: React.FC = () => {
-  const [selectedPedido, setSelectedPedido] = useState<typeof pedidosData[0] | null>(null);
+  const { user } = useContext(AuthContext) as any;
+  const [selectedPedido, setSelectedPedido] = useState<PedidoUI | null>(null);
+  const [pedidosData, setPedidosData] = useState<PedidoUI[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      try {
+        setLoading(true);
+        if (!user) return;
+        
+        const [pedidosApi, detallesApi, productosApi, estadosApi, imagesApi] = await Promise.all([
+          getVentaPedidos(),
+          getDetalleVentaPedidos(),
+          getProductos(),
+          getEstados(),
+          getAllImages()
+        ]);
+
+        const productosConImagen = productosApi.map(p => {
+          const matchingImage = imagesApi.find(img => img.idImagen === p.idImagen);
+          return {
+            ...p,
+            imagen: matchingImage ? matchingImage.urlimagen : p.imagen
+          };
+        });
+
+        // Filtrar pedidos del cliente logueado
+        const misPedidos = pedidosApi.filter(p => p.usuarioId === Number(user.id));
+        
+        const pedidosMapeados: PedidoUI[] = misPedidos.map(pedido => {
+          // Obtener estado
+          const estadoObj = estadosApi.find(e => e.id === pedido.estadoId);
+          const nombreEstado = estadoObj ? estadoObj.nombreEstado : 'Desconocido';
+
+          // Obtener detalles
+          const detallesDelPedido = detallesApi.filter(d => d.ventaPedidoId === pedido.id);
+          const productosAgregados = detallesDelPedido.map(detalle => {
+            const prodInfo = productosConImagen.find(p => p.id === detalle.productoId);
+            return {
+              id: detalle.productoId.toString(),
+              nombre: prodInfo ? prodInfo.nombreProducto : 'Producto Desconocido',
+              cantidad: detalle.cantidad,
+              precio: detalle.precioUnitario,
+              imagen: prodInfo?.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+            };
+          });
+
+          return {
+            id: pedido.id || 0,
+            numeroPedido: `PED-${(pedido.id || 0).toString().padStart(3, '0')}`,
+            fecha: pedido.fechaCreacion ? new Date(pedido.fechaCreacion) : new Date(),
+            estado: nombreEstado,
+            total: pedido.total || 0,
+            productos: productosAgregados,
+            direccionEnvio: {
+              direccion: pedido.direccionEntrega || '',
+              barrio: (pedido as any).barrio || user.barrio || '',
+              ciudad: pedido.ciudadEntrega || '',
+              departamento: pedido.departamentoEntrega || '',
+              telefono: user.telefono || '',
+              envio: pedido.envio || 0,
+              metodoPago: pedido.metodoPago || 'Efectivo',
+            },
+            cliente: {
+              nombre: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+              email: user.email || '',
+              telefono: user.telefono || '',
+              cedula: user.numeroDocumento || '',
+            }
+          };
+        });
+
+        // Ordenar por ID descendente (más recientes primero)
+        setPedidosData(pedidosMapeados.sort((a, b) => b.id - a.id));
+
+      } catch (error) {
+        console.error("Error al cargar pedidos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPedidos();
+  }, [user]);
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -252,6 +197,17 @@ export const PedidosCliente: React.FC = () => {
       </div>
 
       {/* Lista de pedidos */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-10 w-10 animate-spin text-yellow-500" />
+        </div>
+      ) : pedidosData.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <Package className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+          <h3 className="text-lg font-medium text-gray-900">No hay pedidos</h3>
+          <p className="text-gray-500">Aún no has realizado ninguna compra.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-4">
         {pedidosData.map((pedido) => (
           <Card
@@ -334,6 +290,7 @@ export const PedidosCliente: React.FC = () => {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Dialog de detalle de pedido */}
       <Dialog open={!!selectedPedido} onOpenChange={() => setSelectedPedido(null)}>
@@ -374,7 +331,11 @@ export const PedidosCliente: React.FC = () => {
                   <CardContent className="space-y-2">
                     <div className="flex items-center text-sm">
                       <User className="h-4 w-4 mr-2 text-gray-500" />
-                      <span className="text-gray-700">{selectedPedido.cliente.nombre}</span>
+                      <span className="text-gray-700 font-medium">{selectedPedido.cliente.nombre}</span>
+                    </div>
+                    <div className="flex items-center text-sm">
+                      <CreditCard className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-gray-700">C.C. {selectedPedido.cliente.cedula}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <Mail className="h-4 w-4 mr-2 text-gray-500" />
@@ -387,23 +348,41 @@ export const PedidosCliente: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {/* Dirección de envío */}
+                {/* Dirección y Pago */}
                 <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center text-gray-900">
                       <MapPin className="h-5 w-5 mr-2 text-yellow-500" />
-                      Dirección de Envío
+                      Dirección y Pago
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-1 text-sm text-gray-700">
-                    <p>{selectedPedido.direccionEnvio.direccion}</p>
-                    <p>
-                      {selectedPedido.direccionEnvio.ciudad}, {selectedPedido.direccionEnvio.departamento}
-                    </p>
-                    <p className="flex items-center pt-2">
-                      <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                      {selectedPedido.direccionEnvio.telefono}
-                    </p>
+                  <CardContent className="space-y-3 text-sm text-gray-700">
+                    <div>
+                      <p className="font-medium flex items-center">
+                        <MapPin className="h-4 w-4 mr-1 text-gray-500 inline" /> Dirección
+                      </p>
+                      <p className="ml-5">{selectedPedido.direccionEnvio.direccion}</p>
+                      <p className="ml-5">Barrio: {selectedPedido.direccionEnvio.barrio || 'N/A'}</p>
+                      <p className="ml-5">{selectedPedido.direccionEnvio.ciudad}, {selectedPedido.direccionEnvio.departamento}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium flex items-center">
+                        <Truck className="h-4 w-4 mr-1 text-gray-500 inline" /> Envío
+                      </p>
+                      <p className="ml-5 flex items-center">
+                        {selectedPedido.direccionEnvio.envio === 0 ? (
+                          <><Store className="h-4 w-4 mr-1 text-blue-600" /> Recogido en tienda</>
+                        ) : (
+                          <><Truck className="h-4 w-4 mr-1 text-green-600" /> A domicilio</>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-medium flex items-center">
+                        <CreditCard className="h-4 w-4 mr-1 text-gray-500 inline" /> Método de pago
+                      </p>
+                      <p className="ml-5">{selectedPedido.direccionEnvio.metodoPago}</p>
+                    </div>
                   </CardContent>
                 </Card>
 

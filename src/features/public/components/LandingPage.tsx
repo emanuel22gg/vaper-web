@@ -3,6 +3,8 @@ import { Header } from '@/shared/components/Header';
 import { HeroBanner } from '@/features/products/components/HeroBanner';
 import { FeaturedProducts } from '@/features/products/components/FeaturedProducts';
 import { ProductCatalog } from '@/features/products/components/ProductCatalog';
+import { TrustIndicators } from '@/features/public/components/TrustIndicators';
+import { AboutUsSection } from '@/features/public/components/AboutUsSection';
 import { ShoppingCart } from '@/features/sales/components/ShoppingCart';
 import { Checkout } from '@/features/sales/components/Checkout';
 import { Footer } from '@/shared/components/Footer';
@@ -151,8 +153,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         return (
           <>
             <HeroBanner onNavigate={handleNavigation} />
+            <TrustIndicators />
             <FeaturedProducts />
             <ProductCatalog />
+            <AboutUsSection />
           </>
         );
     }

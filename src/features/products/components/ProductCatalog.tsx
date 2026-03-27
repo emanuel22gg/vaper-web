@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
-import { ShoppingCart, Plus, Minus, Loader2, ArrowLeft, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Loader2, ArrowLeft, Package, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/shared/contexts/CartContext';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
@@ -36,45 +36,47 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
-      <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1">
+      <div className="relative h-56 bg-gray-50 flex items-center justify-center overflow-hidden">
         {product.imagen ? (
           <ImageWithFallback 
             src={product.imagen}
             alt={product.nombreProducto}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
-          <Package className="h-10 w-10 text-gray-400" />
+          <Package className="h-10 w-10 text-gray-300 group-hover:text-yellow-500 transition-colors" />
         )}
       </div>
       
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="p-5 flex-1 flex flex-col">
         <div className="mb-2">
-          <span className="text-sm text-gray-500">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
+          <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
         </div>
-        <h3 className="font-semibold text-lg mb-2 line-clamp-2" title={product.nombreProducto}>
+        <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 mt-2 group-hover:text-yellow-600 transition-colors min-h-[3.5rem]" title={product.nombreProducto}>
           {product.nombreProducto}
         </h3>
-        <div className="mt-auto">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
+        <div className="mt-auto pt-4 border-t border-gray-50">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
           </div>
           
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-center gap-3 w-full">
+            <div className="flex items-center justify-between gap-2 w-full bg-gray-50 p-1 rounded-lg border border-gray-100">
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
                 <Minus className="w-4 h-4" />
               </Button>
-              <span className="text-lg font-semibold w-12 text-center">{quantity}</span>
+              <span className="text-base font-semibold w-8 text-center">{quantity}</span>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={incrementQuantity}
                 disabled={product.stock <= quantity}
               >
@@ -84,12 +86,12 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
 
             <Button 
               size="sm" 
-              className="w-full text-[rgb(0,0,0)] bg-[rgb(240,177,0,100)] hover:bg-yellow-500 disabled:opacity-50"
+              className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-5 rounded-xl transition-all shadow-md shadow-yellow-500/20"
               onClick={handleAddToCart}
               disabled={product.stock === 0}
             >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              {product.stock === 0 ? "Agotado" : "Agregar al carrito"}
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              {product.stock === 0 ? "Agotado" : "Agregar al Carrito"}
             </Button>
           </div>
         </div>
@@ -180,20 +182,41 @@ export const ProductCatalog: React.FC = () => {
 
         {selectedCategoryId === null ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-black text-black mb-4 tracking-tight">
+                Explora Nuestras <span className="text-yellow-500">Categorías</span>
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Navega por nuestras líneas de dispositivos y encuentra exactamente lo que buscas con la mejor calidad del mercado.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               <Card 
-                className="cursor-pointer shadow-md border-gray-200 hover:shadow-lg hover:border-yellow-500 border-2 transition-all overflow-hidden flex flex-col justify-center items-center"
+                className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                 onClick={() => setSelectedCategoryId('all')}
               >
-                <CardHeader className="text-center p-8 bg-white flex-1 flex flex-col justify-center items-center w-full">
-                  <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-yellow-500" />
+                {/* Image Section */}
+                <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-yellow-50 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+                    <ShoppingBag className="h-16 w-16 text-yellow-500/80 group-hover:text-yellow-600 transition-colors duration-300" />
                   </div>
-                  <CardTitle className="text-2xl">Todos los Productos</CardTitle>
-                  <p className="text-gray-500 mt-2 text-sm">
-                    Haz clic para explorar nuestro catálogo completo sin filtros.
+                </div>
+                
+                {/* Content Section */}
+                <div className="p-6 flex flex-col flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
+                    Todos los Productos
+                  </h3>
+                  <p className="text-gray-500 text-sm line-clamp-2 mt-1 flex-1">
+                    Explora nuestro catálogo completo sin filtros.
                   </p>
-                </CardHeader>
+                  
+                  <div className="mt-4 flex items-center text-yellow-600 font-medium">
+                    <span className="text-sm uppercase tracking-wider">Ver Productos</span>
+                    <ArrowRight className="h-4 w-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                  </div>
+                </div>
               </Card>
 
               {apiCategorias.map((category) => {
@@ -204,18 +227,38 @@ export const ProductCatalog: React.FC = () => {
                 return (
                   <Card 
                     key={category.id} 
-                    className="cursor-pointer shadow-md border-gray-200 hover:shadow-lg hover:border-yellow-500 border-2 transition-all overflow-hidden flex flex-col justify-center items-center"
+                    className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                     onClick={() => setSelectedCategoryId(category.id)}
                   >
-                    <CardHeader className="text-center p-8 bg-white flex-1 flex flex-col justify-center items-center w-full">
-                      <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                        <Package className="h-8 w-8 text-yellow-500" />
-                      </div>
-                      <CardTitle className="text-2xl">{category.nombreCategoria}</CardTitle>
-                      <p className="text-gray-500 mt-2 text-sm">
-                        Haz clic para ver los productos por categoría de {category.nombreCategoria.toLowerCase()}.
+                    {/* Image Section */}
+                    <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {category.imagen ? (
+                        <ImageWithFallback 
+                          src={category.imagen} 
+                          alt={category.nombreCategoria}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+                          <Package className="h-16 w-16 text-gray-300 group-hover:text-yellow-500 transition-colors duration-300" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Content Section */}
+                    <div className="p-6 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
+                        {category.nombreCategoria}
+                      </h3>
+                      <p className="text-gray-500 text-sm line-clamp-2 mt-1 flex-1">
+                        {category.descripcion || `Haz clic para ver los productos por categoría de ${category.nombreCategoria.toLowerCase()}.`}
                       </p>
-                    </CardHeader>
+
+                      <div className="mt-4 flex items-center text-yellow-600 font-medium">
+                        <span className="text-sm uppercase tracking-wider">Ver Productos</span>
+                        <ArrowRight className="h-4 w-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                    </div>
                   </Card>
                 );
               })}
