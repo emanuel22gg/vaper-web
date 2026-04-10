@@ -356,7 +356,7 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                         <SelectValue placeholder="Seleccione método" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Efectivo">Efectivo</SelectItem>
+                        <SelectItem value="Efectivo">Contraentrega</SelectItem>
                         <SelectItem value="Transferencia">Transferencia</SelectItem>
                       </SelectContent>
                     </Select>

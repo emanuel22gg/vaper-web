@@ -107,6 +107,7 @@ export const ShoppingCart: React.FC<ShoppingCartProps> = ({
                             size="sm"
                             variant="outline"
                             onClick={() => handleIncrement(item.id, item.quantity)}
+                            disabled={item.quantity >= item.stock}
                           >
                             <Plus className="w-4 h-4" />
                           </Button>

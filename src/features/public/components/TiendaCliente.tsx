@@ -54,13 +54,14 @@ import { getProductos, getCategorias, getAllImages } from "@/shared/services/api
 import { Producto, Categoria } from "@/shared/types";
 
 interface CartItem {
-  id: string; // Changed back to string since you might use `${id}-${variante}`? Or we can just use the int id from DB. Let's use string to keep it compatible with existing Cart logic that does `item.id === id` if needed.
+  id: string;
   nombre: string;
   precio: number;
   cantidad: number;
+  stock: number;
   imagen: string;
   variante?: string;
-  productoId: number; // Keep real ID for sending to API later
+  productoId: number;
 }
 
 export const TiendaCliente: React.FC = () => {
@@ -152,29 +153,38 @@ export const TiendaCliente: React.FC = () => {
     );
 
     if (existingItem) {
+      const newQuantity = existingItem.cantidad + 1;
+      if (newQuantity > product.stock) {
+        toast.error(`Solo hay ${product.stock} unidades de este producto.`);
+        return;
+      }
       setCart(
         cart.map((item) =>
           item.productoId === product.id && item.variante === variante
-            ? { ...item, cantidad: item.cantidad + 1 }
+            ? { ...item, cantidad: newQuantity }
             : item,
         ),
       );
     } else {
+      if (product.stock <= 0) {
+        toast.error("Producto sin stock disponible.");
+        return;
+      }
       setCart([
         ...cart,
         {
-          id: stringId, // String id for frontend lists if needed
+          id: stringId,
           productoId: product.id,
           nombre: product.nombreProducto,
           precio: product.precio,
           cantidad: 1,
-          imagen: product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop", // placeholder
+          stock: product.stock,
+          imagen: product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop",
           variante,
         },
       ]);
     }
 
-    // Mostrar notificación de éxito
     toast.success(`${product.nombreProducto} agregado al carrito`);
   };
 
@@ -192,11 +202,16 @@ export const TiendaCliente: React.FC = () => {
       );
     } else {
       setCart(
-        cart.map((item) =>
-          item.id === id && item.variante === variante
-            ? { ...item, cantidad: newQuantity }
-            : item,
-        ),
+        cart.map((item) => {
+          if (item.id === id && item.variante === variante) {
+            if (newQuantity > item.stock) {
+              toast.error(`Solo hay ${item.stock} unidades disponibles.`);
+              return { ...item, cantidad: item.stock };
+            }
+            return { ...item, cantidad: newQuantity };
+          }
+          return item;
+        }),
       );
     }
   };
@@ -330,6 +345,7 @@ export const TiendaCliente: React.FC = () => {
                                     item.cantidad + 1,
                                   )
                                 }
+                                disabled={item.cantidad >= item.stock}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
@@ -499,10 +515,16 @@ export const TiendaCliente: React.FC = () => {
                                 e.stopPropagation();
                                 addToCart(product);
                               }}
-                              disabled={product.stock === 0}
+                              disabled={product.stock === 0 || (cart.find(item => item.productoId === product.id)?.cantidad || 0) >= product.stock}
                             >
                               <ShoppingCart className="h-4 w-4 mx-auto sm:mr-2 sm:mx-0 inline-block" />
-                              <span className="hidden sm:inline-block">{product.stock === 0 ? "Agotado" : "Agregar"}</span>
+                              <span className="hidden sm:inline-block">
+                                {product.stock === 0 
+                                  ? "Agotado" 
+                                  : (cart.find(item => item.productoId === product.id)?.cantidad || 0) >= product.stock 
+                                    ? "Límite" 
+                                    : "Agregar"}
+                              </span>
                             </Button>
                             
                             <Button
@@ -585,12 +607,14 @@ export const TiendaCliente: React.FC = () => {
                         addToCart(selectedProduct);
                         setSelectedProduct(null);
                       }}
-                      disabled={selectedProduct.stock === 0}
+                      disabled={selectedProduct.stock === 0 || (cart.find(item => item.productoId === selectedProduct.id)?.cantidad || 0) >= selectedProduct.stock}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       {selectedProduct.stock === 0
                         ? "Producto Agotado"
-                        : "Agregar al Carrito"}
+                        : (cart.find(item => item.productoId === selectedProduct.id)?.cantidad || 0) >= selectedProduct.stock
+                          ? "Máximo en Carrito"
+                          : "Agregar al Carrito"}
                     </Button>
                   </DialogFooter>
                 </>

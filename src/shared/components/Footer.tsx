@@ -3,13 +3,13 @@ import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png'
 
 export function Footer() {
   return (
-    <footer className="bg-black text-white relative pt-4">
+    <footer id="footer" className="bg-black text-white relative pt-4">
       {/* Decorative Top Border Glow */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-24 bg-yellow-500/5 blur-[50px] rounded-full pointer-events-none"></div>
 
-      <div className="max-w-7xl mx-auto px-4 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Logo y descripción */}
           <div className="space-y-4">
             <div className="flex items-center">
@@ -46,17 +46,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Enlaces útiles */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-yellow-500">Enlaces Útiles</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li className="hover:text-white cursor-pointer">Mi Cuenta</li>
-              <li className="hover:text-white cursor-pointer">Seguimiento de Pedidos</li>
-              <li className="hover:text-white cursor-pointer">Devoluciones</li>
-              <li className="hover:text-white cursor-pointer">Preguntas Frecuentes</li>
-              <li className="hover:text-white cursor-pointer">Términos y Condiciones</li>
-            </ul>
-          </div>
 
           {/* Contacto */}
           <div className="space-y-4">
@@ -76,10 +65,27 @@ export function Footer() {
               </div>
             </div>
           </div>
+
+          {/* Ubicación (Mapa) */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-yellow-500">Ubicación</h3>
+            <div className="rounded-lg overflow-hidden border border-gray-800 h-32 relative shadow-lg">
+              <iframe 
+                src="https://maps.google.com/maps?q=Cl.+51+%23+51-12%2C+La+Candelaria%2C+Medell%C3%ADn%2C+Antioquia&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                width="100%" 
+                height="100%" 
+                style={{ border: 0 }} 
+                allowFullScreen 
+                loading="lazy" 
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación Vaper Medellín"
+              ></iframe>
+            </div>
+          </div>
         </div>
 
         {/* Línea divisoria y copyright */}
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+        <div className="border-t border-gray-800 mt-6 pt-4 text-center">
           <p className="text-gray-400 text-sm">
             © 2024 VaperMedellín. Todos los derechos reservados.
           </p>

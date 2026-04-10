@@ -546,13 +546,12 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   {Array.from(new Set(statuses
                     .filter(s => {
                       const name = s.nombreEstado.toLowerCase();
-                      return ['pendiente', 'entregado', 'anulada', 'anulado', 'cancelado', 'en abonos', 'abonos'].includes(name);
+                      return ['pendiente', 'entregado', 'anulada', 'anulado', 'cancelado'].includes(name);
                     })
                     .map(s => {
                       const name = s.nombreEstado.toLowerCase();
                       if (name === 'pendiente') return 'pendiente';
                       if (name === 'entregado') return 'entregado';
-                      if (name.includes('abono')) return 'en abonos';
                       return 'cancelado';
                     })
                   )).map(label => (
@@ -685,7 +684,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
                       let label = '';
                       if (name === 'pendiente') label = 'Pendiente';
                       else if (name === 'entregado') label = 'Entregado';
-                      else if (name.includes('abono')) label = 'En Abonos';
                       else if (name === 'anulada' || name === 'anulado' || name === 'cancelado') label = 'Cancelado';
 
                       if (label && !acc.find(item => item.label === label)) {

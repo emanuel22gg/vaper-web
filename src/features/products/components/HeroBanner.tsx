@@ -12,20 +12,23 @@ export function HeroBanner({ onNavigate }: HeroBannerProps) {
           {/* Texto corporativo */}
           <div className="space-y-6 z-10 relative">
             <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
-              La Mejor Experiencia en 
+              La Mejor Experiencia en
               <span className="text-yellow-500"> Vapeo</span>
             </h1>
             <p className="text-lg text-gray-300 leading-relaxed font-light mt-4">
               Descubre dispositivos premium, desechables y accesorios de vapeo con envío rápido en Medellín. ¿Listo para elevar el nivel?
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button 
+              <button
                 onClick={() => onNavigate && onNavigate('shop')}
                 className="bg-yellow-500 text-black px-8 py-3 rounded-lg font-medium hover:bg-yellow-400 transition-colors"
               >
                 Ver Catálogo
               </button>
-              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-black transition-colors">
+              <button
+                onClick={() => document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' })}
+                className="border-2 border-white text-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-black transition-colors"
+              >
                 Contáctanos
               </button>
             </div>
@@ -37,9 +40,9 @@ export function HeroBanner({ onNavigate }: HeroBannerProps) {
             <div className="relative w-full h-full flex items-center justify-center">
               {/* Vape principal - Tamaño responsivo corregido */}
               <div className="relative z-10 flex items-center justify-center">
-                <img 
-                  src={vapeImage} 
-                  alt="Snoopy Smoke Extra Tank Vape" 
+                <img
+                  src={vapeImage}
+                  alt="Snoopy Smoke Extra Tank Vape"
                   className="w-[400px] lg:w-[500px] xl:w-[600px] h-auto object-contain max-w-full white-aura-animation"
                 />
               </div>
@@ -107,7 +110,7 @@ export function HeroBanner({ onNavigate }: HeroBannerProps) {
               <div className="absolute bottom-1/3 right-1/3 w-1 h-1 bg-green-400 rounded-full animate-ping opacity-50"></div>
               <div className="absolute top-2/3 left-1/2 w-1 h-1 bg-purple-400 rounded-full animate-pulse opacity-40"></div>
             </div>
-            
+
             {/* Emojis decorativos - Posiciones mejoradas */}
             <div className="absolute bottom-1/3 left-1/4 text-lg animate-pulse opacity-60 pointer-events-none">🍓</div>
             <div className="absolute top-1/2 right-1/4 text-lg float-animation opacity-50 pointer-events-none">❄️</div>

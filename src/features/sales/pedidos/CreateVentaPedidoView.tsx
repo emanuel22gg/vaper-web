@@ -808,7 +808,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                             <Select value={metodoPago} onValueChange={setMetodoPago}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Efectivo">Efectivo</SelectItem>
+                                                    <SelectItem value="Efectivo">Contraentrega</SelectItem>
                                                     <SelectItem value="Transferencia">Transferencia</SelectItem>
                                                     <SelectItem value="Abonos">Abonos</SelectItem>
                                                 </SelectContent>

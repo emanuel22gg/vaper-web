@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 export interface CartProduct {
   id: string;
   name: string;
   price: number;
   quantity: number;
+  stock: number;
   image: string;
   category: string;
 }
@@ -29,14 +31,31 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const existingProduct = prevCart.find((item) => item.id === product.id);
       
       if (existingProduct) {
+        const newQuantity = existingProduct.quantity + quantity;
+        
+        if (newQuantity > product.stock) {
+          toast.error(`No hay suficiente stock disponible. (Máximo: ${product.stock})`);
+          return prevCart.map((item) =>
+            item.id === product.id
+              ? { ...item, quantity: product.stock } // Ajustar al máximo si se intenta exceder
+              : item
+          );
+        }
+
         return prevCart.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         );
       }
       
-      return [...prevCart, { ...product, quantity }];
+      // Si es un producto nuevo, también validamos la cantidad inicial
+      const initialQuantity = Math.min(quantity, product.stock);
+      if (quantity > product.stock) {
+        toast.warning(`Cantidad ajustada al stock disponible (${product.stock})`);
+      }
+
+      return [...prevCart, { ...product, quantity: initialQuantity }];
     });
   };
 
@@ -51,9 +70,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+      prevCart.map((item) => {
+        if (item.id === productId) {
+          if (quantity > item.stock) {
+            toast.error(`Solo hay ${item.stock} unidades disponibles de este producto.`);
+            return { ...item, quantity: item.stock };
+          }
+          return { ...item, quantity };
+        }
+        return item;
+      })
     );
   };
 

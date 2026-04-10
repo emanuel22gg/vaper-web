@@ -1503,7 +1503,7 @@ export const Ventas: React.FC = () => {
                       <SelectValue placeholder="Seleccionar método" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Efectivo">Efectivo</SelectItem>
+                      <SelectItem value="Efectivo">Contraentrega</SelectItem>
                       <SelectItem value="Transferencia">Transferencia</SelectItem>
                     </SelectContent>
                   </Select>

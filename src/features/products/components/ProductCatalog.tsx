@@ -9,8 +9,21 @@ import { getProductos, getCategorias, getAllImages } from '@/shared/services/api
 import { Producto, Categoria } from '@/shared/types';
 
 const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
+  const { cart, addToCart } = useCart();
+  const quantityInCart = cart.find(item => item.id === product.id.toString())?.quantity || 0;
+  const maxAvailable = product.stock - quantityInCart;
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart();
+
+  // Ajustar cantidad local si el stock disponible cambia (ej. al agregar al carrito)
+  useEffect(() => {
+    if (maxAvailable <= 0) {
+      setQuantity(0);
+    } else if (quantity > maxAvailable) {
+      setQuantity(maxAvailable);
+    } else if (quantity === 0 && maxAvailable > 0) {
+      setQuantity(1);
+    }
+  }, [maxAvailable, quantity]);
 
   const handleAddToCart = () => {
     addToCart(
@@ -18,6 +31,7 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
         id: product.id.toString(),
         name: product.nombreProducto,
         price: product.precio,
+        stock: product.stock,
         image: product.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
         category: product.categoria?.nombreCategoria || 'Sin Categoría',
       },
@@ -47,15 +61,24 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
         ) : (
           <Package className="h-10 w-10 text-gray-300 group-hover:text-yellow-500 transition-colors" />
         )}
+        
+        {/* El badge de Agotado se movió debajo del nombre */}
       </div>
       
       <div className="p-5 flex-1 flex flex-col">
         <div className="mb-2">
           <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
         </div>
-        <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 mt-2 group-hover:text-yellow-600 transition-colors min-h-[3.5rem]" title={product.nombreProducto}>
-          {product.nombreProducto}
-        </h3>
+        <div style={{ height: "3.5rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} className="mb-1">
+          <h3 className="font-bold text-gray-900 text-lg group-hover:text-yellow-600 transition-colors w-full" title={product.nombreProducto}>
+            {product.nombreProducto}
+          </h3>
+        </div>
+        {product.stock === 0 && (
+          <div className="flex items-center gap-1.5 text-red-600 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded border border-red-100">Agotado</span>
+          </div>
+        )}
         <div className="mt-auto pt-4 border-t border-gray-50">
           <div className="flex items-center justify-between mb-4">
             <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
@@ -78,7 +101,7 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
                 variant="ghost"
                 className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={incrementQuantity}
-                disabled={product.stock <= quantity}
+                disabled={quantity >= maxAvailable}
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -88,10 +111,10 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
               size="sm" 
               className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-5 rounded-xl transition-all shadow-md shadow-yellow-500/20"
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || maxAvailable <= 0}
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
-              {product.stock === 0 ? "Agotado" : "Agregar al Carrito"}
+              {product.stock === 0 ? "Agotado" : maxAvailable <= 0 ? "En Carrito" : "Agregar al Carrito"}
             </Button>
           </div>
         </div>
@@ -132,7 +155,7 @@ export const ProductCatalog: React.FC = () => {
           };
         });
 
-        setApiProductos(productsWithImages.filter(p => p.estado && p.stock > 0)); 
+        setApiProductos(productsWithImages.filter(p => p.estado)); 
         setApiCategorias(categoriesWithImages.filter(c => c.estado));
       } catch (error) {
         console.error("Error fetching catalog data:", error);
@@ -143,6 +166,16 @@ export const ProductCatalog: React.FC = () => {
     };
     
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const handleCategorySelection = (e: Event) => {
+      const customEvent = e as CustomEvent<{ categoryId: number }>;
+      setSelectedCategoryId(customEvent.detail.categoryId);
+    };
+
+    window.addEventListener('selectCategory', handleCategorySelection);
+    return () => window.removeEventListener('selectCategory', handleCategorySelection);
   }, []);
 
   if (isLoading) {
@@ -167,7 +200,7 @@ export const ProductCatalog: React.FC = () => {
       : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div id="catalogo" className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
 
         {selectedCategoryId === null ? (
