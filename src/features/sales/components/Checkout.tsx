@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/u
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { MapPin, Home, CreditCard, Upload, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
+import { MapPin, Home, CreditCard, Upload, CheckCircle, AlertTriangle, Trash2, Loader2 } from 'lucide-react';
 import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { toast } from 'sonner';
@@ -37,8 +37,9 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       barrio: user?.barrio || '' 
     }
   ]);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'in_store' | null>(null);
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Paso 1: Selección de recogida o envío
   const handlePickupChoice = (choice: 'pickup' | 'delivery') => {
@@ -83,7 +84,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
   };
 
   // Seleccionar método de pago
-  const handlePaymentMethodSelect = (method: 'cash' | 'transfer') => {
+  const handlePaymentMethodSelect = (method: 'cash' | 'transfer' | 'in_store') => {
     setPaymentMethod(method);
   };
 
@@ -110,6 +111,8 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
 
   // Confirmar pedido
   const handleConfirmOrder = async () => {
+    if (isSubmitting) return;
+
     if (paymentMethod === 'transfer') {
       handleWhatsAppRedirect();
     }
@@ -119,6 +122,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       // Create Order
       const activeAddress = deliveryType === 'delivery' ? addresses[addresses.length - 1] : null;
@@ -126,7 +130,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       const pedidoData: VentaPedidoDto = {
         usuarioId: parseInt(user.id),
         estadoId: 2, // 2 = Pendiente
-        metodoPago: paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+        metodoPago: paymentMethod === 'cash' ? 'Efectivo' : (paymentMethod === 'in_store' ? 'Pago en Tienda' : 'Transferencia'),
         direccionEntrega: activeAddress ? `${activeAddress.direccion}, ${activeAddress.barrio}` : 'Recogida en tienda',
         ciudadEntrega: activeAddress ? activeAddress.municipio : '',
         departamentoEntrega: activeAddress ? activeAddress.departamento : '',
@@ -176,6 +180,8 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
     } catch (error) {
       console.error('Error al guardar el pedido:', error);
       toast.error('Ocurrió un error al procesar el pedido. Por favor intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -355,41 +361,87 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card
-                    className={`cursor-pointer transition-all ${
-                      paymentMethod === 'cash'
-                        ? 'ring-2 ring-primary'
-                        : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => handlePaymentMethodSelect('cash')}
-                  >
-                    <CardContent className="p-6 flex flex-col items-center gap-3">
-                      <CreditCard className="w-12 h-12" />
-                      <h3 className="font-semibold">Contraentrega</h3>
-                      <p className="text-sm text-center text-muted-foreground">
-                        Paga al recibir tu pedido {deliveryType === 'pickup' ? 'en tienda' : 'en tu domicilio'}
+                {deliveryType === 'pickup' ? (
+                  <>
+                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg mb-4">
+                      <p className="font-medium text-sm text-center text-black">
+                        Como vas a recoger en tienda, puedes pagar allá mismo en efectivo o transferencia.
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          paymentMethod === 'in_store'
+                            ? 'ring-2 ring-primary border-primary'
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => handlePaymentMethodSelect('in_store')}
+                      >
+                        <CardContent className="p-6 flex flex-col items-center gap-3">
+                          <Home className="w-12 h-12 text-yellow-600" />
+                          <h3 className="font-semibold text-center">Pagar al recoger</h3>
+                          <p className="text-sm text-center text-muted-foreground">
+                            Paga en efectivo o transferencia cuando llegues al local
+                          </p>
+                        </CardContent>
+                      </Card>
 
-                  <Card
-                    className={`cursor-pointer transition-all ${
-                      paymentMethod === 'transfer'
-                        ? 'ring-2 ring-primary'
-                        : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => handlePaymentMethodSelect('transfer')}
-                  >
-                    <CardContent className="p-6 flex flex-col items-center gap-3">
-                      <CreditCard className="w-12 h-12" />
-                      <h3 className="font-semibold">Transferencia</h3>
-                      <p className="text-sm text-center text-muted-foreground">
-                        Paga por transferencia bancaria
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          paymentMethod === 'transfer'
+                            ? 'ring-2 ring-primary border-primary'
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => handlePaymentMethodSelect('transfer')}
+                      >
+                        <CardContent className="p-6 flex flex-col items-center gap-3">
+                          <CreditCard className="w-12 h-12 text-yellow-600" />
+                          <h3 className="font-semibold text-center">Pagar de una vez</h3>
+                          <p className="text-sm text-center text-muted-foreground">
+                            Realiza la transferencia ahora y solo pasa a recogerlo
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        paymentMethod === 'cash'
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => handlePaymentMethodSelect('cash')}
+                    >
+                      <CardContent className="p-6 flex flex-col items-center gap-3">
+                        <CreditCard className="w-12 h-12 text-yellow-600" />
+                        <h3 className="font-semibold">Contraentrega</h3>
+                        <p className="text-sm text-center text-muted-foreground">
+                          Paga en efectivo al recibir tu pedido en tu domicilio
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        paymentMethod === 'transfer'
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => handlePaymentMethodSelect('transfer')}
+                    >
+                      <CardContent className="p-6 flex flex-col items-center gap-3">
+                        <CreditCard className="w-12 h-12 text-yellow-600" />
+                        <h3 className="font-semibold">Transferencia</h3>
+                        <p className="text-sm text-center text-muted-foreground">
+                          Paga por transferencia bancaria
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {paymentMethod === 'transfer' && (
                   <>
@@ -462,10 +514,17 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                 </Button>
                 <Button
                   onClick={handleConfirmOrder}
-                  disabled={!paymentMethod}
+                  disabled={!paymentMethod || isSubmitting}
                   className="flex-1 bg-[rgb(240,177,0,100)] text-[rgb(0,0,0)] hover:bg-gray-400"
                 >
-                  Confirmar Pedido
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    'Confirmar Pedido'
+                  )}
                 </Button>
               </CardFooter>
             </Card>
@@ -485,7 +544,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                 <div className="space-y-3">
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      {paymentMethod === 'cash' ? 'Total por pagar' : 'Total pagado'}
+                      {paymentMethod === 'cash' || paymentMethod === 'in_store' ? 'Total por pagar' : 'Total pagado'}
                     </p>
                     <p className="text-2xl font-bold">${orderTotal.toLocaleString('es-CO')}</p>
                   </div>
@@ -498,7 +557,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <p className="text-sm text-muted-foreground">Método de pago</p>
                     <p className="font-semibold">
-                      {paymentMethod === 'cash' ? 'Contraentrega' : 'Transferencia bancaria'}
+                      {paymentMethod === 'cash' ? 'Contraentrega' : (paymentMethod === 'in_store' ? 'Pago en Tienda' : 'Transferencia bancaria')}
                     </p>
                   </div>
                   {deliveryType === 'delivery' && addresses.length > 0 && (

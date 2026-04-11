@@ -49,6 +49,29 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
     setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
   };
 
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setQuantity(0); // Temporalmente 0 para permitir borrar el input
+      return;
+    }
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) return;
+
+    if (parsed > maxAvailable) {
+      setQuantity(maxAvailable);
+      toast.warning(`Solo hay ${maxAvailable} unidades disponibles`);
+    } else {
+      setQuantity(parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    if (quantity < 1 && maxAvailable > 0) {
+      setQuantity(1);
+    }
+  };
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1">
       <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden p-4">
@@ -77,6 +100,9 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
         <div className="mt-auto pt-3 border-t border-gray-50">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
+            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
+              {product.stock > 0 ? `${product.stock} disp.` : "Agotado"}
+            </span>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -90,13 +116,21 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
               >
                 <Minus className="w-3 h-3" />
               </Button>
-              <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={quantity === 0 ? '' : quantity}
+                onChange={handleQuantityChange}
+                onBlur={handleBlur}
+                className="w-12 text-center text-sm font-semibold bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-yellow-400 rounded"
+              />
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-7 w-7 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={incrementQuantity}
-                disabled={quantity >= maxAvailable}
+                disabled={quantity >= maxAvailable || maxAvailable === 0}
               >
                 <Plus className="w-3 h-3" />
               </Button>
@@ -106,10 +140,10 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
               size="sm"
               className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-4 rounded-xl transition-all shadow-md shadow-yellow-500/20"
               onClick={handleAddToCart}
-              disabled={product.stock === 0 || maxAvailable <= 0}
+              disabled={product.stock === 0 || maxAvailable <= 0 || quantity === 0}
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
-              {product.stock === 0 ? "Agotado" : maxAvailable <= 0 ? "En Carrito" : "Agregar"}
+              {product.stock > 0 && maxAvailable <= 0 ? "En Carrito" : "Agregar"}
             </Button>
           </div>
         </div>
