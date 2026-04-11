@@ -1,4 +1,4 @@
- import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { ShoppingCart, Plus, Minus, Loader2, ArrowLeft, Package, ArrowRight, ShoppingBag } from 'lucide-react';
@@ -51,70 +51,65 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1">
-      <div className="relative h-56 bg-gray-50 flex items-center justify-center overflow-hidden">
+      <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden p-4">
         {product.imagen ? (
-          <ImageWithFallback 
+          <ImageWithFallback
             src={product.imagen}
             alt={product.nombreProducto}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
           <Package className="h-10 w-10 text-gray-300 group-hover:text-yellow-500 transition-colors" />
         )}
-        
+
         {/* El badge de Agotado se movió debajo del nombre */}
       </div>
-      
-      <div className="p-5 flex-1 flex flex-col">
-        <div className="mb-2">
-          <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
+
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="mb-1.5">
+          <span className="text-[10px] font-bold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
         </div>
-        <div style={{ height: "3.5rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} className="mb-1">
-          <h3 className="font-bold text-gray-900 text-lg group-hover:text-yellow-600 transition-colors w-full" title={product.nombreProducto}>
+        <div style={{ height: "2.8rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} className="mb-1">
+          <h3 className="font-bold text-gray-900 text-base group-hover:text-yellow-600 transition-colors w-full leading-tight" title={product.nombreProducto}>
             {product.nombreProducto}
           </h3>
         </div>
-        {product.stock === 0 && (
-          <div className="flex items-center gap-1.5 text-red-600 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded border border-red-100">Agotado</span>
+        <div className="mt-auto pt-3 border-t border-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
           </div>
-        )}
-        <div className="mt-auto pt-4 border-t border-gray-50">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
-          </div>
-          
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2 w-full bg-gray-50 p-1 rounded-lg border border-gray-100">
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-1 w-full bg-gray-50 p-1 rounded-lg border border-gray-100">
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
+                className="h-7 w-7 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
-                <Minus className="w-4 h-4" />
+                <Minus className="w-3 h-3" />
               </Button>
-              <span className="text-base font-semibold w-8 text-center">{quantity}</span>
+              <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
+                className="h-7 w-7 p-0 shrink-0 text-gray-500 hover:text-black hover:bg-white rounded-md shadow-sm"
                 onClick={incrementQuantity}
                 disabled={quantity >= maxAvailable}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3 h-3" />
               </Button>
             </div>
 
-            <Button 
-              size="sm" 
-              className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-5 rounded-xl transition-all shadow-md shadow-yellow-500/20"
+            <Button
+              size="sm"
+              className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-4 rounded-xl transition-all shadow-md shadow-yellow-500/20"
               onClick={handleAddToCart}
               disabled={product.stock === 0 || maxAvailable <= 0}
             >
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              {product.stock === 0 ? "Agotado" : maxAvailable <= 0 ? "En Carrito" : "Agregar al Carrito"}
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              {product.stock === 0 ? "Agotado" : maxAvailable <= 0 ? "En Carrito" : "Agregar"}
             </Button>
           </div>
         </div>
@@ -138,12 +133,14 @@ export const ProductCatalog: React.FC = () => {
           getCategorias(),
           getAllImages()
         ]);
-        
+
         const productsWithImages = prods.map(p => {
           const matchingImage = images.find(img => img.idImagen === p.idImagen);
+          const matchingCategory = cats.find(c => c.id === p.categoriaId);
           return {
             ...p,
-            imagen: matchingImage ? matchingImage.urlimagen : p.imagen
+            imagen: matchingImage ? matchingImage.urlimagen : p.imagen,
+            categoria: matchingCategory || p.categoria
           };
         });
 
@@ -155,7 +152,7 @@ export const ProductCatalog: React.FC = () => {
           };
         });
 
-        setApiProductos(productsWithImages.filter(p => p.estado)); 
+        setApiProductos(productsWithImages.filter(p => p.estado));
         setApiCategorias(categoriesWithImages.filter(c => c.estado));
       } catch (error) {
         console.error("Error fetching catalog data:", error);
@@ -164,7 +161,7 @@ export const ProductCatalog: React.FC = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -189,13 +186,13 @@ export const ProductCatalog: React.FC = () => {
   // Obtenemos los productos para la categoría seleccionada o todos
   const categoryProducts = selectedCategoryId === 'all'
     ? apiProductos
-    : selectedCategoryId 
+    : selectedCategoryId
       ? apiProductos.filter(p => p.categoriaId === selectedCategoryId)
       : [];
 
   const selectedCategoryName = selectedCategoryId === 'all'
     ? 'Todos los Productos'
-    : selectedCategoryId 
+    : selectedCategoryId
       ? apiCategorias.find(c => c.id === selectedCategoryId)?.nombreCategoria
       : null;
 
@@ -215,7 +212,7 @@ export const ProductCatalog: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <Card 
+              <Card
                 className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                 onClick={() => setSelectedCategoryId('all')}
               >
@@ -225,7 +222,7 @@ export const ProductCatalog: React.FC = () => {
                     <ShoppingBag className="h-16 w-16 text-yellow-500/80 group-hover:text-yellow-600 transition-colors duration-300" />
                   </div>
                 </div>
-                
+
                 {/* Content Section */}
                 <div className="p-6 flex flex-col flex-1">
                   <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
@@ -234,7 +231,7 @@ export const ProductCatalog: React.FC = () => {
                   <p className="text-gray-500 text-sm line-clamp-2 mt-1 flex-1">
                     Explora nuestro catálogo completo sin filtros.
                   </p>
-                  
+
                   <div className="mt-4 flex items-center text-yellow-600 font-medium">
                     <span className="text-sm uppercase tracking-wider">Ver Productos</span>
                     <ArrowRight className="h-4 w-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
@@ -248,16 +245,16 @@ export const ProductCatalog: React.FC = () => {
                 if (!hasProducts) return null;
 
                 return (
-                  <Card 
-                    key={category.id} 
+                  <Card
+                    key={category.id}
                     className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                     onClick={() => setSelectedCategoryId(category.id)}
                   >
                     {/* Image Section */}
                     <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-50 flex items-center justify-center">
                       {category.imagen ? (
-                        <ImageWithFallback 
-                          src={category.imagen} 
+                        <ImageWithFallback
+                          src={category.imagen}
                           alt={category.nombreCategoria}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
@@ -267,7 +264,7 @@ export const ProductCatalog: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Content Section */}
                     <div className="p-6 flex flex-col flex-1">
                       <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
@@ -296,8 +293,8 @@ export const ProductCatalog: React.FC = () => {
         ) : (
           <div>
             <div className="relative flex items-center justify-center mb-16 py-6 px-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => setSelectedCategoryId(null)}
                 className="absolute left-4 sm:left-6 hover:bg-gray-100 text-gray-600"
               >
@@ -309,7 +306,7 @@ export const ProductCatalog: React.FC = () => {
                 {selectedCategoryName}
               </h2>
             </div>
-            
+
             {categoryProducts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {categoryProducts.map((product) => (
@@ -317,9 +314,9 @@ export const ProductCatalog: React.FC = () => {
                 ))}
               </div>
             ) : (
-               <div className="text-center text-gray-500 py-12">
-                 No hay productos disponibles en esta categoría.
-               </div>
+              <div className="text-center text-gray-500 py-12">
+                No hay productos disponibles en esta categoría.
+              </div>
             )}
           </div>
         )}

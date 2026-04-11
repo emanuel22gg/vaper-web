@@ -255,6 +255,10 @@ export const useUsers = () => {
             }
         },
         deleteRole: async (roleId: string) => {
+            const role = availableRoles.find(r => r.id === roleId);
+            if (role && (role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin')) {
+                throw new Error('No se puede eliminar un rol esencial del sistema.');
+            }
             setIsLoading(true);
             try {
                 // 1. Verificar si hay usuarios asignados
@@ -289,6 +293,10 @@ export const useUsers = () => {
         toggleRoleStatus: async (roleId: string) => {
             const role = availableRoles.find(r => r.id === roleId);
             if (!role) return;
+
+            if (role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin') {
+                throw new Error('No se puede cambiar el estado de un rol esencial del sistema.');
+            }
 
             const newStatus = !role.isActive;
 

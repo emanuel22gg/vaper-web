@@ -252,32 +252,6 @@ export const GestionUsuarios: React.FC = () => {
   };
 
   const handleEditUser = (user: User) => {
-    if (user.role.name === 'Cliente') {
-      // Convertir User a UsuarioDto (formato que espera ClientEditDialog)
-      const clientDto: UsuarioDto = {
-        id: parseInt(user.id),
-        nombres: user.firstName,
-        apellidos: user.lastName,
-        correo: user.email,
-        tipoDocumento: user.tipoDocumento,
-        numeroDocumento: user.numeroDocumento,
-        telefono: user.telefono,
-        ciudad: user.ciudad,
-        direccion: user.direccion,
-        barrio: user.barrio,
-        departamento: '', // Dejar vacío, el componente lo manejará
-        fechaNacimiento: user.fechaNacimiento,
-        estadoUsuario: user.isActive,
-        rolId: roles.find(r => r.name === 'Cliente')?.id ? parseInt(roles.find(r => r.name === 'Cliente')!.id) : 3,
-        tipoCliente: user.tipoCliente,
-        username: user.username
-      };
-
-      setSelectedClientForEdit(clientDto);
-      setIsClientEditDialogOpen(true);
-      return;
-    }
-
     setEditingUser(user);
     setEditUserData({
       documento: user.numeroDocumento || user.username || '',
@@ -334,6 +308,13 @@ export const GestionUsuarios: React.FC = () => {
         if ((isActivating || isStayingActive) && !roleObj.isActive) {
           toast.error("Acción no permitida", {
             description: `No se puede mantener activo al usuario porque el rol "${roleObj.name}" está desactivado.`,
+          });
+          return;
+        }
+
+        if (roleObj.name === 'Super Administrador') {
+          toast.error("Acción no permitida", {
+            description: "No se puede asignar el rol de Super Administrador a un usuario existente.",
           });
           return;
         }
@@ -443,29 +424,8 @@ export const GestionUsuarios: React.FC = () => {
   };
 
   const handleViewUser = (user: User) => {
-    if (user.role.name === 'Cliente') {
-      const clientDto: UsuarioDto = {
-        id: parseInt(user.id),
-        nombres: user.firstName,
-        apellidos: user.lastName,
-        correo: user.email,
-        telefono: user.telefono || '',
-        ciudad: user.ciudad || 'N/A',
-        direccion: user.direccion || '',
-        barrio: user.barrio || '',
-        departamento: user.departamento || '',
-        fechaNacimiento: user.fechaNacimiento || '',
-        numeroDocumento: user.numeroDocumento || '',
-        tipoDocumento: user.tipoDocumento || 'C.C',
-        estadoUsuario: user.isActive,
-        rolId: user.role.id ? parseInt(user.role.id) : 0
-      };
-      setSelectedClientForDetail(clientDto);
-      setIsClientDetailDialogOpen(true);
-    } else {
-      setSelectedUser(user);
-      setIsUserDetailDialogOpen(true);
-    }
+    setSelectedUser(user);
+    setIsUserDetailDialogOpen(true);
   };
 
   // Manejar cambio de página
@@ -1043,7 +1003,7 @@ export const GestionUsuarios: React.FC = () => {
                       <SelectValue placeholder="Selecciona un rol" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles.filter(role => role.isActive && role.name !== 'Cliente').map((role) => (
+                      {roles.filter(role => role.isActive && role.name !== 'Super Administrador').map((role) => (
                         <SelectItem key={role.id} value={role.name as UserRole}>
                           {role.name}
                         </SelectItem>

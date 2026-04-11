@@ -81,10 +81,11 @@ export const GestionRoles: React.FC = () => {
     permissions: [] as string[]
   });
 
-  // Filtrar roles por búsqueda
+  // Filtrar roles por búsqueda y ocultar 'Super Administrador'
   const filteredRoles = roles.filter(role =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchTerm.toLowerCase())
+    role.name !== 'Super Administrador' &&
+    (role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    role.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Calcular paginación para roles
@@ -555,11 +556,12 @@ export const GestionRoles: React.FC = () => {
                           onCheckedChange={() => handleToggleRoleStatus(role)}
                           disabled={
                             isLoading ||
-                            role.name === 'Super Administrador'
+                            role.name === 'Super Administrador' ||
+                            role.name === 'Administrador' || role.name === 'Admin'
                           }
                           title={
-                            role.name === 'Super Administrador'
-                              ? "No se puede desactivar el rol de Super Administrador"
+                            role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin'
+                              ? "No se puede desactivar un rol esencial"
                               : ""
                           }
                         />
@@ -588,8 +590,8 @@ export const GestionRoles: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteRole(role)}
-                          title={role.name === 'Super Administrador' ? 'No se puede eliminar el rol de Super Administrador' : 'Eliminar rol'}
-                          disabled={role.name === 'Super Administrador'}
+                          title={role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin' ? 'No se puede eliminar un rol esencial' : 'Eliminar rol'}
+                          disabled={role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -91,12 +91,14 @@ export const TiendaCliente: React.FC = () => {
         getCategorias(),
         getAllImages()
       ]);
-      
+
       const productsWithImages = prods.map(p => {
         const matchingImage = images.find(img => img.idImagen === p.idImagen);
+        const matchingCategory = cats.find(c => c.id === p.categoriaId);
         return {
           ...p,
-          imagen: matchingImage ? matchingImage.urlimagen : p.imagen
+          imagen: matchingImage ? matchingImage.urlimagen : p.imagen,
+          categoria: matchingCategory || p.categoria
         };
       });
 
@@ -131,7 +133,7 @@ export const TiendaCliente: React.FC = () => {
       product.descripcion
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-    
+
     // Si la categoría seleccionada es "all" o el nombre de la categoría del producto coincide
     // o el ID de la categoría coincide si estamos filtrando por ID en `selectedCategory`.
     // Asumiremos que `selectedCategory` guarda el `nombreCategoria` para ser compatibles con el UI dropdown.
@@ -385,8 +387,8 @@ export const TiendaCliente: React.FC = () => {
           {selectedCategory !== "all" && (
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="flex items-center gap-4 flex-1">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setSelectedCategory("all")}
                   className="shrink-0"
                 >
@@ -417,16 +419,16 @@ export const TiendaCliente: React.FC = () => {
                 if (!hasProducts) return null;
 
                 return (
-                  <Card 
-                    key={category.id} 
+                  <Card
+                    key={category.id}
                     className="group cursor-pointer rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white flex flex-col h-full"
                     onClick={() => setSelectedCategory(category.nombreCategoria)}
                   >
                     {/* Image Section */}
                     <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-50 flex items-center justify-center">
                       {category.imagen ? (
-                        <ImageWithFallback 
-                          src={category.imagen} 
+                        <ImageWithFallback
+                          src={category.imagen}
                           alt={category.nombreCategoria}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
@@ -436,7 +438,7 @@ export const TiendaCliente: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Content Section */}
                     <div className="p-6 flex flex-col flex-1">
                       <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300">
@@ -465,11 +467,11 @@ export const TiendaCliente: React.FC = () => {
                       className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 relative"
                     >
                       {/* Image section */}
-                      <div className="relative h-56 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer" onClick={() => setSelectedProduct(product)}>
+                      <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer p-4" onClick={() => setSelectedProduct(product)}>
                         <ImageWithFallback
                           src={product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"}
                           alt={product.nombreProducto}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          className="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
                         />
                         {/* Stock badge */}
                         <div className="absolute top-3 right-3 z-10">
@@ -488,29 +490,30 @@ export const TiendaCliente: React.FC = () => {
                       </div>
 
                       {/* Content Section */}
-                      <div className="p-5 flex-1 flex flex-col">
-                        <div className="mb-2">
-                          <span className="text-xs font-semibold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                      <div className="p-4 flex-1 flex flex-col">
+                        <div className="mb-1.5">
+                          <span className="text-[10px] font-bold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
                             {product.categoria?.nombreCategoria || "Sin Categoría"}
                           </span>
                         </div>
-                        
-                        <h3 
-                          className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 mt-2 group-hover:text-yellow-600 transition-colors min-h-[3.5rem] cursor-pointer" 
+
+                        <h3
+                          className="font-bold text-gray-900 text-base mb-1 line-clamp-2 mt-1 group-hover:text-yellow-600 transition-colors min-h-[2.8rem] cursor-pointer leading-tight"
                           title={product.nombreProducto}
                           onClick={() => setSelectedProduct(product)}
                         >
                           {product.nombreProducto}
                         </h3>
 
-                        <div className="mt-auto pt-4 border-t border-gray-50">
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-2xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
+                        <div className="mt-auto pt-3 border-t border-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
                           </div>
-                          
+
                           <div className="flex gap-2 w-full">
                             <Button
-                              className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold transition-all shadow-sm"
+                              size="sm"
+                              className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold transition-all shadow-sm py-4"
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 addToCart(product);
@@ -519,17 +522,18 @@ export const TiendaCliente: React.FC = () => {
                             >
                               <ShoppingCart className="h-4 w-4 mx-auto sm:mr-2 sm:mx-0 inline-block" />
                               <span className="hidden sm:inline-block">
-                                {product.stock === 0 
-                                  ? "Agotado" 
-                                  : (cart.find(item => item.productoId === product.id)?.cantidad || 0) >= product.stock 
-                                    ? "Límite" 
+                                {product.stock === 0
+                                  ? "Agotado"
+                                  : (cart.find(item => item.productoId === product.id)?.cantidad || 0) >= product.stock
+                                    ? "Límite"
                                     : "Agregar"}
                               </span>
                             </Button>
-                            
+
                             <Button
+                              size="sm"
                               variant="outline"
-                              className="hover:bg-gray-50 border-gray-200"
+                              className="hover:bg-gray-50 border-gray-200 py-4"
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 setSelectedProduct(product);
