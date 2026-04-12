@@ -79,7 +79,7 @@ export const useUsers = () => {
                     isActive: u.estadoUsuario,
                     createdAt: new Date(u.fechaNacimiento)
                 };
-            });
+            }).sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
             setUsers(mappedUsers);
             setAvailableRoles(mappedRoles);

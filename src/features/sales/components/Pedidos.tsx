@@ -122,7 +122,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
         detalleVenta_Pedido: detallesData.filter(
           (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId) === Number(pedido.id)
         )
-      }));
+      })).sort((a, b) => (b.id || 0) - (a.id || 0));
 
       setPedidos(pedidosConDetalles);
       setUsuarios(usuariosData);

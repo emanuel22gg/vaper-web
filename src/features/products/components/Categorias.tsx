@@ -100,7 +100,7 @@ export const Categorias: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await getCategorias();
-      setCategorias(data);
+      setCategorias(data.sort((a, b) => (b.id || 0) - (a.id || 0)));
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Error al cargar categorías");

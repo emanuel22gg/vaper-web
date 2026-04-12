@@ -130,7 +130,7 @@ export const Productos: React.FC = () => {
         const linkedProductos = dataProductos.map(p => ({
           ...p,
           categoria: dataCategorias.find(c => c.id === p.categoriaId)
-        }));
+        })).sort((a, b) => (b.id || 0) - (a.id || 0));
 
         setProductos(linkedProductos);
         setCategorias(dataCategorias);
@@ -261,6 +261,7 @@ export const Productos: React.FC = () => {
       });
     } catch (error) {
       toast.error("Error al actualizar producto en la API");
+      throw error;
     }
   };
 

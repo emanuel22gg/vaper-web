@@ -130,16 +130,23 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       const pedidoData: VentaPedidoDto = {
         usuarioId: parseInt(user.id),
         estadoId: 2, // 2 = Pendiente
-        metodoPago: paymentMethod === 'cash' ? 'Efectivo' : (paymentMethod === 'in_store' ? 'Pago en Tienda' : 'Transferencia'),
+        metodoPago: paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo', // Avoid invalid enumerations
         direccionEntrega: activeAddress ? `${activeAddress.direccion}, ${activeAddress.barrio}` : 'Recogida en tienda',
-        ciudadEntrega: activeAddress ? activeAddress.municipio : '',
-        departamentoEntrega: activeAddress ? activeAddress.departamento : '',
+        ciudadEntrega: activeAddress ? activeAddress.municipio : 'N/A',
+        departamentoEntrega: activeAddress ? activeAddress.departamento : 'N/A',
+        observaciones: "",
         plazoAbonos: null,
         subtotal: getCartTotal(),
         envio: 0, // Assume 0 or logic to calculate
         total: getCartTotal(),
         vigenciaDevolucion: 1,
-        tipoVenta: "Pedido"
+        tipoVenta: "Pedido",
+        detalleVenta_Pedido: cart.map(item => ({
+          productoId: parseInt(item.id),
+          cantidad: item.quantity,
+          precioUnitario: item.price,
+          subtotal: item.price * item.quantity
+        }))
       };
 
       const response = await createVentaPedido(pedidoData);
@@ -177,9 +184,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       clearCart();
       setStep('success');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al guardar el pedido:', error);
-      toast.error('Ocurrió un error al procesar el pedido. Por favor intenta de nuevo.');
+      const serverDetails = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      toast.error(`Error al procesar el pedido: ${serverDetails}`);
     } finally {
       setIsSubmitting(false);
     }

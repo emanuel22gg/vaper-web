@@ -809,27 +809,19 @@ export const Cotizaciones: React.FC = () => {
     setOpenSelectorCliente(false);
   };
 
-  // Función para obtener el badge del estado con estilo SaaS minimalista
+  // Función para obtener el badge del estado
   const getEstadoBadge = (estado: string) => {
     const variants = {
-      'aceptada': { 
-        className: 'bg-blue-50 text-blue-700 border-blue-100', 
-        icon: <CheckCircle className="h-3 w-3" />, 
-        label: 'Aceptada' 
-      },
-      'anulada': { 
-        className: 'bg-red-50 text-red-700 border-red-100', 
-        icon: <XCircle className="h-3 w-3" />, 
-        label: 'Anulada' 
-      },
+      'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90 text-white', label: 'Aceptada' },
+      'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700 text-white', label: 'Anulada' },
     };
 
     const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
 
     return (
       <Badge
-        variant="outline"
-        className={cn("flex items-center gap-1.5 w-fit capitalize font-bold px-2.5 py-0.5 rounded-full border shadow-none", config.className)}
+        variant={config.variant}
+        className={cn("flex items-center gap-1 w-fit capitalize", config.color)}
       >
         {config.icon}
         {config.label}

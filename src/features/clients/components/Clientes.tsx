@@ -187,7 +187,7 @@ export const Clientes: React.FC = () => {
         getUsuarios(),
         getVentaPedidos()
       ]);
-      setClientes(usuariosData);
+      setClientes(usuariosData.sort((a, b) => (b.id || 0) - (a.id || 0)));
       setVentas(ventasData);
     } catch (error) {
       console.error("Error fetching data:", error);

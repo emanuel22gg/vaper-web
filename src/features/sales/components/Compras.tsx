@@ -136,7 +136,7 @@ export const Compras: React.FC = () => {
         getProductos(),
         getProveedores()
       ]);
-      setOrdenes(comprasData);
+      setOrdenes(comprasData.sort((a, b) => (b.id || 0) - (a.id || 0)));
       setProductos(productosData);
       setProveedores(proveedoresData);
     } catch (error) {

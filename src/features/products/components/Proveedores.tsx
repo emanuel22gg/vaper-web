@@ -197,7 +197,7 @@ export const Proveedores: React.FC = () => {
         getProveedores(),
         getCompras(),
       ]);
-      setProveedores(proveedoresData);
+      setProveedores(proveedoresData.sort((a, b) => (b.id || 0) - (a.id || 0)));
       setCompras(comprasData);
     } catch (error) {
       console.error("Error al cargar proveedores y compras:", error);

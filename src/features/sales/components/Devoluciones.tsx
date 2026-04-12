@@ -175,7 +175,7 @@ export const Devoluciones: React.FC = () => {
           ...d,
           clienteNombre: cliente ? `${cliente.nombres} ${cliente.apellidos}` : "Desconocido"
         };
-      });
+      }).sort((a, b) => (b.id || 0) - (a.id || 0));
 
       setDevoluciones(devsWithClient);
       setDetallesDevolucion(dets || []);
