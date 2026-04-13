@@ -58,6 +58,7 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
     useEffect(() => {
         if (isOpen && cliente) {
             setEditingCliente({ ...cliente });
+            setSelectedDepartment(cliente.departamento || '');
             fetchInitialData();
 
             // Intentar parsear la dirección si cumple el formato estándar
@@ -319,6 +320,7 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
                                                                 value={dept.name}
                                                                 onSelect={() => {
                                                                     setSelectedDepartment(dept.name);
+                                                                    setEditingCliente({ ...editingCliente!, departamento: dept.name });
                                                                     setIsEditDeptPopoverOpen(false);
                                                                 }}
                                                             >

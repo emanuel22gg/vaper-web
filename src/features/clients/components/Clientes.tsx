@@ -109,7 +109,8 @@ export const Clientes: React.FC = () => {
     fechaNacimiento: new Date().toISOString().split('T')[0],
     rolId: 3, // Rol de Cliente
     estadoUsuario: true,
-    tipoCliente: 'Minorista'
+    tipoCliente: 'Minorista',
+    departamento: ''
   });
 
   useEffect(() => {
@@ -373,7 +374,8 @@ export const Clientes: React.FC = () => {
       fechaNacimiento: new Date().toISOString().split('T')[0],
       rolId: 3,
       estadoUsuario: true,
-      tipoCliente: 'Minorista'
+      tipoCliente: 'Minorista',
+      departamento: ''
     });
     setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
     setSelectedDepartment('');
@@ -565,6 +567,7 @@ export const Clientes: React.FC = () => {
                                       value={dept.name}
                                       onSelect={() => {
                                         setSelectedDepartment(dept.name);
+                                        setNewCliente({ ...newCliente, departamento: dept.name });
                                         setIsDeptPopoverOpen(false);
                                       }}
                                     >

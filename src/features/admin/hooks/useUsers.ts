@@ -125,7 +125,7 @@ export const useUsers = () => {
                     ciudad: updatedUser.ciudad || 'N/A',
                     direccion: updatedUser.direccion || '',
                     barrio: updatedUser.barrio || '',
-                    departamento: '',
+                    departamento: updatedUser.departamento || '',
                     fechaNacimiento: updatedUser.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: updatedUser.isActive,
                     rolId: parseInt(updatedUser.role.id)
@@ -164,7 +164,7 @@ export const useUsers = () => {
                     ciudad: userData.ciudad || 'N/A',
                     direccion: userData.direccion || '',
                     barrio: userData.barrio || '',
-                    departamento: '',
+                    departamento: userData.departamento || '',
                     fechaNacimiento: userData.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: userData.isActive,
                     rolId: parseInt(userData.role.id)
