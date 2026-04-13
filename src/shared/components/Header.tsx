@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { AdminNotifications } from '@/shared/components/AdminNotifications';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
 interface HeaderProps {
@@ -122,6 +123,11 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
                 </Badge>
               </Button>
             </>
+          )}
+
+          {/* Campanita de Notificaciones para Admin */}
+          {isAuthenticated && canAccessAdmin && currentView === 'admin' && (
+            <AdminNotifications onNavigate={onNavigate} onAdminNavigate={onAdminNavigate} />
           )}
 
           {/* Menú de usuario */}

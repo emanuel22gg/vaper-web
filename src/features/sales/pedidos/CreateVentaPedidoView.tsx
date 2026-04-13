@@ -22,6 +22,7 @@ import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
     Search,
+    Store,
     Plus,
     Minus,
     Trash2,
@@ -78,6 +79,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     const [carrito, setCarrito] = useState<Array<{ producto: Producto; cantidad: number }>>([]);
 
     // Datos del pedido
+    const [tipoEntrega, setTipoEntrega] = useState<'domicilio' | 'tienda'>('domicilio');
     const [metodoPago, setMetodoPago] = useState("Efectivo");
     const [direccionEntrega, setDireccionEntrega] = useState("");
     const [ciudadEntrega, setCiudadEntrega] = useState("");
@@ -326,9 +328,9 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                 usuarioId: clienteEncontrado.id,
                 estadoId: estadoFinal,
                 metodoPago: metodoPago === "Abonos" ? "Otro" : metodoPago,
-                direccionEntrega,
-                ciudadEntrega,
-                departamentoEntrega,
+                direccionEntrega: tipoEntrega === 'tienda' ? "Recogida en tienda" : direccionEntrega,
+                ciudadEntrega: tipoEntrega === 'tienda' ? "N/A" : ciudadEntrega,
+                departamentoEntrega: tipoEntrega === 'tienda' ? "N/A" : departamentoEntrega,
                 //barrio,
                 observaciones,
                 plazoAbonos: metodoPago === "Abonos" ? Number(plazoAbonos) : null,
@@ -684,12 +686,25 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                 )}
                             >
                                 <div className="space-y-4">
-                                    <div>
-                                        <h3 className="text-sm font-medium">Entrega</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">Ubicación y dirección estructurada.</p>
+                                    <div className="flex justify-between items-center bg-muted/10 p-4 rounded-lg border border-blue-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-gray-800">Tipo de entrega</h3>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Seleccione si el cliente retira o se envía.</p>
+                                        </div>
+                                        <div className="w-[200px]">
+                                            <Select value={tipoEntrega} onValueChange={(v: 'domicilio'|'tienda') => setTipoEntrega(v)}>
+                                                <SelectTrigger className="font-medium bg-white text-blue-600 border-blue-200"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="domicilio">Envío a domicilio</SelectItem>
+                                                    <SelectItem value="tienda">Recogida en tienda</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-muted/20">
+                                    {tipoEntrega === 'domicilio' ? (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-muted/20">
                                         <div className="space-y-2">
                                             <Label>Departamento</Label>
                                             <Popover open={isDeptPopoverOpen} onOpenChange={setIsDeptPopoverOpen}>
@@ -797,6 +812,18 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                             Vista previa: <span className="text-foreground font-medium">{direccionEntrega || "Complete los campos"}</span>
                                         </div>
                                     </div>
+                                    </>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center p-8 bg-blue-50/50 border border-blue-100 rounded-lg min-h-[290px]">
+                                            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Store className="w-8 h-8" />
+                                            </div>
+                                            <h3 className="text-base font-bold text-gray-800 mb-2">Recogida en tienda física</h3>
+                                            <p className="text-sm text-muted-foreground max-w-[250px] text-center">
+                                                No es necesario ingresar dirección. El cliente debe pasar por el local a retirar su pedido presencialmente.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-4 rounded-lg border p-4 bg-card">
@@ -808,7 +835,11 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                             <Select value={metodoPago} onValueChange={setMetodoPago}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Efectivo">Contraentrega</SelectItem>
+                                                    {tipoEntrega === 'domicilio' ? (
+                                                        <SelectItem value="Efectivo">Contraentrega (Efectivo)</SelectItem>
+                                                    ) : (
+                                                        <SelectItem value="Efectivo">Pago en tienda (Efectivo)</SelectItem>
+                                                    )}
                                                     <SelectItem value="Transferencia">Transferencia</SelectItem>
                                                     <SelectItem value="Abonos">Abonos</SelectItem>
                                                 </SelectContent>

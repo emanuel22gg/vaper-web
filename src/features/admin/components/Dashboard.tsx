@@ -32,6 +32,7 @@ import { Cotizaciones } from "@/features/sales/components/CotizacionesMejoradas"
 import { Devoluciones } from "@/features/sales/components/Devoluciones";
 import { Cartera } from "@/features/sales/components/Cartera";
 import { AbonosIndividuales } from "@/features/sales/components/AbonosIndividuales";
+import { AdminNotificationsView } from "@/features/admin/components/AdminNotificationsView";
 import { getVentaPedidos, getCompras, getProductos, getCategorias, getDetalleVentaPedidos } from "@/shared/services/api";
 import { VentaPedidoDto, CompraDto, Producto, Categoria } from "@/shared/types";
 
@@ -545,7 +546,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       switch (detailView.type) {
 
         default:
-          return <div>Vista no encontrada</div>;
+          return <div>Vista no encontrada (DetailView): {detailView.type}</div>;
       }
     }
 
@@ -631,6 +632,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) : (
           <div>Sin permisos</div>
         );
+
+      case "notificaciones":
+        return <AdminNotificationsView onNavigate={handleViewChange} />;
 
       case "profile":
         return <UserProfile />;
@@ -1195,7 +1199,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
       default:
-        return <div>Vista no encontrada</div>;
+        return <div>Vista no encontrada para la vista activa: {activeView}</div>;
     }
   };
 

@@ -320,7 +320,7 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos }) => {
                                                     <TableCell className="min-w-[140px]">
                                                         <div className="space-y-1.5 pr-4">
                                                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight text-gray-500">
-                                                                <span>{Math.round((item.totalAbonado / item.totalPedido) * 100)}% Pagado</span>
+                                                                <span>{item.totalPedido > 0 ? Math.round((item.totalAbonado / item.totalPedido) * 100) : 0}% Pagado</span>
                                                                 <span>${item.totalAbonado.toLocaleString()}</span>
                                                             </div>
                                                             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
@@ -329,7 +329,7 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos }) => {
                                                                             item.estadoAlerta === 'warning' ? 'bg-amber-500' : 
                                                                             item.estadoAlerta === 'paid' ? 'bg-blue-500' : 'bg-emerald-500'
                                                                         }`}
-                                                                    style={{ width: `${(item.totalAbonado / item.totalPedido) * 100}%` }}
+                                                                    style={{ width: `${item.totalPedido > 0 ? (item.totalAbonado / item.totalPedido) * 100 : 0}%` }}
                                                                 ></div>
                                                             </div>
                                                         </div>

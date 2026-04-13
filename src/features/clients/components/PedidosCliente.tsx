@@ -31,15 +31,20 @@ import {
   CreditCard,
   Store,
   Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { AuthContext } from '@/shared/contexts/AuthContext';
-import { getVentaPedidos, getDetalleVentaPedidos, getProductos, getEstados, getAllImages } from '@/shared/services/api';
+import { getVentaPedidos, getDetalleVentaPedidos, getProductos, getEstados, getAllImages, getAbonos } from '@/shared/services/api';
+import { VentaAbonoDto } from '@/shared/types';
 
 interface PedidoUI {
   id: number;
   numeroPedido: string;
   fecha: Date;
   estado: string;
+  estadoId: number;
+  plazoAbonos: number | null;
+  abonos: VentaAbonoDto[];
   total: number;
   productos: {
     id: string;
@@ -77,12 +82,13 @@ export const PedidosCliente: React.FC = () => {
         setLoading(true);
         if (!user) return;
         
-        const [pedidosApi, detallesApi, productosApi, estadosApi, imagesApi] = await Promise.all([
+        const [pedidosApi, detallesApi, productosApi, estadosApi, imagesApi, abonosApi] = await Promise.all([
           getVentaPedidos(),
           getDetalleVentaPedidos(),
           getProductos(),
           getEstados(),
-          getAllImages()
+          getAllImages(),
+          getAbonos()
         ]);
 
         const productosConImagen = productosApi.map(p => {
@@ -114,11 +120,24 @@ export const PedidosCliente: React.FC = () => {
             };
           });
 
+          const abonosDelPedido = abonosApi.filter(a => a.ventaPedidoId === pedido.id);
+
+          const isRecogida = pedido.direccionEntrega === 'Recogida en tienda' || pedido.ciudadEntrega === 'N/A';
+          let metodoPagoDisplay = pedido.metodoPago || 'Efectivo';
+          if (pedido.metodoPago === 'Otro' || (pedido.plazoAbonos && pedido.plazoAbonos > 0)) {
+              metodoPagoDisplay = 'Abonos';
+          } else if (pedido.metodoPago === 'Efectivo') {
+              metodoPagoDisplay = isRecogida ? 'Pago en tienda' : 'Contraentrega';
+          }
+
           return {
             id: pedido.id || 0,
             numeroPedido: `PED-${(pedido.id || 0).toString().padStart(3, '0')}`,
             fecha: pedido.fechaCreacion ? new Date(pedido.fechaCreacion) : new Date(),
             estado: nombreEstado,
+            estadoId: pedido.estadoId,
+            plazoAbonos: pedido.plazoAbonos || null,
+            abonos: abonosDelPedido,
             total: pedido.total || 0,
             productos: productosAgregados,
             direccionEnvio: {
@@ -128,7 +147,7 @@ export const PedidosCliente: React.FC = () => {
               departamento: pedido.departamentoEntrega || '',
               telefono: user.telefono || '',
               envio: pedido.envio || 0,
-              metodoPago: pedido.metodoPago || 'Efectivo',
+              metodoPago: metodoPagoDisplay,
             },
             cliente: {
               nombre: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
@@ -370,8 +389,8 @@ export const PedidosCliente: React.FC = () => {
                         <Truck className="h-4 w-4 mr-1 text-gray-500 inline" /> Envío
                       </p>
                       <p className="ml-5 flex items-center">
-                        {selectedPedido.direccionEnvio.envio === 0 ? (
-                          <><Store className="h-4 w-4 mr-1 text-blue-600" /> Recogido en tienda</>
+                        {selectedPedido.direccionEnvio.direccion === 'Recogida en tienda' || selectedPedido.direccionEnvio.ciudad === 'N/A' ? (
+                          <><Store className="h-4 w-4 mr-1 text-blue-600" /> Recogida en tienda</>
                         ) : (
                           <><Truck className="h-4 w-4 mr-1 text-green-600" /> A domicilio</>
                         )}
@@ -462,6 +481,64 @@ export const PedidosCliente: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {(selectedPedido.plazoAbonos || (selectedPedido.abonos && selectedPedido.abonos.length > 0)) && (
+                <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200 mt-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center text-gray-900">
+                      <Clock className="h-5 w-5 mr-2 text-blue-500" />
+                      Detalles de Abonos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Resumen */}
+                      <div className="flex justify-between items-center bg-white p-4 rounded-md border border-blue-100 shadow-sm">
+                        <div>
+                           <p className="text-sm font-semibold text-gray-700">Total Abonado</p>
+                           <p className="text-xl font-bold text-blue-600">${selectedPedido.abonos.reduce((sum, a) => sum + (a.estado ? a.monto : 0), 0).toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-sm font-semibold text-gray-700">Saldo Pendiente</p>
+                           <p className="text-xl font-bold text-red-600">${(selectedPedido.total - selectedPedido.abonos.reduce((sum, a) => sum + (a.estado ? a.monto : 0), 0)).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {/* Lista */}
+                      {selectedPedido.abonos.filter(a => a.estado).length > 0 ? (
+                         <div className="space-y-2">
+                           <p className="text-sm font-semibold text-gray-700">Historial de Pagos:</p>
+                           <div className="bg-white rounded-md border border-gray-100 overflow-hidden divide-y">
+                             {selectedPedido.abonos.filter(a => a.estado).map(abono => (
+                               <div key={abono.id} className="flex justify-between text-sm items-center p-3">
+                                 <span className="text-gray-600">{new Date(abono.fecha).toLocaleDateString()}</span>
+                                 <span className="text-gray-500 text-xs px-2 py-1 bg-gray-100 rounded-full">{abono.metodoPago}</span>
+                                 <span className="font-bold text-green-600">+${abono.monto.toLocaleString()}</span>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                      ) : (
+                         <p className="text-sm text-gray-500 italic">Aún no tienes abonos registrados.</p>
+                      )}
+
+                      {/* Notificación Whatsapp */}
+                      <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md text-sm text-yellow-800 shadow-sm">
+                         <div className="flex items-start gap-3">
+                           <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600 mt-0.5" />
+                           <div>
+                             <p className="font-bold mb-1 text-yellow-900">Plazo acordado: {selectedPedido.plazoAbonos || 1} mes(es)</p>
+                             <p className="text-yellow-800">
+                               Para realizar el cobro de tu próxima cuota, por favor comunícate a nuestra línea de WhatsApp enviando tu número de pedido.
+                             </p>
+                           </div>
+                         </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
             </>
           )}
         </DialogContent>
