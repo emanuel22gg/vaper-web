@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -7,7 +7,7 @@ import { MapPin, Home, CreditCard, Upload, CheckCircle, AlertTriangle, Trash2, L
 import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { toast } from 'sonner';
-import { createVentaPedido, createDetalleVentaPedido, getProductoById, updateProducto } from '@/shared/services/api';
+import { createVentaPedido, createDetalleVentaPedido, getProductoById, updateProducto, uploadImage } from '@/shared/services/api';
 import { VentaPedidoDto } from '@/shared/types';
 
 type CheckoutStep = 'pickup-choice' | 'shipping-address' | 'payment-method' | 'success';
@@ -30,16 +30,32 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
   const [step, setStep] = useState<CheckoutStep>('pickup-choice');
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery' | null>(null);
   const [addresses, setAddresses] = useState<ShippingAddress[]>([
-    { 
-      direccion: user?.direccion || '', 
-      departamento: user?.departamento || '', 
-      municipio: user?.ciudad || '', 
-      barrio: user?.barrio || '' 
+    {
+      direccion: user?.direccion || '',
+      departamento: user?.departamento || '',
+      municipio: user?.ciudad || '',
+      barrio: user?.barrio || ''
     }
   ]);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'in_store' | null>(null);
   const [orderTotal, setOrderTotal] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setAddresses(prev => {
+        const newAddresses = [...prev];
+        if (newAddresses.length > 0) {
+          if (!newAddresses[0].direccion && user.direccion) newAddresses[0].direccion = user.direccion;
+          if (!newAddresses[0].departamento && user.departamento) newAddresses[0].departamento = user.departamento;
+          if (!newAddresses[0].municipio && user.ciudad) newAddresses[0].municipio = user.ciudad;
+          if (!newAddresses[0].barrio && user.barrio) newAddresses[0].barrio = user.barrio;
+        }
+        return newAddresses;
+      });
+    }
+  }, [user]);
 
   // Paso 1: Selección de recogida o envío
   const handlePickupChoice = (choice: 'pickup' | 'delivery') => {
@@ -88,45 +104,37 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
     setPaymentMethod(method);
   };
 
-  // Redirigir a WhatsApp
-  const handleWhatsAppRedirect = () => {
-    const phoneNumber = "573052359631";
-    let message = "¡Hola! Quisiera realizar el pago de mi pedido por transferencia. Aquí están los detalles:\n\n";
-    message += "*Productos:*\n";
-    cart.forEach(item => {
-      message += `- ${item.name} x${item.quantity} : $${(item.price * item.quantity).toLocaleString('es-CO')}\n`;
-    });
-    message += `\n*TOTAL:* $${getCartTotal().toLocaleString('es-CO')}\n`;
-    
-    if (deliveryType === 'delivery') {
-      const activeAddress = addresses[addresses.length - 1];
-      message += `\n*Envío a domicilio:*\n${activeAddress.direccion}, ${activeAddress.barrio}, ${activeAddress.municipio}\n`;
-    } else {
-      message += `\n*Método de entrega:* Recogida en tienda\n`;
-    }
-    
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-  };
-
   // Confirmar pedido
   const handleConfirmOrder = async () => {
     if (isSubmitting) return;
-
-    if (paymentMethod === 'transfer') {
-      handleWhatsAppRedirect();
-    }
 
     if (!user) {
       toast.error('Debe iniciar sesión para procesar su pedido en el sistema.');
       return;
     }
 
+    if (paymentMethod === 'transfer' && !comprobanteFile) {
+      toast.error('Debe adjuntar el comprobante de pago para pedidos por transferencia.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      let comprobanteUrl = '';
+      if (paymentMethod === 'transfer' && comprobanteFile) {
+        try {
+          const uploadedImage = await uploadImage(comprobanteFile);
+          comprobanteUrl = uploadedImage.urlimagen;
+        } catch (error) {
+          toast.error('Error al subir el comprobante. Intente nuevamente.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Create Order
       const activeAddress = deliveryType === 'delivery' ? addresses[addresses.length - 1] : null;
-      
+
       const pedidoData: VentaPedidoDto = {
         usuarioId: parseInt(user.id),
         estadoId: 2, // 2 = Pendiente
@@ -135,6 +143,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
         ciudadEntrega: activeAddress ? activeAddress.municipio : 'N/A',
         departamentoEntrega: activeAddress ? activeAddress.departamento : 'N/A',
         observaciones: "",
+        comprobanteUrl: comprobanteUrl || undefined,
         plazoAbonos: null,
         subtotal: getCartTotal(),
         envio: 0, // Assume 0 or logic to calculate
@@ -159,7 +168,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       // Save details & Update stock
       for (const cartItem of cart) {
         const prod = await getProductoById(parseInt(cartItem.id));
-        
+
         await createDetalleVentaPedido({
           ventaPedidoId: createdOrderId,
           productoId: parseInt(cartItem.id),
@@ -179,7 +188,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       toast.success('¡Pedido creado con éxito!', {
         description: 'Recibirás una confirmación por correo electrónico',
       });
-      
+
       setOrderTotal(getCartTotal());
       clearCart();
       setStep('success');
@@ -230,7 +239,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                     <Home className="w-8 h-8" />
                     <span>Sí, recogeré en tienda</span>
                   </Button>
-                  
+
                   <Button
                     onClick={() => handlePickupChoice('delivery')}
                     variant="outline"
@@ -287,7 +296,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           className={index === 0 && !!user?.direccion ? "bg-muted text-muted-foreground" : ""}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor={`departamento-${index}`}>Departamento</Label>
                         <Input
@@ -299,7 +308,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           className={index === 0 && !!user?.departamento ? "bg-muted text-muted-foreground" : ""}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor={`municipio-${index}`}>Municipio</Label>
                         <Input
@@ -311,7 +320,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           className={index === 0 && !!user?.ciudad ? "bg-muted text-muted-foreground" : ""}
                         />
                       </div>
-                      
+
                       <div className="md:col-span-2">
                         <Label htmlFor={`barrio-${index}`}>Barrio</Label>
                         <Input
@@ -363,8 +372,8 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
               <CardHeader>
                 <CardTitle>Método de Pago</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {deliveryType === 'pickup' 
-                    ? 'Recogerás tu pedido en tienda' 
+                  {deliveryType === 'pickup'
+                    ? 'Recogerás tu pedido en tienda'
                     : 'Envío a domicilio'}
                 </p>
               </CardHeader>
@@ -376,14 +385,13 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                         Como vas a recoger en tienda, puedes pagar allá mismo en efectivo o transferencia.
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card
-                        className={`cursor-pointer transition-all ${
-                          paymentMethod === 'in_store'
+                        className={`cursor-pointer transition-all ${paymentMethod === 'in_store'
                             ? 'ring-2 ring-primary border-primary'
                             : 'hover:bg-muted/50'
-                        }`}
+                          }`}
                         onClick={() => handlePaymentMethodSelect('in_store')}
                       >
                         <CardContent className="p-6 flex flex-col items-center gap-3">
@@ -396,11 +404,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                       </Card>
 
                       <Card
-                        className={`cursor-pointer transition-all ${
-                          paymentMethod === 'transfer'
+                        className={`cursor-pointer transition-all ${paymentMethod === 'transfer'
                             ? 'ring-2 ring-primary border-primary'
                             : 'hover:bg-muted/50'
-                        }`}
+                          }`}
                         onClick={() => handlePaymentMethodSelect('transfer')}
                       >
                         <CardContent className="p-6 flex flex-col items-center gap-3">
@@ -416,11 +423,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card
-                      className={`cursor-pointer transition-all ${
-                        paymentMethod === 'cash'
+                      className={`cursor-pointer transition-all ${paymentMethod === 'cash'
                           ? 'ring-2 ring-primary border-primary'
                           : 'hover:bg-muted/50'
-                      }`}
+                        }`}
                       onClick={() => handlePaymentMethodSelect('cash')}
                     >
                       <CardContent className="p-6 flex flex-col items-center gap-3">
@@ -433,11 +439,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                     </Card>
 
                     <Card
-                      className={`cursor-pointer transition-all ${
-                        paymentMethod === 'transfer'
+                      className={`cursor-pointer transition-all ${paymentMethod === 'transfer'
                           ? 'ring-2 ring-primary border-primary'
                           : 'hover:bg-muted/50'
-                      }`}
+                        }`}
                       onClick={() => handlePaymentMethodSelect('transfer')}
                     >
                       <CardContent className="p-6 flex flex-col items-center gap-3">
@@ -465,40 +470,55 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                       <CardHeader>
                         <CardTitle className="text-lg">Información Bancaria</CardTitle>
                       </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Banco:</span>
-                        <span className="font-semibold">Bancolombia</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tipo de cuenta:</span>
-                        <span className="font-semibold">Ahorros</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Número de cuenta:</span>
-                        <span className="font-semibold">1234567890</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Titular:</span>
-                        <span className="font-semibold">Remates de Boyacá</span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="text-muted-foreground">Monto a transferir:</span>
-                        <span className="font-bold text-lg">${getCartTotal().toLocaleString('es-CO')}</span>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col gap-3">
-                      <div className="w-full">
+                      <CardContent className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Banco:</span>
+                          <span className="font-semibold">Bancolombia</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tipo de cuenta:</span>
+                          <span className="font-semibold">Ahorros</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Número de cuenta:</span>
+                          <span className="font-semibold">1234567890</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Titular:</span>
+                          <span className="font-semibold">Remates de Boyacá</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t">
+                          <span className="text-muted-foreground">Monto a transferir:</span>
+                          <span className="font-bold text-lg">${getCartTotal().toLocaleString('es-CO')}</span>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex flex-col gap-3 items-center">
                         <Button
-                          onClick={handleWhatsAppRedirect}
-                          className="w-full bg-green-500 hover:bg-green-600 text-white font-bold"
+                          type="button"
+                          className="w-full bg-[rgb(240,177,0,100)] text-[rgb(0,0,0)] hover:bg-gray-400"
+                          onClick={() => document.getElementById('comprobante')?.click()}
                         >
-                          Enviar detalles y comprobante por WhatsApp
+                          {comprobanteFile ? 'Cambiar comprobante' : 'Subir comprobante de pago'}
                         </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </>)}
+                        <Input
+                          id="comprobante"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setComprobanteFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        {comprobanteFile && (
+                          <p className="text-sm text-green-600 mt-1">
+                            Archivo seleccionado: {comprobanteFile.name}
+                          </p>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  </>)}
                 {/* Resumen del pedido */}
                 <Card className="bg-muted/50">
                   <CardHeader>

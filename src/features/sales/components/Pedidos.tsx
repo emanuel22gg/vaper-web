@@ -818,6 +818,27 @@ export const Pedidos: React.FC<PedidosProps> = ({
                           <Label className="text-xs font-medium text-gray-500">Tipo de Venta</Label>
                           <p className="text-sm font-medium text-gray-900">{selectedPedido.tipoVenta || "Venta"}</p>
                         </div>
+                        {selectedPedido.comprobanteUrl && (
+                          <div className="space-y-1 col-span-2">
+                            <Label className="text-xs font-medium text-gray-500">Comprobante de pago</Label>
+                            <div>
+                              <a
+                                href={selectedPedido.comprobanteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                              >
+                                <Receipt className="h-4 w-4" /> Ver comprobante de pago
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                        {selectedPedido.observaciones && (
+                          <div className="space-y-1 col-span-2">
+                            <Label className="text-xs font-medium text-gray-500">Observaciones</Label>
+                            <p className="text-sm font-medium text-gray-900">{selectedPedido.observaciones}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

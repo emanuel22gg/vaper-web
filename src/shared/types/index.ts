@@ -228,6 +228,7 @@ export interface VentaPedidoDto {
   departamentoEntrega: string;
   //barrio?: string;
   observaciones?: string;
+  comprobanteUrl?: string;
   plazoAbonos: number | null;
   subtotal: number;
   envio: number;

@@ -107,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ciudad: foundUserApi.ciudad,
         direccion: foundUserApi.direccion,
         barrio: foundUserApi.barrio,
+        departamento: foundUserApi.departamento,
         fechaNacimiento: foundUserApi.fechaNacimiento,
         tipoCliente: foundUserApi.tipoCliente,
         role: role,
@@ -163,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ciudad: 'Desconocida',
         direccion: 'Desconocida',
         barrio: 'Desconocido',
+        departamento: 'Desconocido',
         fechaNacimiento: new Date().toISOString().split('T')[0]
       };
 
@@ -231,6 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ciudad: currentUserApi.ciudad,
           direccion: currentUserApi.direccion,
           barrio: currentUserApi.barrio,
+          departamento: currentUserApi.departamento,
           fechaNacimiento: currentUserApi.fechaNacimiento,
           tipoCliente: currentUserApi.tipoCliente
         };
@@ -259,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ciudad: userData.ciudad,
         direccion: userData.direccion,
         barrio: userData.barrio,
+        departamento: userData.departamento || '',
         fechaNacimiento: userData.fechaNacimiento,
         tipoCliente: userData.tipoCliente
       };
