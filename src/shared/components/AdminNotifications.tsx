@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getProductos, getVentaPedidos, getEstados } from '@/shared/services/api';
+import { Bell } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
 
 interface AdminNotificationsProps {
   onNavigate: (view: any) => void;
@@ -15,12 +18,19 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
   const knownOrderIds = React.useRef<Set<number>>(new Set());
   const isFirstLoad = React.useRef(true);
   
+  const handleNavigateToCenter = useCallback(() => {
+    if (onAdminNavigate) {
+      onAdminNavigate('notificaciones');
+    } else {
+      onNavigate('admin');
+    }
+  }, [onAdminNavigate, onNavigate]);
+
   const handleNavigateToPedidos = useCallback(() => {
     if (onAdminNavigate) {
       onAdminNavigate('pedidos');
     } else {
       onNavigate('admin');
-      if (onAdminNavigate) onAdminNavigate('pedidos');
     }
   }, [onAdminNavigate, onNavigate]);
 
@@ -106,7 +116,20 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
   }, [fetchNotifications]);
 
 
-  // Ocultado temporalmente por solicitud: return <Button>...</Button>;
-  // Retornamos null para que corra los procesos silenciosos pero no se vea en el Header.
-  return null;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="relative text-gray-500 hover:text-blue-600 transition-colors"
+      onClick={handleNavigateToCenter}
+      title="Centro de Notificaciones"
+    >
+      <Bell className="h-6 w-6" />
+      {totalAlerts > 0 && (
+        <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-full border-2 border-white shadow-sm">
+          {totalAlerts > 99 ? '99+' : totalAlerts}
+        </Badge>
+      )}
+    </Button>
+  );
 }
