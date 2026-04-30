@@ -9,7 +9,9 @@ import { UserRole } from '@/shared/types';
 import { toast } from "sonner";
 import { PasswordRecoveryEmail } from './PasswordRecoveryEmail';
 import { PasswordResetForm } from './PasswordResetForm';
+import { RegisterForm } from './RegisterForm';
 import * as apiService from '@/shared/services/api';
+import logoImage from '@/assets/logo_vaper_bee.jpg';
 
 interface AuthFormProps {
   onSuccess?: () => void;
@@ -23,6 +25,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
   const [showRecovery, setShowRecovery] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [sentEmail, setSentEmail] = useState('');
   const [resetToken, setResetToken] = useState('');
 
@@ -49,6 +52,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
       console.error('Error en handleLogin:', err);
       if (err.message === 'UserDeactivated') {
         setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
+      } else if (err.message === 'UserPendingApproval') {
+        setError('Tu cuenta aún no ha sido aprobada. Estamos verificando tu documento.');
       } else if (err.message === 'RoleDeactivated') {
         setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
       } else {
@@ -156,157 +161,196 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     setResetToken('');
   };
 
-  // Si estamos en el flujo de cambio de contraseña, mostrar el componente correspondiente
   if (showPasswordReset) {
     return (
-      <PasswordResetForm
-        userEmail={sentEmail}
-        resetToken={resetToken}
-        onSuccess={handlePasswordResetSuccess}
-        onCancel={handlePasswordResetCancel}
-      />
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center relative py-12 px-4">
+        {/* Background Decorative Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-500/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-yellow-600/10 blur-[120px] rounded-full" />
+        </div>
+
+        <div className="w-full max-w-lg px-6 relative z-10 py-10">
+          <div className="backdrop-blur-xl bg-gray-900/60 border border-gray-700/50 p-8 sm:p-10 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-500 ease-in-out">
+            <PasswordResetForm
+              userEmail={sentEmail}
+              resetToken={resetToken}
+              onSuccess={handlePasswordResetSuccess}
+              onCancel={handlePasswordResetCancel}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showRegister) {
+    return (
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center relative py-12 px-4">
+        {/* Background Decorative Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-500/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-yellow-600/10 blur-[120px] rounded-full" />
+        </div>
+
+        <div className="w-full max-w-4xl px-6 relative z-10 py-6">
+          <div className="backdrop-blur-xl bg-gray-900/60 border border-gray-700/50 p-6 sm:p-8 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-500 ease-in-out">
+            <RegisterForm 
+              onSuccess={() => setShowRegister(false)} 
+              onCancel={() => setShowRegister(false)} 
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl text-yellow-400 mb-2">Vaper One Medellín</h1>
-          <p className="text-white/70">Sistema de Gestión</p>
-        </div>
+    <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center relative py-12 px-4">
+      {/* Background Decorative Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-yellow-600/10 blur-[120px] rounded-full" />
+      </div>
 
-        {/* Login */}
-        {!showRecovery ? (
-          <Card className="bg-gray-900 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Bienvenido de vuelta</CardTitle>
-              <CardDescription className="text-gray-400">
-                Ingresa tus credenciales para acceder al sistema
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleLogin}>
-              <CardContent className="space-y-4">
+      <div className="w-full max-w-lg px-6 relative z-10 py-10">
+        {/* Login / Recovery Form */}
+        <div className="backdrop-blur-xl bg-gray-900/60 border border-gray-700/50 p-8 sm:p-10 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-500 ease-in-out">
+          {!showRecovery ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-8 text-center">
+                <h2 className="text-3xl text-white font-bold mb-2">Bienvenido</h2>
+                <p className="text-base text-gray-400">Ingresa tus credenciales para acceder</p>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-5">
                 {error && (
-                  <Alert className="border-red-500 bg-red-500/10">
-                    <AlertDescription className="text-red-400">
-                      {error}
-                    </AlertDescription>
+                  <Alert className="border-red-500/50 bg-red-500/10 text-red-400 py-3 rounded-xl">
+                    <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Documento o Email</Label>
+                  <Label htmlFor="username" className="text-gray-300 text-sm font-medium">Documento o Email</Label>
                   <Input
                     id="username"
                     type="text"
                     value={loginData.username}
                     onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    className="bg-gray-800 border-gray-600 text-white"
-                    placeholder="Documento de identidad o correo electrónico"
+                    className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-12 text-base px-4 transition-all"
+                    placeholder="ej. 1000123456"
                     required
                   />
                 </div>
 
-                <div className="space-y-2 mb-8">
-                  <Label htmlFor="password" className="text-white">Contraseña</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-gray-300 text-sm font-medium">Contraseña</Label>
                   <Input
                     id="password"
                     type="password"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="bg-gray-800 border-gray-600 text-white"
-                    placeholder="Ingresa tu contraseña"
+                    className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-12 text-base px-4 transition-all"
+                    placeholder="••••••••"
                     required
                   />
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-3">
-                <Button
-                  type="submit"
-                  className="w-full bg-black hover:bg-gray-800 text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-yellow-400 hover:text-yellow-300"
-                  onClick={() => setShowRecovery(true)}
-                >
-                  ¿Olvidaste tu contraseña?
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        ) : (
-          <Card className="bg-gray-900 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Recuperar Contraseña</CardTitle>
-              <CardDescription className="text-gray-400">
-                Ingresa tu email para recibir las instrucciones de recuperación
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleRecoverPassword}>
-              <CardContent className="space-y-4">
+
+                <div className="pt-4 space-y-5">
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] transition-all duration-300"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+                  </Button>
+
+                  <div className="flex flex-col space-y-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowRecovery(true)}
+                      className="text-sm text-yellow-500 hover:text-yellow-400 transition-colors font-medium focus:outline-none"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-8 text-center text-sm text-gray-400">
+                  ¿No tienes una cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowRegister(true)}
+                    className="text-yellow-500 hover:text-yellow-400 font-semibold text-base ml-1 transition-colors focus:outline-none"
+                  >
+                    Regístrate aquí
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl text-white font-bold mb-2">Recuperar Acceso</h2>
+                <p className="text-base text-gray-400">Te enviaremos las instrucciones por email</p>
+              </div>
+
+              <form onSubmit={handleRecoverPassword} className="space-y-5">
                 {error && (
-                  <Alert className="border-red-500 bg-red-500/10">
-                    <AlertDescription className="text-red-400">
-                      {error}
-                    </AlertDescription>
+                  <Alert className="border-red-500/50 bg-red-500/10 text-red-400 py-3 rounded-xl">
+                    <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
                   </Alert>
                 )}
 
                 {success && (
-                  <Alert className="border-green-500 bg-green-500/10">
-                    <AlertDescription className="text-green-400">
-                      {success}
-                    </AlertDescription>
+                  <Alert className="border-green-500/50 bg-green-500/10 text-green-400 py-3 rounded-xl">
+                    <AlertDescription className="text-sm font-medium">{success}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="recovery-email" className="text-white">Email</Label>
+                  <Label htmlFor="recovery-email" className="text-gray-300 text-sm font-medium">Correo Electrónico Registrado</Label>
                   <Input
                     id="recovery-email"
                     type="email"
                     value={recoveryData.email}
                     onChange={(e) => setRecoveryData({ ...recoveryData, email: e.target.value })}
-                    className="bg-gray-800 border-gray-600 text-white"
+                    className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-12 text-base px-4 transition-all"
                     placeholder="correo@ejemplo.com"
                     required
                   />
                 </div>
 
-                <div className="text-xs text-gray-400 bg-gray-800/50 p-3 rounded">
-                  <div className="mb-1">📧 <strong>Proceso de recuperación:</strong></div>
-                  <div>• Recibirás un email con un código de recuperación</div>
-                  <div>• El código será válido por 15 minutos</div>
-                  <div>• Revisa también tu carpeta de spam</div>
+                <div className="mt-6 text-xs text-gray-400 bg-black/30 border border-gray-800 p-4 rounded-xl leading-relaxed">
+                  <span className="block mb-2 text-yellow-500 font-medium">Proceso de recuperación:</span>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>Recibirás un código seguro por email.</li>
+                    <li>El código expira en 15 minutos.</li>
+                    <li>Por favor revisa tu carpeta de SPAM.</li>
+                  </ul>
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-2">
-                <Button
-                  type="submit"
-                  className="w-full bg-black hover:bg-gray-800 text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Enviando...' : 'Enviar Instrucciones'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full text-gray-400 hover:text-white"
-                  onClick={handlePasswordResetCancel}
-                >
-                  Volver al inicio de sesión
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        )}
+
+                <div className="pt-6 flex flex-row items-center justify-between space-x-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 h-12 text-base text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-gray-800"
+                    onClick={handlePasswordResetCancel}
+                  >
+                    Atrás
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 h-12 text-base bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] transition-all duration-300"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '...' : 'Enviar'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

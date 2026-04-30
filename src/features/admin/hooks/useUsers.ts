@@ -77,7 +77,8 @@ export const useUsers = () => {
                     tipoCliente: u.tipoCliente,
                     role: userRole,
                     isActive: u.estadoUsuario,
-                    createdAt: new Date(u.fechaNacimiento)
+                    createdAt: new Date(u.fechaNacimiento),
+                    documentoUrl: u.documentoUrl
                 };
             }).sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
@@ -128,7 +129,8 @@ export const useUsers = () => {
                     departamento: updatedUser.departamento || '',
                     fechaNacimiento: updatedUser.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: updatedUser.isActive,
-                    rolId: parseInt(updatedUser.role.id)
+                    rolId: parseInt(updatedUser.role.id),
+                    documentoUrl: updatedUser.documentoUrl
                 });
                 await loadData(false);
             } catch (error) {
@@ -167,7 +169,8 @@ export const useUsers = () => {
                     departamento: userData.departamento || '',
                     fechaNacimiento: userData.fechaNacimiento || new Date().toISOString(),
                     estadoUsuario: userData.isActive,
-                    rolId: parseInt(userData.role.id)
+                    rolId: parseInt(userData.role.id),
+                    documentoUrl: userData.documentoUrl
                 });
                 await loadData(false);
             } catch (error) {

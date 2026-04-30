@@ -48,7 +48,8 @@ import {
   UserPlus,
   Loader2,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Shield
 } from 'lucide-react';
 
 // Eliminados mockClientes para usar API real
@@ -76,6 +77,8 @@ export const Clientes: React.FC = () => {
   const [selectedCliente, setSelectedCliente] = useState<UsuarioDto | null>(null);
   const [editingCliente, setEditingCliente] = useState<UsuarioDto | null>(null);
   const [clienteToDelete, setClienteToDelete] = useState<UsuarioDto | null>(null);
+  const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
+  const [clientToValidate, setClientToValidate] = useState<UsuarioDto | null>(null);
 
   // Estados para Geografía
   const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
@@ -848,6 +851,20 @@ export const Clientes: React.FC = () => {
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        {cliente.documentoUrl && !cliente.estadoUsuario && (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                             onClick={() => {
+                               setClientToValidate(cliente);
+                               setIsValidationDialogOpen(true);
+                             }}
+                             title="Validar Documento"
+                           >
+                             <Shield className="h-4 w-4" />
+                           </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -874,6 +891,7 @@ export const Clientes: React.FC = () => {
         onOpenChange={setIsViewDialogOpen}
         cliente={selectedCliente}
         onEdit={handleEditCliente}
+        onRefresh={fetchData}
       />
 
       {/* Modal de Edición */}
@@ -883,6 +901,84 @@ export const Clientes: React.FC = () => {
         cliente={editingCliente}
         onSuccess={fetchData}
       />
+
+      {/* Modal de Validación Directa */}
+      <Dialog open={isValidationDialogOpen} onOpenChange={setIsValidationDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Validar Documento de Cliente</DialogTitle>
+            <DialogDescription>
+              Revisa el comprobante de identidad adjunto para aprobar o rechazar al cliente.
+            </DialogDescription>
+          </DialogHeader>
+          {clientToValidate && clientToValidate.documentoUrl && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="text-sm">
+                  <span className="text-gray-500 font-medium">Fecha de Nacimiento declarada: </span>
+                  <span className="font-bold text-gray-900">
+                    {clientToValidate.fechaNacimiento ? new Date(clientToValidate.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-500 font-medium">Documento: </span>
+                  <span className="font-bold text-gray-900">{clientToValidate.numeroDocumento}</span>
+                </div>
+              </div>
+              <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex justify-center p-4">
+                  <img 
+                      src={clientToValidate.documentoUrl} 
+                      alt="Documento de Identidad" 
+                      className="w-full object-contain hover:scale-110 transition-transform duration-300 cursor-zoom-in"
+                  />
+              </div>
+              <div className="flex gap-4 pt-4 border-t border-gray-100">
+                  <Button 
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white h-12 text-lg"
+                      onClick={async () => {
+                          try {
+                              setLoading(true);
+                              await deleteUsuario(clientToValidate.id);
+                              toast.success('Cliente rechazado y eliminado.');
+                              setIsValidationDialogOpen(false);
+                              fetchData();
+                          } catch (error) {
+                              toast.error('Error al eliminar cliente');
+                          } finally {
+                              setLoading(false);
+                          }
+                      }}
+                      disabled={loading}
+                  >
+                      <Trash2 className="w-5 h-5 mr-2" />
+                      Rechazar (Eliminar)
+                  </Button>
+                  <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 text-lg"
+                      onClick={async () => {
+                          try {
+                              setLoading(true);
+                              const updatedClient = { ...clientToValidate, estadoUsuario: true, documentoUrl: "" };
+                              await updateUsuario(clientToValidate.id, updatedClient);
+                              toast.success('Cliente aprobado y activado correctamente.');
+                              setIsValidationDialogOpen(false);
+                              fetchData();
+                          } catch (error) {
+                              toast.error('Error al aprobar cliente');
+                          } finally {
+                              setLoading(false);
+                          }
+                      }}
+                      disabled={loading}
+                  >
+                      <Shield className="w-5 h-5 mr-2" />
+                      Aprobar y Activar
+                  </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Eliminación */}
       <UniversalDeleteDialog

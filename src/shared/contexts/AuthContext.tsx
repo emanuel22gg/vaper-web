@@ -44,6 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 3. Verificar si el usuario está activo
       if (!foundUserApi.estadoUsuario) {
+        if (foundUserApi.documentoUrl) {
+          throw new Error('UserPendingApproval');
+        }
         throw new Error('UserDeactivated');
       }
 
@@ -149,23 +152,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!roleFound) return false;
 
-      // 3. Crear el usuario en la API
+      // 3. Crear el usuario en la API con estadoUsuario = false para requerir aprobación
       const newUsuarioApi: Omit<UsuarioDto, 'id'> = {
         nombres: userData.firstName,
         apellidos: userData.lastName,
         correo: userData.email,
         contraseña: userData.password,
         rolId: roleFound.id,
-        estadoUsuario: true,
+        estadoUsuario: false, // Inactivo por defecto, requiere validación de edad
+        documentoUrl: userData.documentoUrl, // Guardar la URL del documento
         // Campos requeridos por la API con valores por defecto si no están en userData
         tipoDocumento: 'CC',
-        numeroDocumento: '0000000000',
-        telefono: '0000000000',
-        ciudad: 'Desconocida',
-        direccion: 'Desconocida',
-        barrio: 'Desconocido',
-        departamento: 'Desconocido',
-        fechaNacimiento: new Date().toISOString().split('T')[0]
+        numeroDocumento: userData.username || '0000000000', // Usamos el username (documento) si existe
+        telefono: userData.telefono || '',
+        ciudad: userData.ciudad || '',
+        departamento: userData.departamento || '',
+        direccion: userData.direccion || '',
+        barrio: userData.barrio || '',
+        fechaNacimiento: userData.fechaNacimiento || new Date().toISOString().split('T')[0],
+        tipoCliente: 'Minorista'
       };
 
       await apiService.createUsuario(newUsuarioApi);

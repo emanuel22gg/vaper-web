@@ -23,20 +23,24 @@ import {
     History
 } from 'lucide-react';
 import { UsuarioDto, VentaPedidoDto, DevolucionDto } from '@/shared/types';
-import { getVentaPedidos, getDevoluciones } from '@/shared/services/api';
+import { getVentaPedidos, getDevoluciones, updateUsuario, deleteUsuario } from '@/shared/services/api';
+import { toast } from 'sonner';
+import { Shield, Trash2 } from 'lucide-react';
 
 interface ClientDetailDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     cliente: UsuarioDto | null;
     onEdit?: (cliente: UsuarioDto) => void;
+    onRefresh?: () => void;
 }
 
 export const ClientDetailDialog: React.FC<ClientDetailDialogProps> = ({
     isOpen,
     onOpenChange,
     cliente,
-    onEdit
+    onEdit,
+    onRefresh
 }) => {
     const [pedidosCliente, setPedidosCliente] = useState<VentaPedidoDto[]>([]);
     const [devolucionesCliente, setDevolucionesCliente] = useState<DevolucionDto[]>([]);
@@ -127,6 +131,14 @@ export const ClientDetailDialog: React.FC<ClientDetailDialogProps> = ({
                         >
                             <History className="h-4 w-4" /> Historial Comercial
                         </TabsTrigger>
+                        {cliente.documentoUrl && (
+                            <TabsTrigger 
+                                value="documento" 
+                                className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
+                            >
+                                <Shield className="h-4 w-4" /> Documento (Validación)
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
@@ -270,6 +282,72 @@ export const ClientDetailDialog: React.FC<ClientDetailDialogProps> = ({
                             </>
                         )}
                     </TabsContent>
+
+                    {cliente.documentoUrl && (
+                        <TabsContent value="documento" className="space-y-8 animate-in fade-in-50 duration-500">
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                    <Shield className="h-3.5 w-3.5" /> Comprobante de Identidad
+                                </h4>
+                                <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                    <div className="text-sm">
+                                        <span className="text-gray-500 font-medium">Fecha de Nacimiento declarada: </span>
+                                        <span className="font-bold text-gray-900">
+                                            {cliente.fechaNacimiento ? new Date(cliente.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="text-gray-500 font-medium">Documento: </span>
+                                        <span className="font-bold text-gray-900">{cliente.numeroDocumento}</span>
+                                    </div>
+                                </div>
+                                <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex justify-center p-4">
+                                    <img 
+                                        src={cliente.documentoUrl} 
+                                        alt="Documento de Identidad" 
+                                        className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm"
+                                    />
+                                </div>
+                                {!cliente.estadoUsuario && (
+                                    <div className="flex gap-4 pt-4 border-t border-gray-100">
+                                        <Button 
+                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={async () => {
+                                                try {
+                                                    await deleteUsuario(cliente.id);
+                                                    toast.success('Cliente rechazado y eliminado.');
+                                                    onOpenChange(false);
+                                                    if (onRefresh) onRefresh();
+                                                } catch (error) {
+                                                    toast.error('Error al eliminar cliente');
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Rechazar y Eliminar
+                                        </Button>
+                                        <Button 
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                            onClick={async () => {
+                                                try {
+                                                    const updatedClient = { ...cliente, estadoUsuario: true, documentoUrl: "" };
+                                                    await updateUsuario(cliente.id, updatedClient);
+                                                    toast.success('Cliente aprobado y activado correctamente. El documento ha sido eliminado por seguridad y espacio.');
+                                                    onOpenChange(false);
+                                                    if (onRefresh) onRefresh();
+                                                } catch (error) {
+                                                    toast.error('Error al aprobar cliente');
+                                                }
+                                            }}
+                                        >
+                                            <Shield className="w-4 h-4 mr-2" />
+                                            Aprobar y Activar
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
 

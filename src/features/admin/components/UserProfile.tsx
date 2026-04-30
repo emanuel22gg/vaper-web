@@ -18,9 +18,16 @@ import {
   Crown,
   Briefcase,
   UserCircle,
-  Lock
+  Lock,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDepartments, getCitiesByDepartment } from '@/shared/services/api';
+import { DepartmentColombian, CityColombian } from '@/shared/types';
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
+import { cn } from "@/shared/ui/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,11 +55,48 @@ export const UserProfile: React.FC = () => {
     numeroDocumento: user?.numeroDocumento || '',
     tipoDocumento: user?.tipoDocumento || 'C.C',
     telefono: user?.telefono || '',
+    departamento: user?.departamento || '',
     ciudad: user?.ciudad || '',
     direccion: user?.direccion || '',
     barrio: user?.barrio || '',
     fechaNacimiento: user?.fechaNacimiento || ''
   });
+
+  const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
+  const [cities, setCities] = useState<CityColombian[]>([]);
+  const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
+  const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
+
+  React.useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const depts = await getDepartments();
+        setDepartments([...depts].sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (err) {
+        console.error("Error fetching departments", err);
+      }
+    };
+    fetchLocations();
+  }, []);
+
+  React.useEffect(() => {
+    if (profileData.departamento) {
+      const fetchCities = async () => {
+        try {
+          const dept = departments.find(d => d.name === profileData.departamento);
+          if (dept) {
+            const data = await getCitiesByDepartment(dept.id);
+            setCities([...data].sort((a, b) => a.name.localeCompare(b.name)));
+          }
+        } catch (err) {
+          console.error("Error fetching cities", err);
+        }
+      };
+      fetchCities();
+    } else {
+      setCities([]);
+    }
+  }, [profileData.departamento, departments]);
 
   const { updateUser } = useAuth();
 
@@ -84,6 +128,7 @@ export const UserProfile: React.FC = () => {
       numeroDocumento: profileData.numeroDocumento,
       tipoDocumento: profileData.tipoDocumento,
       telefono: profileData.telefono,
+      departamento: profileData.departamento,
       ciudad: profileData.ciudad,
       direccion: profileData.direccion,
       barrio: profileData.barrio,
@@ -305,16 +350,118 @@ export const UserProfile: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="ciudad" className="text-gray-700">Ciudad</Label>
-                  <Input
-                    id="ciudad"
-                    value={profileData.ciudad}
-                    onChange={(e) => setProfileData({ ...profileData, ciudad: e.target.value })}
-                    disabled={!isEditing}
-                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
-                  />
+                  <Label className="text-gray-700">Departamento</Label>
+                  {!isEditing ? (
+                    <Input
+                      value={profileData.departamento}
+                      disabled
+                      className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                    />
+                  ) : (
+                    <Popover open={isDeptPopoverOpen} onOpenChange={setIsDeptPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isDeptPopoverOpen}
+                          className="w-full justify-between bg-white border-gray-300 text-gray-900"
+                        >
+                          {profileData.departamento
+                            ? departments.find((dept) => dept.name === profileData.departamento)?.name
+                            : "Seleccionar departamento"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar departamento..." />
+                          <CommandList className="custom-scrollbar max-h-60">
+                            <CommandEmpty>No se encontró.</CommandEmpty>
+                            <CommandGroup>
+                              {departments.map((dept) => (
+                                <CommandItem
+                                  key={dept.id}
+                                  value={dept.name}
+                                  onSelect={() => {
+                                    setProfileData({ ...profileData, departamento: dept.name, ciudad: '' });
+                                    setIsDeptPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      profileData.departamento === dept.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {dept.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="text-gray-700">Ciudad</Label>
+                  {!isEditing ? (
+                    <Input
+                      value={profileData.ciudad}
+                      disabled
+                      className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                    />
+                  ) : (
+                    <Popover open={isCityPopoverOpen} onOpenChange={setIsCityPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isCityPopoverOpen}
+                          disabled={!profileData.departamento}
+                          className="w-full justify-between bg-white border-gray-300 text-gray-900 disabled:opacity-50"
+                        >
+                          {profileData.ciudad
+                            ? cities.find((city) => city.name === profileData.ciudad)?.name
+                            : profileData.departamento ? "Seleccionar ciudad" : "Selecciona depto primero"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar ciudad..." />
+                          <CommandList className="custom-scrollbar max-h-60">
+                            <CommandEmpty>No se encontró.</CommandEmpty>
+                            <CommandGroup>
+                              {cities.map((city) => (
+                                <CommandItem
+                                  key={city.id}
+                                  value={city.name}
+                                  onSelect={() => {
+                                    setProfileData({ ...profileData, ciudad: city.name });
+                                    setIsCityPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      profileData.ciudad === city.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {city.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="barrio" className="text-gray-700">Barrio</Label>
                   <Input
@@ -325,17 +472,16 @@ export const UserProfile: React.FC = () => {
                     className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="direccion" className="text-gray-700">Dirección</Label>
-                <Input
-                  id="direccion"
-                  value={profileData.direccion}
-                  onChange={(e) => setProfileData({ ...profileData, direccion: e.target.value })}
-                  disabled={!isEditing}
-                  className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="direccion" className="text-gray-700">Dirección</Label>
+                  <Input
+                    id="direccion"
+                    value={profileData.direccion}
+                    onChange={(e) => setProfileData({ ...profileData, direccion: e.target.value })}
+                    disabled={!isEditing}
+                    className="bg-gray-50 border-gray-300 text-gray-900 disabled:opacity-50"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

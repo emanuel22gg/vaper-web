@@ -63,6 +63,7 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   lastLogin?: Date;
+  documentoUrl?: string;
 }
 
 export interface RegisterData {
@@ -72,6 +73,13 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   role: string;
+  documentoUrl?: string;
+  telefono?: string;
+  departamento?: string;
+  ciudad?: string;
+  barrio?: string;
+  direccion?: string;
+  fechaNacimiento?: string;
 }
 
 export interface AuthContextType {
@@ -137,6 +145,7 @@ export interface UsuarioDto {
   rolId: number;
   tipoCliente?: 'Minorista' | 'Mayorista' | null;
   username?: string;
+  documentoUrl?: string; // Para validar la mayoría de edad
 }
 
 export interface RolDto {

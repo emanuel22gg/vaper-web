@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
 import {
   Tabs,
@@ -24,6 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
+import { cn } from "@/shared/ui/utils";
 import { ImageWithFallback } from "@/shared/components/figma/ImageWithFallback";
 import {
   Search,
@@ -47,11 +52,13 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PedidosCliente } from "@/features/clients/components/PedidosCliente";
-import { getProductos, getCategorias, getAllImages } from "@/shared/services/api";
-import { Producto, Categoria } from "@/shared/types";
+import { getProductos, getCategorias, getAllImages, getDepartments, getCitiesByDepartment } from "@/shared/services/api";
+import { Producto, Categoria, DepartmentColombian, CityColombian } from "@/shared/types";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 interface CartItem {
   id: string;
@@ -65,6 +72,7 @@ interface CartItem {
 }
 
 export const TiendaCliente: React.FC = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState("all");
@@ -78,6 +86,56 @@ export const TiendaCliente: React.FC = () => {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState(user?.direccion || "");
+  const [deliveryDepartment, setDeliveryDepartment] = useState(user?.departamento || "");
+  const [deliveryCity, setDeliveryCity] = useState(user?.ciudad || "");
+  const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
+  const [cities, setCities] = useState<CityColombian[]>([]);
+  const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
+  const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    if (user?.direccion && !deliveryAddress) {
+      setDeliveryAddress(user.direccion);
+    }
+    if (user?.departamento && !deliveryDepartment) {
+      setDeliveryDepartment(user.departamento);
+    }
+    if (user?.ciudad && !deliveryCity) {
+      setDeliveryCity(user.ciudad);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const depts = await getDepartments();
+        setDepartments([...depts].sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (err) {
+        console.error("Error fetching departments", err);
+      }
+    };
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
+    if (deliveryDepartment) {
+      const fetchCities = async () => {
+        try {
+          const dept = departments.find(d => d.name === deliveryDepartment);
+          if (dept) {
+            const data = await getCitiesByDepartment(dept.id);
+            setCities([...data].sort((a, b) => a.name.localeCompare(b.name)));
+          }
+        } catch (err) {
+          console.error("Error fetching cities", err);
+        }
+      };
+      fetchCities();
+    } else {
+      setCities([]);
+    }
+  }, [deliveryDepartment, departments]);
 
   useEffect(() => {
     fetchData();
@@ -685,6 +743,122 @@ export const TiendaCliente: React.FC = () => {
                     <MapPin className="h-4 w-4" />
                     <span>Entrega en Medellín en 24-48 horas</span>
                   </div>
+
+                  <div className="pt-2 border-t space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-gray-900 font-medium">Departamento *</Label>
+                        <Popover open={isDeptPopoverOpen} onOpenChange={setIsDeptPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={isDeptPopoverOpen}
+                              className="w-full justify-between border-gray-300"
+                            >
+                              {deliveryDepartment
+                                ? departments.find((dept) => dept.name === deliveryDepartment)?.name
+                                : "Selecciona..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar departamento..." />
+                              <CommandList className="custom-scrollbar max-h-60">
+                                <CommandEmpty>No se encontró.</CommandEmpty>
+                                <CommandGroup>
+                                  {departments.map((dept) => (
+                                    <CommandItem
+                                      key={dept.id}
+                                      value={dept.name}
+                                      onSelect={() => {
+                                        setDeliveryDepartment(dept.name);
+                                        setDeliveryCity('');
+                                        setIsDeptPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          deliveryDepartment === dept.name ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {dept.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-gray-900 font-medium">Ciudad *</Label>
+                        <Popover open={isCityPopoverOpen} onOpenChange={setIsCityPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={isCityPopoverOpen}
+                              disabled={!deliveryDepartment}
+                              className="w-full justify-between border-gray-300 disabled:opacity-50"
+                            >
+                              {deliveryCity
+                                ? cities.find((city) => city.name === deliveryCity)?.name
+                                : deliveryDepartment ? "Selecciona..." : "Elige depto"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar ciudad..." />
+                              <CommandList className="custom-scrollbar max-h-60">
+                                <CommandEmpty>No se encontró.</CommandEmpty>
+                                <CommandGroup>
+                                  {cities.map((city) => (
+                                    <CommandItem
+                                      key={city.id}
+                                      value={city.name}
+                                      onSelect={() => {
+                                        setDeliveryCity(city.name);
+                                        setIsCityPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          deliveryCity === city.name ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {city.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-address" className="text-gray-900 font-medium">Dirección de Entrega *</Label>
+                      <Input
+                        id="checkout-address"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Ej. Calle 10 #20-30"
+                        className="border-gray-300"
+                      />
+                    </div>
+                    {(!deliveryAddress.trim() || !deliveryDepartment || !deliveryCity) && (
+                      <p className="text-xs text-red-500 font-medium flex items-center">
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Es necesario completar tu ubicación (departamento, ciudad y dirección) para el envío.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -696,7 +870,13 @@ export const TiendaCliente: React.FC = () => {
                   Seguir Comprando
                 </Button>
                 <Button
+                  className="bg-black hover:bg-gray-800 text-white"
+                  disabled={!deliveryAddress.trim() || !deliveryDepartment || !deliveryCity}
                   onClick={() => {
+                    if (!deliveryAddress.trim() || !deliveryDepartment || !deliveryCity) {
+                      toast.error("Por favor completa los datos de ubicación para la entrega.");
+                      return;
+                    }
                     toast.success(
                       "¡Pedido realizado con éxito! Nos pondremos en contacto contigo.",
                     );
