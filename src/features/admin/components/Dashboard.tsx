@@ -197,6 +197,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     id: string;
   } | null>(null);
 
+  const [navigationPayload, setNavigationPayload] = useState<any>(null);
+
   // Estado para sub-vistas (ej. cobrar desde cartera)
   const [subViewPedido, setSubViewPedido] = useState<VentaPedidoDto | null>(null);
 
@@ -474,10 +476,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const productosVendidosTotal = realPedidos.reduce((sum, item) => (item.estadoId === 1 || item.estadoId === 5) ? sum + (item.detalleVenta_Pedido?.reduce((s, d) => s + d.cantidad, 0) || 0) : sum, 0);
 
   // Función para manejar navegación interna y notificar al padre
-  const handleViewChange = (view: string) => {
+  const handleViewChange = (view: string, payload?: any) => {
     setActiveView(view);
     setDetailView(null); // Limpiar vista de detalle cuando cambia la vista principal
     setSubViewPedido(null); // Limpiar sub-vistas
+    setNavigationPayload(payload || null);
     if (onAdminNavigate) {
       onAdminNavigate(view);
     }
@@ -579,7 +582,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         );
       case "productos":
         return hasPermission("Gestionar Productos") ? (
-          <Productos />
+          <Productos initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
           <div>Sin permisos</div>
         );
@@ -591,7 +594,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         );
       case "clientes":
         return hasPermission("Gestionar Clientes") ? (
-          <Clientes />
+          <Clientes initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
           <div>Sin permisos</div>
         );
@@ -603,7 +606,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         );
       case "pedidos":
         return hasPermission("Gestionar Pedidos") ? (
-          <Pedidos />
+          <Pedidos initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
           <div>Sin permisos</div>
         );
@@ -627,7 +630,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onBack={() => setSubViewPedido(null)}
             />
           ) : (
-            <Cartera onVerAbonos={(p) => setSubViewPedido(p)} />
+            <Cartera onVerAbonos={(p) => setSubViewPedido(p)} initialSearchTerm={navigationPayload?.toString() || ''} />
           )
         ) : (
           <div>Sin permisos</div>

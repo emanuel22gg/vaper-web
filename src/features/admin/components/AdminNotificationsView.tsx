@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingCart, AlertCircle, Clock, Package, ChevronRight, BellRing } from 'lucide-react';
+import { ShoppingCart, AlertCircle, Clock, Package, ChevronRight, BellRing, UserPlus } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/ui/card';
-import { getProductos, getVentaPedidos, getEstados } from '@/shared/services/api';
+import { getProductos, getVentaPedidos, getEstados, getUsuarios } from '@/shared/services/api';
 
 interface AdminNotificationsViewProps {
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, payload?: any) => void;
 }
 
 export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewProps) {
@@ -16,15 +16,17 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
   const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [expiringInstallments, setExpiringInstallments] = useState<any[]>([]);
+  const [pendingClients, setPendingClients] = useState<any[]>([]);
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const [productos, pedidos, estados] = await Promise.all([
+      const [productos, pedidos, estados, usuarios] = await Promise.all([
         getProductos(),
         getVentaPedidos(),
         getEstados(),
+        getUsuarios(),
       ]);
 
       const lowStock = productos.filter((p: any) => p.stock <= 5 && p.estado);
@@ -57,6 +59,10 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
       });
 
       setExpiringInstallments(expiring);
+
+      const pendingCli = usuarios.filter((u: any) => u.rolId === 3 && !u.estadoUsuario && u.documentoUrl);
+      setPendingClients(pendingCli);
+
       setLastCheck(new Date());
 
     } catch (error) {
@@ -70,7 +76,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const totalAlerts = lowStockProducts.length + pendingOrders.length + expiringInstallments.length;
+  const totalAlerts = lowStockProducts.length + pendingOrders.length + expiringInstallments.length + pendingClients.length;
 
   if (loading && totalAlerts === 0) {
     return (
@@ -116,8 +122,50 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
           
+          {/* Columna Clientes */}
+          <Card className="shadow-sm border-purple-100 flex flex-col">
+            <CardHeader className="bg-purple-50/50 border-b border-purple-100 pb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg text-purple-900 flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-purple-600" />
+                    Clientes Pendientes
+                  </CardTitle>
+                  <CardDescription className="text-purple-600/70 mt-1">Por Autorizar</CardDescription>
+                </div>
+                <Badge className="bg-purple-600 font-bold hover:bg-purple-700">{pendingClients.length}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 p-0">
+              {pendingClients.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 text-sm">Sin clientes por autorizar.</div>
+              ) : (
+                <div className="divide-y divide-gray-50 flex flex-col max-h-[500px] overflow-y-auto">
+                  {pendingClients.map((client) => (
+                    <div key={client.id} className="p-4 hover:bg-purple-50/30 transition-colors flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-purple-100/50 p-2 rounded-lg text-purple-600">
+                           <UserPlus className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800">Cliente #{String(client.id).padStart(3, '0')}</p>
+                          <p className="text-xs font-semibold text-gray-500">
+                             {client.numeroDocumento}
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-purple-600 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('clientes', client.numeroDocumento)}>
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Columna Pedidos */}
           <Card className="shadow-sm border-blue-100 flex flex-col">
             <CardHeader className="bg-blue-50/50 border-b border-blue-100 pb-4">
@@ -150,7 +198,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
                           </p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="text-blue-600 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('pedidos')}>
+                      <Button variant="ghost" size="icon" className="text-blue-600 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('pedidos', pedido.id)}>
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
@@ -192,7 +240,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
                           </p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="text-amber-600 shrink-0 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('productos')}>
+                      <Button variant="ghost" size="icon" className="text-amber-600 shrink-0 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('productos', prod.nombreProducto)}>
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
@@ -240,7 +288,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon" className="text-red-600 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('cartera')}>
+                          <Button variant="ghost" size="icon" className="text-red-600 opacity-0 group-hover:opacity-100" onClick={() => onNavigate('cartera', abono.id)}>
                             <ChevronRight className="h-5 w-5" />
                           </Button>
                         </div>

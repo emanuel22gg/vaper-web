@@ -64,15 +64,17 @@ import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png'
 
 interface PedidosProps {
   onNavigateToDetail?: (id: string) => void;
+  initialSearchTerm?: string;
 }
 
 export const Pedidos: React.FC<PedidosProps> = ({
   onNavigateToDetail,
+  initialSearchTerm = '',
 }) => {
   // Estados para pedidos y UI
   const [pedidos, setPedidos] = useState<VentaPedidoDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [filterStatus, setFilterStatus] = useState("all");
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -196,6 +198,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusColor = (estado: string) => {
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "text-green-600";
+    if (s.includes('enviado')) return "text-blue-600";
+    if (s.includes('despachan') || s.includes('preparan')) return "text-cyan-600";
     if (s.includes('pendien')) return "text-amber-600";
     if (s.includes('abono')) return "text-indigo-600";
     if (s.includes('anula') || s.includes('cancel')) return "text-red-600";
@@ -205,6 +209,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusIcon = (estado: string) => {
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return <CheckCircle className="h-3 w-3" />;
+    if (s.includes('enviado')) return <ShoppingCart className="h-3 w-3" />;
+    if (s.includes('despachan') || s.includes('preparan')) return <Package className="h-3 w-3" />;
     if (s.includes('pendien')) return <Clock className="h-3 w-3" />;
     if (s.includes('abono')) return <Receipt className="h-3 w-3" />;
     if (s.includes('anula') || s.includes('cancel')) return <XCircle className="h-3 w-3" />;
@@ -214,6 +220,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusVariant = (estado: string) => {
     const s = estado.toLowerCase();
     if (s.includes('completa') || s.includes('entrega') || s.includes('aceptad')) return "default" as const;
+    if (s.includes('enviado') || s.includes('despachan')) return "secondary" as const;
     if (s.includes('abono')) return "outline" as const;
     if (s.includes('anula') || s.includes('cancel')) return "destructive" as const;
     return "secondary" as const;
@@ -404,8 +411,13 @@ export const Pedidos: React.FC<PedidosProps> = ({
           fechaEntrega: newStatusId === 1 ? now : pedidoToUpdate.fechaEntrega
         };
 
-        // Si el estado cambia a Entregado (1) desde otro estado, deducir inventario
-        if (newStatusId === 1 && pedidoToUpdate.estadoId !== 1) {
+        // Si el estado cambia a Despachando/Enviado/Entregado y ANTES no lo era, deducir inventario
+        const isDespachandoEnAdelante = (estadoId: number) => {
+          const name = getStatusName(estadoId).toLowerCase();
+          return ['despachando', 'enviado', 'entregado'].includes(name);
+        };
+
+        if (isDespachandoEnAdelante(newStatusId) && !isDespachandoEnAdelante(pedidoToUpdate.estadoId)) {
           const syncToast = toast.loading('Sincronizando inventario...');
           try {
             let detallesRaw: any[] = pedidoToUpdate.detalleVenta_Pedido ||
@@ -546,11 +558,13 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   {Array.from(new Set(statuses
                     .filter(s => {
                       const name = s.nombreEstado.toLowerCase();
-                      return ['pendiente', 'entregado', 'anulada', 'anulado', 'cancelado'].includes(name);
+                      return ['pendiente', 'despachando', 'enviado', 'entregado', 'anulada', 'anulado', 'cancelado'].includes(name);
                     })
                     .map(s => {
                       const name = s.nombreEstado.toLowerCase();
                       if (name === 'pendiente') return 'pendiente';
+                      if (name === 'despachando') return 'despachando';
+                      if (name === 'enviado') return 'enviado';
                       if (name === 'entregado') return 'entregado';
                       return 'cancelado';
                     })
@@ -683,6 +697,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
                       const name = s.nombreEstado.toLowerCase();
                       let label = '';
                       if (name === 'pendiente') label = 'Pendiente';
+                      else if (name === 'despachando') label = 'Despachando';
+                      else if (name === 'enviado') label = 'Enviado';
                       else if (name === 'entregado') label = 'Entregado';
                       else if (name === 'anulada' || name === 'anulado' || name === 'cancelado') label = 'Cancelado';
 

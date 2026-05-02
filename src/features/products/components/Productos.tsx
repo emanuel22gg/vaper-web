@@ -90,14 +90,18 @@ const ProductoImage = ({ idImagen, fallbackImage }: { idImagen?: number, fallbac
 };
 
 
-export const Productos: React.FC = () => {
+interface ProductosProps {
+  initialSearchTerm?: string;
+}
+
+export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [productosFiltrados, setProductosFiltrados] = useState<
     Producto[]
   >([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [filtroCategoria, setFiltroCategoria] =
     useState<string>("todas");
 

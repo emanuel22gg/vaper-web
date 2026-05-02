@@ -31,7 +31,8 @@ import {
     CheckCircle2,
     ChevronRight,
     ChevronLeft,
-    ArrowLeft
+    ArrowLeft,
+    Info
 } from "lucide-react";
 import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados, updateVentaPedido, updateProducto, createAbono } from "@/shared/services/api";
 import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, DetalleVentaPedidoDto } from "@/shared/types";
@@ -648,31 +649,23 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                 <div>
                                     <h3 className="text-sm font-medium">Garantía / devoluciones</h3>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Defina el plazo máximo para devoluciones de este pedido.
+                                        Información sobre el plazo máximo para devoluciones de este pedido.
                                     </p>
                                 </div>
 
-                                <div className={cn("rounded-lg border space-y-4 bg-card", embedInDialog ? "p-4" : "p-6")}>
-                                    <Label className="text-sm font-medium">Vigencia</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {[1, 2, 3, 4].map((mes) => (
-                                            <Button
-                                                key={mes}
-                                                type="button"
-                                                variant={vigenciaDevolucion === mes ? "default" : "outline"}
-                                                className={cn(
-                                                    vigenciaDevolucion === mes &&
-                                                    "bg-yellow-400 hover:bg-yellow-500 text-black border-none"
-                                                )}
-                                                onClick={() => setVigenciaDevolucion(mes)}
-                                            >
-                                                {mes} {mes === 1 ? "mes" : "meses"}
-                                            </Button>
-                                        ))}
+                                <div className={cn("rounded-lg border space-y-4 bg-blue-50/50 border-blue-100", embedInDialog ? "p-4" : "p-6")}>
+                                    <div className="flex items-start gap-3">
+                                        <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-blue-900">Plazo de garantía</h4>
+                                            <p className="text-sm text-blue-800 mt-1">
+                                                Hay plazo de <strong>un mes (30 días)</strong> para hacer la devolución de los productos de este pedido.
+                                            </p>
+                                            <p className="text-xs text-blue-600/80 mt-2">
+                                                Esta política aplica de manera global para todos los artículos.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground border-t pt-3">
-                                        Este plazo se usará al calcular la garantía en devoluciones.
-                                    </p>
                                 </div>
                             </div>
                         </TabsContent>

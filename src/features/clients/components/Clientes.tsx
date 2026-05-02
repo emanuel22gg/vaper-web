@@ -54,11 +54,15 @@ import {
 
 // Eliminados mockClientes para usar API real
 
-export const Clientes: React.FC = () => {
+interface ClientesProps {
+  initialSearchTerm?: string;
+}
+
+export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) => {
   const [clientes, setClientes] = useState<UsuarioDto[]>([]);
   const [ventas, setVentas] = useState<VentaPedidoDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 

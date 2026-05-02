@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { getProductos, getVentaPedidos, getEstados } from '@/shared/services/api';
+import { getProductos, getVentaPedidos, getEstados, getUsuarios } from '@/shared/services/api';
 import { Bell } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 
 interface AdminNotificationsProps {
   onNavigate: (view: any) => void;
-  onAdminNavigate?: (view: string) => void;
+  onAdminNavigate?: (view: string, payload?: any) => void;
 }
 
 export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotificationsProps) {
@@ -16,6 +16,7 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
 
   // Tracking para emitir notificaciones
   const knownOrderIds = React.useRef<Set<number>>(new Set());
+  const knownPendingClientIds = React.useRef<Set<number>>(new Set());
   const isFirstLoad = React.useRef(true);
   
   const handleNavigateToCenter = useCallback(() => {
@@ -26,9 +27,17 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
     }
   }, [onAdminNavigate, onNavigate]);
 
-  const handleNavigateToPedidos = useCallback(() => {
+  const handleNavigateToPedidos = useCallback((pedidoId?: string) => {
     if (onAdminNavigate) {
-      onAdminNavigate('pedidos');
+      onAdminNavigate('pedidos', pedidoId);
+    } else {
+      onNavigate('admin');
+    }
+  }, [onAdminNavigate, onNavigate]);
+
+  const handleNavigateToClientes = useCallback((documento?: string) => {
+    if (onAdminNavigate) {
+      onAdminNavigate('clientes', documento);
     } else {
       onNavigate('admin');
     }
@@ -36,10 +45,11 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const [productos, pedidos, estados] = await Promise.all([
+      const [productos, pedidos, estados, usuarios] = await Promise.all([
         getProductos(),
         getVentaPedidos(),
         getEstados(),
+        getUsuarios(),
       ]);
 
       const lowStockProducts = productos.filter((p: any) => p.stock <= 5 && p.estado);
@@ -65,7 +75,7 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
               duration: 8000,
               action: {
                 label: 'Ir a Pedidos',
-                onClick: () => handleNavigateToPedidos()
+                onClick: () => handleNavigateToPedidos(newlyAdded[0].toString())
               }
             });
           } else {
@@ -84,6 +94,48 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
         }
       }
 
+      // Lógica de toast de notificaciones para Clientes Pendientes
+      const pendingClients = usuarios.filter((u: any) => u.rolId === 3 && !u.estadoUsuario && u.documentoUrl);
+      const currentPendingClientIds = pendingClients.map((u: any) => u.id);
+
+      if (isFirstLoad.current) {
+        currentPendingClientIds.forEach((id: number) => knownPendingClientIds.current.add(id));
+        // isFirstLoad.current se cambia a false más abajo
+      } else {
+        const newlyAddedClients = currentPendingClientIds.filter((id: number) => !knownPendingClientIds.current.has(id));
+        
+        if (newlyAddedClients.length > 0) {
+          if (newlyAddedClients.length === 1) {
+            const client = pendingClients.find((c: any) => c.id === newlyAddedClients[0]);
+            toast.info(`¡Tienes un cliente pendiente por autorizar!`, {
+              description: `Un cliente se está registrando (ID: ${client?.id}). Autorízalo.`,
+              icon: '👤',
+              duration: 8000,
+              action: {
+                label: 'Ir a Clientes',
+                onClick: () => handleNavigateToClientes(client?.numeroDocumento)
+              }
+            });
+          } else {
+            toast.info(`¡Hay ${newlyAddedClients.length} clientes pendientes por autorizar!`, {
+              description: 'Dirígete a la sección de clientes para autorizarlos.',
+              icon: '👤',
+              duration: 8000,
+              action: {
+                label: 'Ir a Clientes',
+                onClick: () => handleNavigateToClientes()
+              }
+            });
+          }
+          
+          newlyAddedClients.forEach((id: number) => knownPendingClientIds.current.add(id));
+        }
+      }
+
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
+
       const today = new Date();
       const expiringInstallments = pedidos.filter((p: any) => {
         if (p.estadoId === 6 || (p.plazoAbonos && p.plazoAbonos > 0)) {
@@ -99,12 +151,12 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
         return false;
       });
 
-      setTotalAlerts(lowStockProducts.length + pendingOrders.length + expiringInstallments.length);
+      setTotalAlerts(lowStockProducts.length + pendingOrders.length + expiringInstallments.length + pendingClients.length);
 
     } catch (error) {
       console.error("Error fetching notifications badging:", error);
     }
-  }, [handleNavigateToPedidos]);
+  }, [handleNavigateToPedidos, handleNavigateToClientes]);
 
   useEffect(() => {
     fetchNotifications();

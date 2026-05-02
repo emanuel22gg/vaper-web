@@ -625,6 +625,7 @@ export const Ventas: React.FC = () => {
             descuento: montoDescuento > 0 ? montoDescuento : 0,
             envio: 0,
             total: total,
+            vigenciaDevolucion: 1,
             tipoVenta: "Venta" // <--- REVERTIDO: Ocultar de Pedidos usando el tipo estándar
           };
 
@@ -1760,6 +1761,19 @@ export const Ventas: React.FC = () => {
                   <Calculator className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm sm:text-base">No hay productos agregados</p>
                   <p className="text-xs sm:text-sm mt-1">Selecciona un producto para comenzar</p>
+                </div>
+              )}
+
+              {/* Mensaje de Garantía */}
+              {formData.items.length > 0 && (
+                <div className="mt-4 p-4 rounded-lg bg-blue-50/50 border border-blue-100 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900">Plazo de garantía</h4>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Hay plazo de <strong>un mes (30 días)</strong> para hacer la devolución de los productos de esta venta.
+                    </p>
+                  </div>
                 </div>
               )}
                 </TabsContent>

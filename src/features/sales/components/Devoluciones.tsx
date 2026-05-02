@@ -288,8 +288,8 @@ export const Devoluciones: React.FC = () => {
         if (venda.fechaCreacion) {
           const fechaVenta = new Date(venda.fechaCreacion);
           const hoy = new Date();
-          // Usar vigenciaDevolucion del backend o por defecto 1 mes
-          const mesesVigencia = venda.vigenciaDevolucion || 1;
+          // Dejar la devolución fija en 1 mes por acuerdo con el cliente
+          const mesesVigencia = 1;
 
           const fechaLimite = new Date(fechaVenta);
           fechaLimite.setMonth(fechaLimite.getMonth() + mesesVigencia);

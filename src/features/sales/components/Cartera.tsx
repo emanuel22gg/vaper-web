@@ -38,15 +38,16 @@ interface DebtorInfo {
 
 interface CarteraProps {
     onVerAbonos?: (pedido: VentaPedidoDto) => void;
+    initialSearchTerm?: string;
 }
 
-export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos }) => {
+export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm = '' }) => {
     const [pedidos, setPedidos] = useState<VentaPedidoDto[]>([]);
     const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
     const [abonos, setAbonos] = useState<VentaAbonoDto[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [hasSearched, setHasSearched] = useState(false);
+    const [searchQuery, setSearchQuery] = useState(initialSearchTerm);
+    const [hasSearched, setHasSearched] = useState(!!initialSearchTerm);
 
     useEffect(() => {
         fetchData();
