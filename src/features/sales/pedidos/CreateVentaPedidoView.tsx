@@ -685,7 +685,10 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                             <p className="text-xs text-muted-foreground mt-0.5">Seleccione si el cliente retira o se envía.</p>
                                         </div>
                                         <div className="w-[200px]">
-                                            <Select value={tipoEntrega} onValueChange={(v: 'domicilio'|'tienda') => setTipoEntrega(v)}>
+                                            <Select value={tipoEntrega} onValueChange={(v: 'domicilio'|'tienda') => {
+                                                setTipoEntrega(v);
+                                                if (v === 'tienda') setCostoEnvio(0);
+                                            }}>
                                                 <SelectTrigger className="font-medium bg-white text-blue-600 border-blue-200"><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="domicilio">Envío a domicilio</SelectItem>
@@ -845,6 +848,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                 value={costoEnvio === 0 ? "" : formatCOP(costoEnvio)}
                                                 onChange={handleCostoEnvioChange}
                                                 placeholder="$ 0"
+                                                disabled={tipoEntrega === 'tienda'}
                                             />
                                         </div>
                                         {metodoPago === "Abonos" && (
@@ -960,7 +964,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                     {activeTab === "entrega" && (
                         <Button
                             onClick={handleGuardarPedido}
-                            disabled={guardando || !direccionEntrega || !ciudadEntrega}
+                            disabled={guardando || (tipoEntrega === 'domicilio' && (!direccionEntrega || !ciudadEntrega))}
                             className="bg-black hover:bg-gray-800 text-white border-none"
                         >
                             {guardando ? "Guardando…" : "Finalizar pedido"}
