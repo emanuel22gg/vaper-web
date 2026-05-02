@@ -5,14 +5,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogTrigger
 } from '@/shared/ui/dialog';
 import { Categoria } from '@/shared/types';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { getImage } from '@/shared/services/api';
-import { Building2, Info, LayoutDashboard, Tag, Image as ImageIcon } from 'lucide-react';
+import { Info, LayoutDashboard, Tag } from 'lucide-react';
 import { cn } from "@/shared/ui/utils";
 
 interface DetailCategoriaDialogProps {
@@ -67,13 +68,30 @@ export const DetailCategoriaDialog: React.FC<DetailCategoriaDialogProps> = ({
           {/* Cabecera */}
           <div className="flex items-center gap-6">
             {imageUrl ? (
-              <div className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex-shrink-0">
-                <img
-                  src={imageUrl}
-                  alt={categoria.nombreCategoria}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div title="Ver imagen ampliada" className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-blue-500 transition-all">
+                    <img
+                      src={imageUrl}
+                      alt={categoria.nombreCategoria}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </DialogTrigger>
+                <DialogContent hideClose={true} className="sm:max-w-2xl bg-transparent border-none shadow-none flex justify-center p-0">
+                  <DialogHeader className="sr-only">
+                    <DialogTitle>Imagen de {categoria.nombreCategoria}</DialogTitle>
+                    <DialogDescription>Vista ampliada</DialogDescription>
+                  </DialogHeader>
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-md p-2">
+                    <img
+                      src={imageUrl}
+                      alt={categoria.nombreCategoria}
+                      className="max-w-full max-h-[80vh] object-contain rounded-xl"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             ) : (
               <div className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 flex-shrink-0">
                 <LayoutDashboard className="h-10 w-10 text-gray-300" />
@@ -99,12 +117,6 @@ export const DetailCategoriaDialog: React.FC<DetailCategoriaDialogProps> = ({
               >
                 <Info className="h-4 w-4" /> Información General
               </TabsTrigger>
-              <TabsTrigger 
-                value="media" 
-                className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none transition-all"
-              >
-                <ImageIcon className="h-4 w-4" /> Elementos Visuales
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
@@ -117,22 +129,6 @@ export const DetailCategoriaDialog: React.FC<DetailCategoriaDialogProps> = ({
                     {categoria.descripcion || "Sin descripción disponible."}
                   </p>
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="media" className="space-y-8 animate-in fade-in-50 duration-500">
-              <div className="space-y-6">
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Vista Previa de Imagen</h4>
-                {imageUrl ? (
-                  <div className="rounded-xl overflow-hidden border border-gray-100 max-w-sm mx-auto">
-                    <img src={imageUrl} alt={categoria.nombreCategoria} className="w-full h-auto" />
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 p-12 rounded-xl border border-gray-100 text-center flex flex-col items-center justify-center">
-                    <ImageIcon className="h-10 w-10 text-gray-300 mb-3" />
-                    <p className="text-sm font-medium text-gray-500">Sin elemento visual asignado</p>
-                  </div>
-                )}
               </div>
             </TabsContent>
           </Tabs>

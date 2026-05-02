@@ -8,6 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/shared/ui/dialog';
 import { Separator } from '@/shared/ui/separator';
 import { Package, Calendar, User, DollarSign, Hash, Scale, Ruler, Tag, Building2, AlertTriangle, Info, PackageCheck, Archive } from 'lucide-react';
@@ -104,13 +105,30 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
           {/* Cabecera del Producto */}
           <div className="flex items-center gap-6">
             {imageUrl ? (
-              <div className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex-shrink-0">
-                <img
-                  src={imageUrl}
-                  alt={producto.nombreProducto}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div title="Ver imagen ampliada" className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-blue-500 transition-all">
+                    <img
+                      src={imageUrl}
+                      alt={producto.nombreProducto}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </DialogTrigger>
+                <DialogContent hideClose={true} className="sm:max-w-2xl bg-transparent border-none shadow-none flex justify-center p-0">
+                  <DialogHeader className="sr-only">
+                    <DialogTitle>Imagen de {producto.nombreProducto}</DialogTitle>
+                    <DialogDescription>Vista ampliada</DialogDescription>
+                  </DialogHeader>
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-md p-2">
+                    <img
+                      src={imageUrl}
+                      alt={producto.nombreProducto}
+                      className="max-w-full max-h-[80vh] object-contain rounded-xl"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             ) : (
               <div className="h-20 w-20 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 flex-shrink-0">
                 <Package className="h-10 w-10 text-gray-300" />

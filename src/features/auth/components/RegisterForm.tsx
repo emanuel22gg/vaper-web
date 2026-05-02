@@ -258,7 +258,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                     <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 text-white" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent 
+                <PopoverContent
                   className="w-[--radix-popover-trigger-width] p-0 bg-gray-900 border-gray-700 text-white rounded-xl"
                 >
                   <Command className="bg-gray-900 text-white rounded-xl">
@@ -310,7 +310,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                     <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 text-white" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent 
+                <PopoverContent
                   className="w-[--radix-popover-trigger-width] p-0 bg-gray-900 border-gray-700 text-white rounded-xl"
                 >
                   <Command className="bg-gray-900 text-white rounded-xl">
@@ -373,7 +373,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
           <div className="space-y-1.5">
             <Label className="text-gray-300 text-xs font-medium flex justify-between">
               <span>Foto de Documento *</span>
-              <span className="text-red-400">Obligatorio (Mayoría de edad)</span>
+              <span className="text-red-400 text-right">Obligatorio (Mayoría de edad, documento por ambos lados)</span>
             </Label>
             {!imageFile ? (
               <div className="flex justify-center px-4 py-3 border border-yellow-500/30 border-dashed rounded-xl bg-black/30 hover:bg-black/50 hover:border-yellow-500/50 transition-all">

@@ -436,10 +436,10 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                     Ingrese el documento del cliente para cargar sus datos.
                                 </p>
 
-                                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="documento">Documento</Label>
-                                        <div className="relative">
+                                <div className="space-y-2">
+                                    <Label htmlFor="documento" className="font-medium">Documento</Label>
+                                    <div className="flex flex-col sm:flex-row gap-3 items-center">
+                                        <div className="relative flex-1 w-full">
                                             <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="documento"
@@ -447,17 +447,17 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                 value={documentoSearch}
                                                 onChange={(e) => setDocumentoSearch(e.target.value)}
                                                 onKeyPress={(e) => e.key === 'Enter' && handleBuscarCliente()}
-                                                className="pl-9"
+                                                className="pl-9 w-full"
                                             />
                                         </div>
+                                        <Button
+                                            onClick={handleBuscarCliente}
+                                            disabled={buscandoCliente}
+                                            className="bg-[rgb(21,93,252)] hover:bg-blue-700 shrink-0 w-full sm:w-auto"
+                                        >
+                                            {buscandoCliente ? "Buscando…" : "Localizar cliente"}
+                                        </Button>
                                     </div>
-                                    <Button
-                                        onClick={handleBuscarCliente}
-                                        disabled={buscandoCliente}
-                                        className="bg-[rgb(21,93,252)] hover:bg-blue-700 shrink-0"
-                                    >
-                                        {buscandoCliente ? "Buscando…" : "Localizar cliente"}
-                                    </Button>
                                 </div>
 
                                 {clienteEncontrado ? (
