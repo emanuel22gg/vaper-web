@@ -112,6 +112,28 @@ export const Proveedores: React.FC = () => {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] =
     useState(false);
 
+  // Funciones de validación en tiempo real
+  const isDuplicateEmail = (email: string, excludeId?: number) => {
+    if (!email) return false;
+    return proveedores.some(
+      (p) => p.id !== excludeId && p.email?.toLowerCase() === email.toLowerCase()
+    );
+  };
+
+  const isDuplicateCedula = (cedula: string, excludeId?: number) => {
+    if (!cedula) return false;
+    return proveedores.some(
+      (p) => p.id !== excludeId && (p.cedula === cedula || p.numeroDocumento === cedula)
+    );
+  };
+
+  const isDuplicateNit = (nit: string, excludeId?: number) => {
+    if (!nit) return false;
+    return proveedores.some(
+      (p) => p.id !== excludeId && (p.nit === nit || p.numeroDocumento === nit)
+    );
+  };
+
   // Estados para paginación - 5 elementos por página
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -259,6 +281,39 @@ export const Proveedores: React.FC = () => {
       return;
     }
 
+    // Validar duplicados en la lista local
+    const emailExists = proveedores.some(
+      (p) => p.email?.toLowerCase() === newProveedor.email?.toLowerCase()
+    );
+    if (emailExists) {
+      toast.error("Email duplicado", {
+        description: "Ya existe un proveedor con este correo electrónico.",
+      });
+      return;
+    }
+
+    if (isPersonaNatural) {
+      const cedulaExists = proveedores.some(
+        (p) => p.cedula === newProveedor.cedula || p.numeroDocumento === newProveedor.cedula
+      );
+      if (cedulaExists) {
+        toast.error("Documento duplicado", {
+          description: "Ya existe un proveedor con esta cédula.",
+        });
+        return;
+      }
+    } else {
+      const nitExists = proveedores.some(
+        (p) => p.nit === newProveedor.nit || p.numeroDocumento === newProveedor.nit
+      );
+      if (nitExists) {
+        toast.error("NIT duplicado", {
+          description: "Ya existe un proveedor con este NIT.",
+        });
+        return;
+      }
+    }
+
     // Si todas las validaciones pasan, mostrar confirmación
     setIsConfirmDialogOpen(true);
   };
@@ -308,6 +363,40 @@ export const Proveedores: React.FC = () => {
 
   const handleUpdateProveedor = async () => {
     if (selectedProveedor) {
+      // Validar duplicados en la lista local (excluyendo el actual)
+      const emailExists = proveedores.some(
+        (p) => p.id !== selectedProveedor.id && p.email?.toLowerCase() === selectedProveedor.email?.toLowerCase()
+      );
+      if (emailExists) {
+        toast.error("Email duplicado", {
+          description: "Ya existe otro proveedor con este correo electrónico.",
+        });
+        return;
+      }
+
+      const isNatural = selectedProveedor.tipoPersona === "natural";
+      if (isNatural) {
+        const cedulaExists = proveedores.some(
+          (p) => p.id !== selectedProveedor.id && (p.cedula === selectedProveedor.cedula || p.numeroDocumento === selectedProveedor.cedula)
+        );
+        if (cedulaExists) {
+          toast.error("Documento duplicado", {
+            description: "Ya existe otro proveedor con esta cédula.",
+          });
+          return;
+        }
+      } else {
+        const nitExists = proveedores.some(
+          (p) => p.id !== selectedProveedor.id && (p.nit === selectedProveedor.nit || p.numeroDocumento === selectedProveedor.nit)
+        );
+        if (nitExists) {
+          toast.error("NIT duplicado", {
+            description: "Ya existe otro proveedor con este NIT.",
+          });
+          return;
+        }
+      }
+
       try {
         await updateProveedor(selectedProveedor.id, selectedProveedor);
         await fetchProveedores();
@@ -578,13 +667,21 @@ export const Proveedores: React.FC = () => {
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="cedula">Documento de identidad *</Label>
+                            <Label htmlFor="cedula" className={isDuplicateCedula(newProveedor.cedula || "") ? "text-red-500" : ""}>
+                              Documento de identidad *
+                            </Label>
                             <Input
                               id="cedula"
                               value={newProveedor.cedula || ""}
                               onChange={(e) => setNewProveedor({ ...newProveedor, cedula: e.target.value })}
                               placeholder="43123456"
+                              className={isDuplicateCedula(newProveedor.cedula || "") ? "border-red-500 focus-visible:ring-red-500" : ""}
                             />
+                            {isDuplicateCedula(newProveedor.cedula || "") && (
+                              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                                <AlertTriangle className="h-3 w-3" /> Este documento ya está registrado.
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -607,13 +704,21 @@ export const Proveedores: React.FC = () => {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="nit">NIT *</Label>
+                              <Label htmlFor="nit" className={isDuplicateNit(newProveedor.nit || "") ? "text-red-500" : ""}>
+                                NIT *
+                              </Label>
                               <Input
                                 id="nit"
                                 value={newProveedor.nit || ""}
                                 onChange={(e) => setNewProveedor({ ...newProveedor, nit: e.target.value })}
                                 placeholder="900123456-1"
+                                className={isDuplicateNit(newProveedor.nit || "") ? "border-red-500 focus-visible:ring-red-500" : ""}
                               />
+                              {isDuplicateNit(newProveedor.nit || "") && (
+                                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                                  <AlertTriangle className="h-3 w-3" /> Este NIT ya está registrado.
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -633,18 +738,25 @@ export const Proveedores: React.FC = () => {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="email">Email *</Label>
+                            <Label htmlFor="email" className={isDuplicateEmail(newProveedor.email || "") ? "text-red-500" : ""}>
+                              Email *
+                            </Label>
                             <div className="relative">
-                              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Mail className={`absolute left-3 top-3 h-4 w-4 ${isDuplicateEmail(newProveedor.email || "") ? "text-red-400" : "text-gray-400"}`} />
                               <Input
                                 id="email"
                                 type="email"
                                 value={newProveedor.email || ""}
                                 onChange={(e) => setNewProveedor({ ...newProveedor, email: e.target.value })}
                                 placeholder="contacto@ejemplo.com"
-                                className="pl-9"
+                                className={`pl-9 ${isDuplicateEmail(newProveedor.email || "") ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                               />
                             </div>
+                            {isDuplicateEmail(newProveedor.email || "") && (
+                              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                                <AlertTriangle className="h-3 w-3" /> Este correo ya está registrado.
+                              </p>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="telefono">Teléfono *</Label>
@@ -1157,7 +1269,7 @@ export const Proveedores: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-cedula">
+                    <Label htmlFor="edit-cedula" className={isDuplicateCedula(selectedProveedor.cedula || "", selectedProveedor.id) ? "text-red-500" : ""}>
                       Documento de identidad *
                     </Label>
                     <Input
@@ -1169,7 +1281,13 @@ export const Proveedores: React.FC = () => {
                           cedula: e.target.value,
                         })
                       }
+                      className={isDuplicateCedula(selectedProveedor.cedula || "", selectedProveedor.id) ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
+                    {isDuplicateCedula(selectedProveedor.cedula || "", selectedProveedor.id) && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                        <AlertTriangle className="h-3 w-3" /> Este documento ya pertenece a otro proveedor.
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1196,7 +1314,7 @@ export const Proveedores: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-nit">NIT *</Label>
+                      <Label htmlFor="edit-nit" className={isDuplicateNit(selectedProveedor.nit || "", selectedProveedor.id) ? "text-red-500" : ""}>NIT *</Label>
                       <Input
                         id="edit-nit"
                         value={selectedProveedor.nit || ""}
@@ -1206,7 +1324,13 @@ export const Proveedores: React.FC = () => {
                             nit: e.target.value,
                           })
                         }
+                        className={isDuplicateNit(selectedProveedor.nit || "", selectedProveedor.id) ? "border-red-500 focus-visible:ring-red-500" : ""}
                       />
+                      {isDuplicateNit(selectedProveedor.nit || "", selectedProveedor.id) && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <AlertTriangle className="h-3 w-3" /> Este NIT ya pertenece a otro proveedor.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -1239,7 +1363,7 @@ export const Proveedores: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-email">Email *</Label>
+                    <Label htmlFor="edit-email" className={isDuplicateEmail(selectedProveedor.email || "", selectedProveedor.id) ? "text-red-500" : ""}>Email *</Label>
                     <Input
                       id="edit-email"
                       type="email"
@@ -1250,7 +1374,13 @@ export const Proveedores: React.FC = () => {
                           email: e.target.value,
                         })
                       }
+                      className={isDuplicateEmail(selectedProveedor.email || "", selectedProveedor.id) ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
+                    {isDuplicateEmail(selectedProveedor.email || "", selectedProveedor.id) && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                        <AlertTriangle className="h-3 w-3" /> Este correo ya pertenece a otro proveedor.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-telefono">

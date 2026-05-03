@@ -107,6 +107,14 @@ export const Compras: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
+  // Validación de factura duplicada
+  const isDuplicateFactura = (factura: string) => {
+    if (!factura) return false;
+    return ordenes.some(
+      (o) => o.numeroFactura?.toLowerCase() === factura.toLowerCase() && o.estado !== 3
+    );
+  };
+
   // Estados para crear nueva orden
   const [newOrden, setNewOrden] = useState({
     proveedorId: 0,
@@ -413,6 +421,13 @@ export const Compras: React.FC = () => {
       return;
     }
 
+    if (isDuplicateFactura(newOrden.numeroFactura)) {
+      toast.error("Factura duplicada", {
+        description: "Ya existe una compra con este número de factura.",
+      });
+      return;
+    }
+
     const total = productosValidos.reduce(
       (sum, p) => sum + p.cantidad * p.precioCompra,
       0,
@@ -682,7 +697,13 @@ export const Compras: React.FC = () => {
                         onChange={(e) =>
                           setNewOrden({ ...newOrden, numeroFactura: e.target.value })
                         }
+                        className={isDuplicateFactura(newOrden.numeroFactura) ? "border-red-500 focus-visible:ring-red-500" : ""}
                       />
+                      {isDuplicateFactura(newOrden.numeroFactura) && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <AlertTriangle className="h-3 w-3" /> Este número de factura ya está registrado.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="fechaFactura">
