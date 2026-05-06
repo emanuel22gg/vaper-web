@@ -400,8 +400,6 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
                       <LoadingScreen message="Cargando abonos..." />
                     </TableCell>
                   </TableRow>
-                    </TableCell>
-                  </TableRow>
                 ) : abonosIndividuales.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">
