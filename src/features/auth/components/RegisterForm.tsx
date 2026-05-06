@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/shared/ui/label';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import * as apiService from '@/shared/services/api';
 import { toast } from "sonner";
-import { Upload, CheckCircle, FileImage, X } from 'lucide-react';
+import { Upload, CheckCircle, FileImage, X, Loader2, AlertCircle } from 'lucide-react';
 import { DepartmentColombian, CityColombian } from '@/shared/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
@@ -20,9 +20,79 @@ interface RegisterFormProps {
   onCancel?: () => void;
 }
 
+// ── Reglas de validación ──────────────────────────────────────────────────────
+const ONLY_LETTERS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
+const ONLY_NUMBERS = /^\d+$/;
+const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function calcAge(dateStr: string): number {
+  if (!dateStr) return 0;
+  const today = new Date();
+  const birth  = new Date(dateStr);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function validateField(
+  field: string,
+  value: string,
+  tipoDocumento?: string
+): string {
+  switch (field) {
+    case 'firstName':
+    case 'lastName': {
+      if (!value.trim()) return 'Este campo es obligatorio.';
+      if (value.trim().length < 2) return 'Mínimo 2 caracteres.';
+      if (!ONLY_LETTERS.test(value)) return 'Solo se permiten letras.';
+      return '';
+    }
+    case 'documento': {
+      if (!value.trim()) return 'Este campo es obligatorio.';
+      if (!ONLY_NUMBERS.test(value)) return 'Solo se permiten números.';
+      const min = tipoDocumento === 'TI' ? 10 : 6;
+      const max = tipoDocumento === 'TI' ? 11 : 10;
+      if (value.length < min) return `Mínimo ${min} dígitos para ${tipoDocumento}.`;
+      if (value.length > max) return `Máximo ${max} dígitos para ${tipoDocumento}.`;
+      return '';
+    }
+    case 'email': {
+      if (!value.trim()) return 'Este campo es obligatorio.';
+      if (!EMAIL_REGEX.test(value)) return 'Ingresa un correo válido.';
+      return '';
+    }
+    case 'password': {
+      if (!value) return 'Este campo es obligatorio.';
+      if (value.length < 8) return 'Mínimo 8 caracteres.';
+      if (!/[A-Z]/.test(value)) return 'Debe tener al menos una mayúscula.';
+      if (!/\d/.test(value)) return 'Debe tener al menos un número.';
+      return '';
+    }
+    case 'fechaNacimiento': {
+      if (!value) return 'Este campo es obligatorio.';
+      if (calcAge(value) < 18) return 'Debes ser mayor de 18 años.';
+      return '';
+    }
+    case 'telefono': {
+      if (!value.trim()) return 'Este campo es obligatorio.';
+      if (!ONLY_NUMBERS.test(value)) return 'Solo se permiten números.';
+      if (value.length !== 10) return 'El teléfono debe tener 10 dígitos.';
+      return '';
+    }
+    default:
+      return '';
+  }
+}
+
+const REQUIRED_FIELDS = ['firstName', 'lastName', 'documento', 'email', 'password', 'fechaNacimiento', 'telefono'] as const;
+type RequiredField = typeof REQUIRED_FIELDS[number];
+
+// ── Componente ────────────────────────────────────────────────────────────────
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel }) => {
   const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
   const [cities, setCities] = useState<CityColombian[]>([]);
@@ -32,6 +102,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   const [registerData, setRegisterData] = useState({
     firstName: '',
     lastName: '',
+    tipoDocumento: 'CC',
     documento: '',
     email: '',
     password: '',
@@ -43,7 +114,42 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
     fechaNacimiento: '',
   });
 
+  // Errores por campo y campos que ya fueron tocados
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredField, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<RequiredField, boolean>>>({});
+
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Marca el campo como tocado y valida al salir del foco
+  const handleBlur = useCallback((field: RequiredField) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+    setFieldErrors(prev => ({ ...prev, [field]: msg }));
+  }, [registerData]);
+
+  // Actualiza el valor y valida en tiempo real si el campo ya fue tocado
+  const handleChange = useCallback((field: RequiredField, value: string) => {
+    setRegisterData(prev => {
+      const next = { ...prev, [field]: value };
+      if (touched[field]) {
+        const msg = validateField(field, value, next.tipoDocumento);
+        setFieldErrors(fe => ({ ...fe, [field]: msg }));
+      }
+      return next;
+    });
+  }, [touched]);
+
+  // Al cambiar tipo de documento, re-valida el número si ya fue tocado
+  const handleTipoDocumentoChange = useCallback((value: string) => {
+    setRegisterData(prev => {
+      const next = { ...prev, tipoDocumento: value };
+      if (touched['documento']) {
+        const msg = validateField('documento', next.documento, value);
+        setFieldErrors(fe => ({ ...fe, documento: msg }));
+      }
+      return next;
+    });
+  }, [touched]);
 
   React.useEffect(() => {
     const fetchDepartments = async () => {
@@ -76,31 +182,58 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
     }
   }, [registerData.departamento, departments]);
 
+  // Clases del input según estado de validación
+  const inputClass = (field: RequiredField) => {
+    const base = "bg-black/50 border text-white rounded-xl h-9 text-sm transition-all focus:ring-1";
+    if (!touched[field]) return `${base} border-gray-700 focus:border-yellow-500 focus:ring-yellow-500`;
+    if (fieldErrors[field]) return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
+    return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
-    try {
-      if (!imageFile) {
-        setError('Debes adjuntar un comprobante o foto de tu documento de identidad para validar la mayoría de edad.');
-        setIsLoading(false);
-        return;
-      }
+    // Validar todos los campos obligatorios antes de enviar
+    const allTouched: Partial<Record<RequiredField, boolean>> = {};
+    const allErrors: Partial<Record<RequiredField, string>> = {};
+    let hasErrors = false;
 
+    for (const field of REQUIRED_FIELDS) {
+      allTouched[field] = true;
+      const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+      allErrors[field] = msg;
+      if (msg) hasErrors = true;
+    }
+
+    setTouched(allTouched);
+    setFieldErrors(allErrors);
+
+    if (hasErrors) return;
+
+    if (!imageFile) {
+      setError('Debes adjuntar un comprobante o foto de tu documento de identidad para validar la mayoría de edad.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
       // 1. Subir la imagen
       let documentoUrl = '';
       try {
+        setLoadingStep('Subiendo documento...');
         const uploadResult = await apiService.uploadImage(imageFile);
         documentoUrl = uploadResult.urlimagen;
       } catch (err) {
         console.error('Error uploading image', err);
         setError('Hubo un error al subir la imagen del documento.');
         setIsLoading(false);
+        setLoadingStep('');
         return;
       }
 
       // 2. Registrar usuario (se creará inactivo)
+      setLoadingStep('Creando tu cuenta...');
       const success = await register({
         firstName: registerData.firstName,
         lastName: registerData.lastName,
@@ -108,6 +241,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
         email: registerData.email,
         password: registerData.password,
         role: 'Cliente',
+        tipoDocumento: registerData.tipoDocumento,
         documentoUrl,
         telefono: registerData.telefono,
         departamento: registerData.departamento,
@@ -130,8 +264,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
       setError('Error inesperado durante el registro.');
     } finally {
       setIsLoading(false);
+      setLoadingStep('');
     }
   };
+
+  // Helper para mostrar el mensaje de error bajo el campo
+  const FieldError = ({ field }: { field: RequiredField }) =>
+    touched[field] && fieldErrors[field] ? (
+      <p className="text-red-400 text-xs mt-1">{fieldErrors[field]}</p>
+    ) : null;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -143,47 +284,67 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
       <form onSubmit={handleRegister} className="space-y-4">
         <div className="space-y-4">
           {error && (
-            <Alert className="border-red-500/50 bg-red-500/10 text-red-400 py-2 rounded-xl mb-3">
-              <AlertDescription className="text-sm font-medium">
-                {error}
-              </AlertDescription>
-            </Alert>
+            <div style={{ background: 'linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 100%)', border: '1px solid rgba(239,68,68,0.6)', borderLeft: '3px solid #ef4444', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <AlertCircle style={{ color: '#ef4444', width: '15px', height: '15px', flexShrink: 0, marginTop: '1px' }} />
+              <p style={{ color: '#f1f1f1', fontSize: '13px', fontWeight: '400', margin: 0, lineHeight: '1.5' }}>{error}</p>
+            </div>
           )}
 
-          {/* Fila 1: Nombres, Apellidos, Documento */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Fila 1: Nombres, Apellidos, Tipo Doc, Documento */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="firstName" className="text-gray-300 text-xs font-medium">Nombres *</Label>
               <Input
                 id="firstName"
-                required
                 value={registerData.firstName}
-                onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('firstName', e.target.value)}
+                onBlur={() => handleBlur('firstName')}
+                className={inputClass('firstName')}
                 placeholder="Tus nombres"
               />
+              <FieldError field="firstName" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lastName" className="text-gray-300 text-xs font-medium">Apellidos *</Label>
               <Input
                 id="lastName"
-                required
                 value={registerData.lastName}
-                onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('lastName', e.target.value)}
+                onBlur={() => handleBlur('lastName')}
+                className={inputClass('lastName')}
                 placeholder="Tus apellidos"
               />
+              <FieldError field="lastName" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="documento" className="text-gray-300 text-xs font-medium">Documento *</Label>
+              <Label htmlFor="tipoDocumento" className="text-gray-300 text-xs font-medium">Tipo Doc. *</Label>
+              <Select
+                value={registerData.tipoDocumento}
+                onValueChange={handleTipoDocumentoChange}
+              >
+                <SelectTrigger
+                  id="tipoDocumento"
+                  className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                >
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-700 text-white rounded-xl">
+                  <SelectItem value="CC" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">CC - Cédula de Ciudadanía</SelectItem>
+                  <SelectItem value="TI" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">TI - Tarjeta de Identidad</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="documento" className="text-gray-300 text-xs font-medium">N° Documento *</Label>
               <Input
                 id="documento"
-                required
                 value={registerData.documento}
-                onChange={(e) => setRegisterData({ ...registerData, documento: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('documento', e.target.value)}
+                onBlur={() => handleBlur('documento')}
+                className={inputClass('documento')}
                 placeholder="Ej. 1000000000"
               />
+              <FieldError field="documento" />
             </div>
           </div>
 
@@ -194,36 +355,39 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Input
                 id="email"
                 type="email"
-                required
                 value={registerData.email}
-                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('email', e.target.value)}
+                onBlur={() => handleBlur('email')}
+                className={inputClass('email')}
                 placeholder="correo@ejemplo.com"
               />
+              <FieldError field="email" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-gray-300 text-xs font-medium">Contraseña *</Label>
               <Input
                 id="password"
                 type="password"
-                required
                 value={registerData.password}
-                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('password', e.target.value)}
+                onBlur={() => handleBlur('password')}
+                className={inputClass('password')}
                 placeholder="Crea contraseña"
               />
+              <FieldError field="password" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fechaNacimiento" className="text-gray-300 text-xs font-medium">F. Nacimiento *</Label>
               <Input
                 id="fechaNacimiento"
                 type="date"
-                required
                 value={registerData.fechaNacimiento}
-                onChange={(e) => setRegisterData({ ...registerData, fechaNacimiento: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('fechaNacimiento', e.target.value)}
+                onBlur={() => handleBlur('fechaNacimiento')}
+                className={inputClass('fechaNacimiento')}
                 style={{ colorScheme: 'dark' }}
               />
+              <FieldError field="fechaNacimiento" />
             </div>
           </div>
 
@@ -233,12 +397,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Label htmlFor="telefono" className="text-gray-300 text-xs font-medium">Teléfono *</Label>
               <Input
                 id="telefono"
-                required
                 value={registerData.telefono}
-                onChange={(e) => setRegisterData({ ...registerData, telefono: e.target.value })}
-                className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
+                onChange={(e) => handleChange('telefono', e.target.value)}
+                onBlur={() => handleBlur('telefono')}
+                className={inputClass('telefono')}
                 placeholder="Ej. 3001234567"
               />
+              <FieldError field="telefono" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="departamento" className="text-gray-300 text-xs font-medium">Depto (Opcional)</Label>
@@ -271,7 +436,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                             key={dept.id}
                             value={dept.name}
                             onSelect={() => {
-                              setRegisterData({ ...registerData, departamento: dept.name, ciudad: '' });
+                              setRegisterData(prev => ({ ...prev, departamento: dept.name, ciudad: '' }));
                               setIsDeptPopoverOpen(false);
                             }}
                             className="text-sm text-white hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-800"
@@ -323,7 +488,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                             key={city.id}
                             value={city.name}
                             onSelect={() => {
-                              setRegisterData({ ...registerData, ciudad: city.name });
+                              setRegisterData(prev => ({ ...prev, ciudad: city.name }));
                               setIsCityPopoverOpen(false);
                             }}
                             className="text-sm text-white hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-800"
@@ -352,7 +517,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Input
                 id="barrio"
                 value={registerData.barrio}
-                onChange={(e) => setRegisterData({ ...registerData, barrio: e.target.value })}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, barrio: e.target.value }))}
                 className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
                 placeholder="Ej. Laureles"
               />
@@ -362,7 +527,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Input
                 id="direccion"
                 value={registerData.direccion}
-                onChange={(e) => setRegisterData({ ...registerData, direccion: e.target.value })}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, direccion: e.target.value }))}
                 className="bg-black/50 border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-white rounded-xl h-9 text-sm transition-all"
                 placeholder="Ej. Calle 10 #20-30"
               />
@@ -371,31 +536,34 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
 
           {/* Fila 5: Comprobante */}
           <div className="space-y-1.5">
-            <Label className="text-gray-300 text-xs font-medium flex justify-between">
-              <span>Foto de Documento *</span>
-              <span className="text-red-400 text-right">Obligatorio (Mayoría de edad, documento por ambos lados)</span>
+            <Label className="text-gray-300 text-xs font-medium">
+              Foto del Documento *
             </Label>
+            <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 mb-1">
+              <span className="text-yellow-400 mt-0.5 shrink-0 text-sm">⚠</span>
+              <p className="text-xs text-yellow-200 leading-relaxed">
+                <span className="font-semibold text-yellow-400">Sube una foto de tu documento por ambos lados Es obligatorio para verificar tu mayoría de edad y activar la cuenta(preferible PDF).</span>. 
+              </p>
+            </div>
             {!imageFile ? (
-              <div className="flex justify-center px-4 py-3 border border-yellow-500/30 border-dashed rounded-xl bg-black/30 hover:bg-black/50 hover:border-yellow-500/50 transition-all">
-                <div className="flex items-center space-x-3 text-center">
-                  <Upload className="h-5 w-5 text-yellow-500/80" />
-                  <div className="text-sm text-gray-400">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer font-medium text-yellow-500 hover:text-yellow-400 transition-colors"
-                    >
-                      <span>Seleccionar archivo</span>
-                      <Input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept="image/*"
-                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
-                </div>
+              <div className="flex justify-center px-4 py-4 border border-dashed border-yellow-500/50 rounded-xl bg-white/5 hover:bg-white/10 hover:border-yellow-400 transition-all cursor-pointer">
+                <label htmlFor="file-upload" className="flex items-center gap-3 cursor-pointer">
+                  <Upload className="h-5 w-5 text-yellow-400 shrink-0" />
+                  <span className="text-sm text-gray-200">
+                    {' '}
+                    <span className="font-semibold text-yellow-400 hover:text-yellow-300 transition-colors">
+                      Haz clic para seleccionar archivo
+                    </span>
+                  </span>
+                  <Input
+                    id="file-upload"
+                    name="file-upload"
+                    type="file"
+                    className="sr-only"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  />
+                </label>
               </div>
             ) : (
               <div className="flex items-center justify-between p-2.5 border border-green-500/40 rounded-xl bg-green-500/10 backdrop-blur-sm">
@@ -443,10 +611,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
           </Button>
           <Button
             type="submit"
-            className="flex-1 h-11 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] transition-all duration-300"
+            className="flex-1 h-11 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] transition-all duration-300 disabled:opacity-80"
             disabled={isLoading}
           >
-            {isLoading ? '...' : 'Registrarse'}
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{loadingStep || 'Procesando...'}</span>
+              </span>
+            ) : (
+              'Registrarse'
+            )}
           </Button>
         </div>
       </form>

@@ -157,7 +157,7 @@ export const ClientDetailDialog: React.FC<ClientDetailDialogProps> = ({
                                 <div className="space-y-1">
                                     <Label className="text-xs font-medium text-gray-500">Fecha de Nacimiento</Label>
                                     <p className="text-sm font-medium text-gray-900">
-                                        {cliente.fechaNacimiento ? new Date(cliente.fechaNacimiento).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No registrada'}
+                                        {cliente.fechaNacimiento ? new Date(cliente.fechaNacimiento + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No registrada'}
                                     </p>
                                 </div>
                                 <div className="space-y-1">
@@ -293,7 +293,7 @@ export const ClientDetailDialog: React.FC<ClientDetailDialogProps> = ({
                                     <div className="text-sm">
                                         <span className="text-gray-500 font-medium">Fecha de Nacimiento declarada: </span>
                                         <span className="font-bold text-gray-900">
-                                            {cliente.fechaNacimiento ? new Date(cliente.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                                            {cliente.fechaNacimiento ? new Date(cliente.fechaNacimiento + 'T00:00:00').toLocaleDateString() : 'No registrada'}
                                         </span>
                                     </div>
                                     <div className="text-sm">

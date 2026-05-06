@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados } from '@/shared/services/api';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
@@ -1206,7 +1207,13 @@ export const Ventas: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentVentas.map((venta) => (
+              {isLoadingVentas ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-48 text-center">
+                    <LoadingScreen message="Cargando ventas..." />
+                  </TableCell>
+                </TableRow>
+              ) : currentVentas.map((venta) => (
                 <TableRow key={venta.id}>
                   <TableCell className="font-medium text-black">{venta.numeroVenta}</TableCell>
                   <TableCell>{venta.nombreCliente}</TableCell>

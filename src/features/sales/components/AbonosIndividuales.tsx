@@ -36,6 +36,7 @@ import {
 import { Separator } from '@/shared/ui/separator';
 import { toast } from "sonner";
 import { VentaPedidoDto, VentaAbonoDto, UsuarioDto } from '@/shared/types';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { getAbonos, getAbonosByPedido, createAbono, updateAbono, updateVentaPedido, getUsuarioById } from '@/shared/services/api';
 
 // Adaptar el DTO para el componente local
@@ -395,8 +396,10 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
-                      Cargando historial...
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando abonos..." />
+                    </TableCell>
+                  </TableRow>
                     </TableCell>
                   </TableRow>
                 ) : abonosIndividuales.length === 0 ? (

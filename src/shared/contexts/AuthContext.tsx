@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         estadoUsuario: false, // Inactivo por defecto, requiere validación de edad
         documentoUrl: userData.documentoUrl, // Guardar la URL del documento
         // Campos requeridos por la API con valores por defecto si no están en userData
-        tipoDocumento: 'CC',
+        tipoDocumento: userData.tipoDocumento || 'CC',
         numeroDocumento: userData.username || '0000000000', // Usamos el username (documento) si existe
         telefono: userData.telefono || '',
         ciudad: userData.ciudad || '',

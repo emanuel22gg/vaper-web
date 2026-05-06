@@ -107,6 +107,7 @@ import {
   ProductoDto,
   UsuarioDto
 } from "@/shared/types";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
   Tabs,
   TabsContent,
@@ -673,7 +674,7 @@ export const Devoluciones: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    <LoadingScreen message="Cargando devoluciones..." />
                   </TableCell>
                 </TableRow>
               ) : paginatedDevoluciones.length === 0 ? (

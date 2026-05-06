@@ -73,6 +73,7 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   role: string;
+  tipoDocumento?: string;
   documentoUrl?: string;
   telefono?: string;
   departamento?: string;

@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import { UniversalDeleteDialog } from "@/shared/components/UniversalDeleteDialog";
 import { getProveedores, createProveedor, updateProveedor, deleteProveedor, getCompras } from "@/shared/services/api";
 import { Proveedor, CompraDto } from "@/shared/types";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
   Plus,
   Search,
@@ -894,7 +895,13 @@ export const Proveedores: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentProveedores.map((proveedor) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando proveedores..." />
+                    </TableCell>
+                  </TableRow>
+                ) : currentProveedores.map((proveedor) => (
                   <TableRow key={proveedor.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">

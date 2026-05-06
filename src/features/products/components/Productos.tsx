@@ -12,6 +12,7 @@ import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
 import { Switch } from "@/shared/ui/switch";
 import { toast } from "sonner";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
   getProductos,
   getCategorias,
@@ -441,8 +442,8 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                        Cargando productos...
+                      <TableCell colSpan={7} className="h-48 text-center">
+                        <LoadingScreen message="Cargando productos..." />
                       </TableCell>
                     </TableRow>
                   ) : (

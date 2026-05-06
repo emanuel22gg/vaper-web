@@ -38,6 +38,7 @@ import { Separator } from "@/shared/ui/separator";
 import { TablePagination } from '@/shared/ui/TablePagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { VentaPedidoDto, UsuarioDto, Producto } from "@/shared/types";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados, getDetalleVentaPedidos } from "@/shared/services/api";
 import { CreateVentaPedidoView } from "../pedidos/CreateVentaPedidoView";
 import { toast } from "sonner";
@@ -592,8 +593,8 @@ export const Pedidos: React.FC<PedidosProps> = ({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
-                      Cargando pedidos...
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando pedidos..." />
                     </TableCell>
                   </TableRow>
                 ) : paginatedPedidos.length === 0 ? (

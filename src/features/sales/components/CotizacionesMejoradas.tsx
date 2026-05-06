@@ -94,6 +94,7 @@ import logoImage from "@/assets/da58514cc4a62145203981edd12b890ba8690130.png";
 import { cn } from "@/shared/ui/utils";
 import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion } from "@/shared/services/api";
 import { CotizacionDto, DetalleCotizacionDto } from "@/shared/types";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 
 // Interfaces para tipado
 interface Cliente {
@@ -1091,7 +1092,13 @@ export const Cotizaciones: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cotizacionesPaginadas.map((cotizacion) => (
+              {isInitialLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-48 text-center">
+                    <LoadingScreen message="Cargando cotizaciones..." />
+                  </TableCell>
+                </TableRow>
+              ) : cotizacionesPaginadas.map((cotizacion) => (
                 <TableRow key={cotizacion.id}>
                   <TableCell className="font-medium text-black">
                     {`COT-${String(cotizacion.id).padStart(3, '0')}`}

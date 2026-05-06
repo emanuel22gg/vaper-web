@@ -18,6 +18,7 @@ import { Button } from '@/shared/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import { getVentaPedidos, getUsuarios, getAbonos } from '@/shared/services/api';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { VentaPedidoDto, UsuarioDto, VentaAbonoDto } from '@/shared/types';
 import { toast } from 'sonner';
 
@@ -290,11 +291,8 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-12">
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-                                                        <p className="text-sm font-medium text-gray-500">Cargando datos de cartera...</p>
-                                                    </div>
+                                                <TableCell colSpan={6} className="h-48 text-center">
+                                                    <LoadingScreen message="Cargando datos de cartera..." />
                                                 </TableCell>
                                             </TableRow>
                                         ) : processedResults.length === 0 ? (

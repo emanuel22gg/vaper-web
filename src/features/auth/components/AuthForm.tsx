@@ -12,6 +12,7 @@ import { PasswordResetForm } from './PasswordResetForm';
 import { RegisterForm } from './RegisterForm';
 import * as apiService from '@/shared/services/api';
 import logoImage from '@/assets/logo_vaper_bee.jpg';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AuthFormProps {
   onSuccess?: () => void;
@@ -225,9 +226,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
 
               <form onSubmit={handleLogin} className="space-y-5">
                 {error && (
-                  <Alert className="border-red-500/50 bg-red-500/10 text-red-400 py-3 rounded-xl">
-                    <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
-                  </Alert>
+                  <div style={{ background: 'linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 100%)', border: '1px solid rgba(239,68,68,0.6)', borderLeft: '3px solid #ef4444', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                    <AlertCircle style={{ color: '#ef4444', width: '15px', height: '15px', flexShrink: 0, marginTop: '1px' }} />
+                    <p style={{ color: '#f1f1f1', fontSize: '13px', fontWeight: '400', margin: 0, lineHeight: '1.5' }}>{error}</p>
+                  </div>
                 )}
 
                 <div className="space-y-2">
@@ -297,15 +299,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
 
               <form onSubmit={handleRecoverPassword} className="space-y-5">
                 {error && (
-                  <Alert className="border-red-500/50 bg-red-500/10 text-red-400 py-3 rounded-xl">
-                    <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
-                  </Alert>
+                  <div style={{ background: 'linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 100%)', border: '1px solid rgba(239,68,68,0.6)', borderLeft: '3px solid #ef4444', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <AlertCircle style={{ color: '#ef4444', width: '15px', height: '15px', flexShrink: 0, marginTop: '1px' }} />
+                    <p style={{ color: '#f1f1f1', fontSize: '13px', fontWeight: '400', margin: 0, lineHeight: '1.5' }}>{error}</p>
+                  </div>
                 )}
 
                 {success && (
-                  <Alert className="border-green-500/50 bg-green-500/10 text-green-400 py-3 rounded-xl">
-                    <AlertDescription className="text-sm font-medium">{success}</AlertDescription>
-                  </Alert>
+                  <div style={{ background: 'linear-gradient(135deg, #0a1a0f 0%, #0f2d18 100%)', border: '1px solid rgba(34,197,94,0.6)', borderLeft: '3px solid #22c55e', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <CheckCircle2 style={{ color: '#22c55e', width: '15px', height: '15px', flexShrink: 0, marginTop: '1px' }} />
+                    <p style={{ color: '#f1f1f1', fontSize: '13px', fontWeight: '400', margin: 0, lineHeight: '1.5' }}>{success}</p>
+                  </div>
                 )}
 
                 <div className="space-y-2">

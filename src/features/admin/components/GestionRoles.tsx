@@ -3,6 +3,7 @@ import { useUsers } from '../hooks/useUsers';
 import { Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Badge } from '@/shared/ui/badge';
@@ -532,7 +533,13 @@ export const GestionRoles: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentRoles.map((role) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-48 text-center">
+                      <LoadingScreen message="Cargando roles..." />
+                    </TableCell>
+                  </TableRow>
+                ) : currentRoles.map((role) => (
                   <TableRow key={role.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">

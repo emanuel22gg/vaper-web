@@ -13,6 +13,7 @@ import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { Separator } from '@/shared/ui/separator';
 import { TablePagination } from '@/shared/ui/TablePagination';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { ClientEditDialog } from "./ClientEditDialog";
 import { ClientDetailDialog } from "./ClientDetailDialog";
 import { toast } from "sonner";
@@ -784,7 +785,13 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentClientes.map((cliente) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando clientes..." />
+                    </TableCell>
+                  </TableRow>
+                ) : currentClientes.map((cliente) => (
                   <TableRow key={cliente.id}>
                     <TableCell>
                       <div className="font-medium">{cliente.nombres} {cliente.apellidos}</div>
@@ -921,7 +928,7 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                 <div className="text-sm">
                   <span className="text-gray-500 font-medium">Fecha de Nacimiento declarada: </span>
                   <span className="font-bold text-gray-900">
-                    {clientToValidate.fechaNacimiento ? new Date(clientToValidate.fechaNacimiento).toLocaleDateString() : 'No registrada'}
+                    {clientToValidate.fechaNacimiento ? new Date(clientToValidate.fechaNacimiento + 'T00:00:00').toLocaleDateString() : 'No registrada'}
                   </span>
                 </div>
                 <div className="text-sm">

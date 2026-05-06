@@ -60,6 +60,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { toast } from "sonner";
 import { getCompras, createCompra, updateCompra, getProductos, getProveedores, updateProducto } from "@/shared/services/api";
 import { CompraDto, DetalleCompraDto, Producto, Proveedor } from "@/shared/types";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
   Plus,
   Search,
@@ -956,7 +957,13 @@ export const Compras: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedOrdenes.length === 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando compras..." />
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedOrdenes.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}

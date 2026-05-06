@@ -3,6 +3,7 @@ import { useUsers } from '../hooks/useUsers';
 import { User, Role, UserRole, Permission, UsuarioDto } from '@/shared/types';
 import { getDepartments } from '@/shared/services/api';
 import { Button } from '@/shared/ui/button';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -712,7 +713,13 @@ export const GestionUsuarios: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentUsers.map((user) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando usuarios..." />
+                    </TableCell>
+                  </TableRow>
+                ) : currentUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div>

@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/ui/card';
 import { getProductos, getVentaPedidos, getEstados, getUsuarios } from '@/shared/services/api';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 
 interface AdminNotificationsViewProps {
   onNavigate: (view: string, payload?: any) => void;
@@ -79,12 +80,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
   const totalAlerts = lowStockProducts.length + pendingOrders.length + expiringInstallments.length + pendingClients.length;
 
   if (loading && totalAlerts === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mb-4"></div>
-        <p className="text-lg font-medium">Cargando Centro de Notificaciones...</p>
-      </div>
-    );
+    return <LoadingScreen message="Cargando notificaciones..." />;
   }
 
   return (

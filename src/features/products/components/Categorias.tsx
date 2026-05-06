@@ -30,6 +30,7 @@ import {
 import { TablePagination } from '@/shared/ui/TablePagination';
 
 import { Categoria, CategoriaFormData } from '@/shared/types';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { filtrarCategorias } from '@/shared/utils/categorias';
 import { getCategorias, deleteCategoria, updateCategoria, getImage } from '@/shared/services/api';
 
@@ -80,7 +81,7 @@ export const Categorias: React.FC = () => {
   const [categoriaToDelete, setCategoriaToDelete] = useState<Categoria | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Estados de diálogos
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -266,8 +267,8 @@ export const Categorias: React.FC = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
-                      Cargando...
+                    <TableCell colSpan={6} className="h-48 text-center">
+                      <LoadingScreen message="Cargando categorías..." />
                     </TableCell>
                   </TableRow>
                 ) : currentCategorias.length === 0 ? (

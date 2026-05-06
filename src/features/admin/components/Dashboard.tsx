@@ -38,6 +38,7 @@ import { VentaPedidoDto, CompraDto, Producto, Categoria } from "@/shared/types";
 
 import { TiendaCliente } from "@/features/public/components/TiendaCliente";
 import { AdminPanel } from "@/features/admin/components/AdminPanel";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
   BarChart,
   Bar,
@@ -1211,10 +1212,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Contenido principal basado en la vista activa */}
         {loading && activeView === "dashboard" ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg border shadow-sm">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-muted-foreground animate-pulse">Cargando datos reales...</p>
-          </div>
+          <LoadingScreen message="Cargando datos del panel..." />
         ) : (
           renderContent()
         )}
