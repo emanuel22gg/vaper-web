@@ -1,7 +1,40 @@
+import { useEffect, useState } from 'react';
 import { Phone, Mail, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
+import { getCategorias } from '@/shared/services/api';
+import { Categoria } from '@/shared/types';
 
-export function Footer() {
+interface FooterProps {
+  onNavigate?: (view: 'home') => void;
+}
+
+export function Footer({ onNavigate }: FooterProps) {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+
+  useEffect(() => {
+    getCategorias()
+      .then(data => setCategorias(data.filter(c => c.estado)))
+      .catch(err => console.error('Error cargando categorías en footer:', err));
+  }, []);
+
+  const handleCategoryClick = (categoriaId: number) => {
+    // Si estamos en otra vista, primero navegar a home
+    if (onNavigate) {
+      onNavigate('home');
+    }
+    // Pequeño delay para que el catálogo se monte antes de disparar el evento
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('selectCategory', { detail: { categoryId: categoriaId } })
+      );
+      // Scroll al catálogo
+      const catalogo = document.getElementById('catalogo');
+      if (catalogo) {
+        catalogo.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   return (
     <footer id="footer" className="bg-black text-white relative pt-4">
       {/* Decorative Top Border Glow */}
@@ -38,11 +71,19 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-semibold text-yellow-500">Categorías</h3>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li className="hover:text-white cursor-pointer">Desechables</li>
-              <li className="hover:text-white cursor-pointer">Recargables</li>
-              <li className="hover:text-white cursor-pointer">Productos Eróticos</li>
-              <li className="hover:text-white cursor-pointer">Accesorios</li>
-              <li className="hover:text-white cursor-pointer">E-liquids</li>
+              {categorias.length > 0 ? (
+                categorias.map(cat => (
+                  <li
+                    key={cat.id}
+                    className="hover:text-white cursor-pointer transition-colors"
+                    onClick={() => handleCategoryClick(cat.id)}
+                  >
+                    {cat.nombreCategoria}
+                  </li>
+                ))
+              ) : (
+                <li className="text-gray-500 italic">Cargando...</li>
+              )}
             </ul>
           </div>
 

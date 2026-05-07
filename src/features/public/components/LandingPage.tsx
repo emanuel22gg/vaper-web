@@ -195,7 +195,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6">
             {renderMainContent()}
           </div>
-          {isMainView && <Footer />}
+          {isMainView && <Footer onNavigate={handleNavigation} />}
         </main>
       </div>
     </div>
