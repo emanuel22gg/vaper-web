@@ -28,7 +28,7 @@ import {
   CommandList
 } from "@/shared/ui/command";
 import { UsuarioDto, DepartmentColombian, CityColombian, VentaPedidoDto, DevolucionDto } from '@/shared/types';
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getDepartments, getCitiesByDepartment, getVentaPedidos, getDevoluciones } from '@/shared/services/api';
+import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getDepartments, getCitiesByDepartment, getVentaPedidos, getDevoluciones, notificarAprobacion, notificarRechazo } from '@/shared/services/api';
 import { UniversalDeleteDialog } from '@/shared/components/UniversalDeleteDialog';
 import {
   Plus,
@@ -949,12 +949,13 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                       onClick={async () => {
                           try {
                               setLoading(true);
+                              await notificarRechazo(clientToValidate.id);
                               await deleteUsuario(clientToValidate.id);
-                              toast.success('Cliente rechazado y eliminado.');
+                              toast.success('Cliente rechazado. Se le notificó por correo.');
                               setIsValidationDialogOpen(false);
                               fetchData();
                           } catch (error) {
-                              toast.error('Error al eliminar cliente');
+                              toast.error('Error al rechazar cliente');
                           } finally {
                               setLoading(false);
                           }
@@ -971,7 +972,8 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                               setLoading(true);
                               const updatedClient = { ...clientToValidate, estadoUsuario: true, documentoUrl: "" };
                               await updateUsuario(clientToValidate.id, updatedClient);
-                              toast.success('Cliente aprobado y activado correctamente.');
+                              await notificarAprobacion(clientToValidate.id);
+                              toast.success('Cliente aprobado. Se le notificó por correo.');
                               setIsValidationDialogOpen(false);
                               fetchData();
                           } catch (error) {

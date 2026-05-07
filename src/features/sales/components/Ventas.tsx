@@ -1213,6 +1213,12 @@ export const Ventas: React.FC = () => {
                     <LoadingScreen message="Cargando ventas..." />
                   </TableCell>
                 </TableRow>
+              ) : currentVentas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    No se encontraron ventas.
+                  </TableCell>
+                </TableRow>
               ) : currentVentas.map((venta) => (
                 <TableRow key={venta.id}>
                   <TableCell className="font-medium text-black">{venta.numeroVenta}</TableCell>

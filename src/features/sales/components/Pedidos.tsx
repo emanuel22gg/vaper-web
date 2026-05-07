@@ -39,7 +39,7 @@ import { TablePagination } from '@/shared/ui/TablePagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { VentaPedidoDto, UsuarioDto, Producto } from "@/shared/types";
 import { LoadingScreen } from "@/shared/components/LoadingScreen";
-import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados, getDetalleVentaPedidos } from "@/shared/services/api";
+import { getVentaPedidos, getUsuarios, updateVentaPedido, getEstados, getDetalleVentaPedidos, notificarEstadoPedido } from "@/shared/services/api";
 import { CreateVentaPedidoView } from "../pedidos/CreateVentaPedidoView";
 import { toast } from "sonner";
 import {
@@ -59,7 +59,8 @@ import {
   Info,
   User,
   MapPin,
-  CreditCard
+  CreditCard,
+  Loader2
 } from "lucide-react";
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 
@@ -87,6 +88,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
 
   const [selectedPedido, setSelectedPedido] = useState<VentaPedidoDto | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pedidoToUpdate, setPedidoToUpdate] = useState<VentaPedidoDto | null>(null);
   const [newStatusId, setNewStatusId] = useState<number>(0);
 
@@ -402,7 +404,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const handleUpdateStatus = async () => {
     if (pedidoToUpdate && newStatusId) {
       try {
-        setLoading(true);
+        setIsUpdatingStatus(true);
         const now = new Date().toISOString();
         const updatedPedido: VentaPedidoDto = {
           ...pedidoToUpdate,
@@ -459,6 +461,13 @@ export const Pedidos: React.FC<PedidosProps> = ({
 
         await updateVentaPedido(pedidoToUpdate.id!, updatedPedido);
 
+        // Notificar al cliente por correo sobre el cambio de estado
+        try {
+          await notificarEstadoPedido(pedidoToUpdate.id!);
+        } catch (e) {
+          console.warn("No se pudo enviar notificación de estado al cliente:", e);
+        }
+
         // Forzar refresco completo para asegurar consistencia con el backend
         await fetchData();
 
@@ -473,7 +482,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
         console.error("Error updating order status:", error);
         toast.error("No se pudo actualizar el estado");
       } finally {
-        setLoading(false);
+        setIsUpdatingStatus(false);
       }
     }
   };
@@ -677,47 +686,63 @@ export const Pedidos: React.FC<PedidosProps> = ({
         </CardContent>
       </Card>
 
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Actualizar Estado del Pedido</DialogTitle>
-            <DialogDescription>
-              Cambie el estado del pedido #{pedidoToUpdate?.id}
+      <Dialog open={isStatusDialogOpen} onOpenChange={(open) => { if (!isUpdatingStatus) setIsStatusDialogOpen(open); }}>
+        <DialogContent className="p-4" style={{ width: '380px', maxWidth: '90vw' }}>
+          <DialogHeader className="pb-1">
+            <DialogTitle className="text-base">Actualizar Estado</DialogTitle>
+            <DialogDescription className="text-xs">
+              Pedido #{pedidoToUpdate?.id}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nuevo Estado</Label>
-              <Select value={newStatusId.toString()} onValueChange={(v: string) => setNewStatusId(parseInt(v))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statuses
-                    .reduce((acc: { id: number, label: string }[], s) => {
-                      const name = s.nombreEstado.toLowerCase();
-                      let label = '';
-                      if (name === 'pendiente') label = 'Pendiente';
-                      else if (name === 'despachando') label = 'Despachando';
-                      else if (name === 'enviado') label = 'Enviado';
-                      else if (name === 'entregado') label = 'Entregado';
-                      else if (name === 'anulada' || name === 'anulado' || name === 'cancelado') label = 'Cancelado';
 
-                      if (label && !acc.find(item => item.label === label)) {
-                        acc.push({ id: s.id, label });
-                      }
-                      return acc;
-                    }, [])
-                    .map(s => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.label}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="py-2 flex flex-col gap-1">
+            {[
+              { label: 'Pendiente',    icon: '🕐', colorSelected: 'border-yellow-400 bg-yellow-50 ring-1 ring-yellow-300' },
+              { label: 'Despachando', icon: '📦', colorSelected: 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'   },
+              { label: 'Enviado',     icon: '🚚', colorSelected: 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-300' },
+              { label: 'Entregado',   icon: '✅', colorSelected: 'border-green-400 bg-green-50 ring-1 ring-green-300' },
+              { label: 'Cancelado',   icon: '❌', colorSelected: 'border-red-400 bg-red-50 ring-1 ring-red-300'      },
+            ].map((option) => {
+              const match = statuses.find(s =>
+                s.nombreEstado.toLowerCase() === option.label.toLowerCase() ||
+                (option.label === 'Cancelado' && ['anulada','anulado','cancelado'].includes(s.nombreEstado.toLowerCase()))
+              );
+              if (!match) return null;
+              const isSelected = newStatusId === match.id;
+              const isCurrent = pedidoToUpdate?.estadoId === match.id;
+              return (
+                <button
+                  key={match.id}
+                  type="button"
+                  onClick={() => setNewStatusId(match.id)}
+                  disabled={isUpdatingStatus}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all text-left
+                    ${isSelected ? option.colorSelected : 'border-gray-200 bg-white hover:bg-gray-50'}
+                    ${isUpdatingStatus ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+                  `}
+                >
+                  <span className="text-sm">{option.icon}</span>
+                  <span className="flex-1 text-sm font-medium text-gray-800">{option.label}</span>
+                  {isSelected && <CheckCircle className="h-4 w-4 text-gray-600 shrink-0" />}
+                </button>
+              );
+            })}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleUpdateStatus}>Actualizar</Button>
+
+          <DialogFooter className="gap-1.5 pt-1">
+            <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 text-sm"
+              onClick={handleUpdateStatus}
+              disabled={isUpdatingStatus || newStatusId === pedidoToUpdate?.estadoId}
+            >
+              {isUpdatingStatus ? (
+                <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Actualizando...</>
+              ) : 'Confirmar'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

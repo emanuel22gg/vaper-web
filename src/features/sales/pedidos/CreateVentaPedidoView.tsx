@@ -32,7 +32,8 @@ import {
     ChevronRight,
     ChevronLeft,
     ArrowLeft,
-    Info
+    Info,
+    Loader2
 } from "lucide-react";
 import { getUsuarioByDocumento, getProductos, createVentaPedido, getDepartments, getCitiesByDepartment, createDetalleVentaPedido, getEstados, updateVentaPedido, updateProducto, createAbono } from "@/shared/services/api";
 import { UsuarioDto, Producto, VentaPedidoDto, DepartmentColombian, CityColombian, DetalleVentaPedidoDto } from "@/shared/types";
@@ -965,9 +966,13 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                         <Button
                             onClick={handleGuardarPedido}
                             disabled={guardando || (tipoEntrega === 'domicilio' && (!direccionEntrega || !ciudadEntrega))}
-                            className="bg-black hover:bg-gray-800 text-white border-none"
+                            className="bg-black hover:bg-gray-800 text-white border-none disabled:opacity-70"
                         >
-                            {guardando ? "Guardando…" : "Finalizar pedido"}
+                            {guardando ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
+                            ) : (
+                                'Finalizar pedido'
+                            )}
                         </Button>
                     )}
                 </div>

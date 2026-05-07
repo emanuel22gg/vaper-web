@@ -430,3 +430,16 @@ export const createDetalleCotizacion = async (detalle: DetalleCotizacionDto): Pr
     const response = await api.post('/DetalleCotizaciones', detalle);
     return response.data;
 };
+
+// Notificaciones Service
+export const notificarAprobacion = async (id: number): Promise<void> => {
+    await api.post(`/Usuarios/${id}/NotificarAprobacion`);
+};
+
+export const notificarRechazo = async (id: number): Promise<void> => {
+    await api.post(`/Usuarios/${id}/NotificarRechazo`);
+};
+
+export const notificarEstadoPedido = async (id: number): Promise<void> => {
+    await api.post(`/VentaPedidos/${id}/NotificarEstado`);
+};
