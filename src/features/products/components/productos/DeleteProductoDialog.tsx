@@ -11,7 +11,7 @@ import {
 } from '@/shared/ui/dialog';
 import { AlertTriangle, Package, DollarSign } from 'lucide-react';
 import { toast } from "sonner";
-
+import { deleteProducto } from '@/shared/services/api';
 import { Categoria, Producto } from '@/shared/types';
 
 interface DeleteProductoDialogProps {
@@ -35,8 +35,7 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
     setIsLoading(true);
 
     try {
-      // Simular API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await deleteProducto(producto.id);
 
       onProductoDeleted(producto.id);
 
