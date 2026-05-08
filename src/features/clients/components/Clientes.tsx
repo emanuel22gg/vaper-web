@@ -862,7 +862,7 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        {cliente.documentoUrl && !cliente.estadoUsuario && (
+                        {!cliente.estadoUsuario && cliente.documentoUrl && cliente.documentoUrl.trim() !== '' && (
                            <Button
                              variant="outline"
                              size="sm"
