@@ -122,29 +122,29 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     useState<Producto | null>(null);
 
   // Cargar datos desde la API al iniciar
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [dataProductos, dataCategorias] = await Promise.all([
+        getProductos(),
+        getCategorias()
+      ]);
+
+      const linkedProductos = dataProductos.map(p => ({
+        ...p,
+        categoria: dataCategorias.find(c => c.id === p.categoriaId)
+      })).sort((a, b) => (b.id || 0) - (a.id || 0));
+
+      setProductos(linkedProductos);
+      setCategorias(dataCategorias);
+    } catch (error) {
+      toast.error("Error al cargar datos de la API");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [dataProductos, dataCategorias] = await Promise.all([
-          getProductos(),
-          getCategorias()
-        ]);
-
-        // Vincular categorías a los productos
-        const linkedProductos = dataProductos.map(p => ({
-          ...p,
-          categoria: dataCategorias.find(c => c.id === p.categoriaId)
-        })).sort((a, b) => (b.id || 0) - (a.id || 0));
-
-        setProductos(linkedProductos);
-        setCategorias(dataCategorias);
-      } catch (error) {
-        toast.error("Error al cargar datos de la API");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -234,15 +234,10 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
   // Funciones de callback para los diálogos
   const handleProductoCreated = async (data: ProductoDto) => {
     try {
-      const result = await createProducto(data);
-      // Vincular categoría localmente para que aparezca en el detalle
-      const categoriaCompleta = categorias.find(c => c.id === result.categoriaId);
-      const productoConCategoria = { ...result, categoria: categoriaCompleta };
-
-      setProductos((prev) => [...prev, productoConCategoria]);
-
+      await createProducto(data);
+      await fetchData();
       toast.success("Producto creado", {
-        description: `El producto "${result.nombreProducto}" ha sido creado exitosamente.`,
+        description: `El producto ha sido creado exitosamente.`,
       });
     } catch (error) {
       toast.error("Error al crear producto en la API");
@@ -252,17 +247,10 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
   const handleProductoUpdated = async (data: ProductoDto) => {
     if (!selectedProducto) return;
     try {
-      const result = await updateProducto(selectedProducto.id, data);
-      // Vincular categoría localmente
-      const categoriaCompleta = categorias.find(c => c.id === result.categoriaId);
-      const productoConCategoria = { ...result, categoria: categoriaCompleta };
-
-      setProductos(
-        (prev) => prev.map((p) => (p.id === result.id ? productoConCategoria : p)),
-      );
-
+      await updateProducto(selectedProducto.id, data);
+      await fetchData();
       toast.success("Producto actualizado", {
-        description: `El producto "${result.nombreProducto}" ha sido actualizado exitosamente.`,
+        description: `El producto ha sido actualizado exitosamente.`,
       });
     } catch (error) {
       toast.error("Error al actualizar producto en la API");
@@ -270,16 +258,9 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     }
   };
 
-  const handleProductoDeleted = async (id: number) => {
-    try {
-      await deleteProducto(id);
-      setProductos((prev) => prev.filter((p) => p.id !== id));
-      toast.success("Producto eliminado", {
-        description: `El producto ha sido eliminado exitosamente.`,
-      });
-    } catch (error) {
-      toast.error("Error al eliminar producto en la API");
-    }
+  const handleProductoDeleted = async () => {
+    // El DeleteProductoDialog ya llamó a la API, recargamos desde la API
+    await fetchData();
   };
 
   // Función para cambiar el estado de un producto con click
@@ -296,10 +277,8 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     };
 
     try {
-      const result = await updateProducto(producto.id, data);
-      setProductos(
-        (prev) => prev.map((p) => (p.id === result.id ? result : p)),
-      );
+      await updateProducto(producto.id, data);
+      await fetchData();
       toast.success("Estado actualizado", {
         description: `El producto "${producto.nombreProducto}" ahora está ${nuevoEstado ? "activo" : "inactivo"}.`,
       });

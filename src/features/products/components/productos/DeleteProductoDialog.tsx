@@ -18,7 +18,7 @@ interface DeleteProductoDialogProps {
   isOpen: boolean;
   onClose: () => void;
   producto: Producto | null;
-  onProductoDeleted: (productoId: number) => void;
+  onProductoDeleted: () => void;
 }
 
 export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
@@ -36,8 +36,7 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
 
     try {
       await deleteProducto(producto.id);
-
-      onProductoDeleted(producto.id);
+      onProductoDeleted();
 
       toast.success("Producto eliminado exitosamente", {
         description: `"${producto.nombreProducto}" ha sido eliminado del inventario.`
