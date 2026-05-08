@@ -724,7 +724,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   <span className="text-sm">{option.icon}</span>
                   <span className="flex-1 text-sm font-medium text-gray-800">{option.label}</span>
                   {isSelected && <CheckCircle className="h-4 w-4 text-gray-600 shrink-0" />}
-                </button>me 
+                </button>
               );
             })}
           </div>
