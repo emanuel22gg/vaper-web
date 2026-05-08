@@ -44,6 +44,7 @@ interface CarteraProps {
 
 export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm = '' }) => {
     const [pedidos, setPedidos] = useState<VentaPedidoDto[]>([]);
+    const [allPedidos, setAllPedidos] = useState<VentaPedidoDto[]>([]);
     const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
     const [abonos, setAbonos] = useState<VentaAbonoDto[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,6 +64,7 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 getAbonos()
             ]);
 
+            setAllPedidos(pedidosData);
             // Interesan pedidos en "En Abonos" (6) y los ya "Pagados/Entregados" (1) para historial
             setPedidos(pedidosData.filter(p => p.estadoId === 6 || p.estadoId === 1));
             setUsuarios(usuariosData);
@@ -151,17 +153,34 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 };
             })
             .filter(item => {
-                return (
-                    item.clienteNombre.toLowerCase().includes(search) ||
-                    item.clienteDocumento.includes(search) ||
-                    item.pedidoId.toString() === search // Búsqueda exacta por ID es mejor si es por ID específico
-                );
+                const isIdSearch = item.pedidoId.toString() === search;
+                const isClientSearch = item.clienteNombre.toLowerCase().includes(search) || item.clienteDocumento.includes(search);
+                
+                // Si busca por cliente, forzamos que solo sea estado 6 y tenga saldo pendiente
+                if (isClientSearch && !isIdSearch) {
+                    if (item.pedidoOriginal.estadoId !== 6 || item.saldoPendiente <= 0) {
+                        return false;
+                    }
+                }
+
+                return isIdSearch || isClientSearch;
             });
     }, [pedidos, usuarios, abonos, searchQuery]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setHasSearched(true);
+        
+        const search = searchQuery.trim();
+        if (search) {
+            const esBuscandoId = /^\d+$/.test(search);
+            if (esBuscandoId) {
+                const pedidoBuscado = allPedidos.find(p => p.id?.toString() === search);
+                if (pedidoBuscado && pedidoBuscado.estadoId !== 6) {
+                    toast.warning("Pedidos sin abonos pendientes");
+                }
+            }
+        }
     };
 
     const getStatusBadge = (alerta: string, dias: number) => {
