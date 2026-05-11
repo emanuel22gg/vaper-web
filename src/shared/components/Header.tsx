@@ -24,9 +24,11 @@ interface HeaderProps {
   isAuthenticated: boolean;
   canAccessAdmin: boolean;
   onAdminNavigate?: (view: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenticated, canAccessAdmin, onAdminNavigate }: HeaderProps) {
+export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenticated, canAccessAdmin, onAdminNavigate, searchTerm, onSearchChange }: HeaderProps) {
   const { getCartItemCount } = useCart();
   const { logout } = useAuth();
 
@@ -108,6 +110,8 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
                 <Input
                   placeholder="Buscar productos..."
                   className="pl-10 w-64 bg-gray-50 border-gray-200"
+                  value={searchTerm || ''}
+                  onChange={(e) => onSearchChange?.(e.target.value)}
                 />
               </div>
 

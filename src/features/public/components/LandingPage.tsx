@@ -15,6 +15,7 @@ import { Dashboard } from '@/features/admin/components/Dashboard';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { PedidosCliente } from '@/features/clients/components/PedidosCliente';
+import { toast } from 'sonner';
 
 interface LandingPageProps {
   shouldRedirectToAdmin?: boolean;
@@ -31,6 +32,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos'>('home');
   const [activeAdminView, setActiveAdminView] = useState<string>('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [intendedView, setIntendedView] = useState<string | null>(null);
 
   // Redirección automática para admin/empleado después del login
   useEffect(() => {
@@ -62,7 +65,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (shouldRedirectToShop && isAuthenticated && user) {
       const isClient = user.role.name === 'Cliente';
       if (isClient) {
-        if (currentView !== 'home') {
+        if (intendedView === 'checkout') {
+          setCurrentView('checkout');
+          setIntendedView(null);
+        } else if (currentView !== 'home') {
           setCurrentView('home');
         }
 
@@ -71,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     }
-  }, [shouldRedirectToShop, isAuthenticated, user, currentView, onResetRedirection]);
+  }, [shouldRedirectToShop, isAuthenticated, user, currentView, onResetRedirection, intendedView]);
 
   const toggleSideMenu = () => {
     setIsSideMenuOpen(!isSideMenuOpen);
@@ -105,6 +111,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');
   };
 
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    
+    // Si estamos en home, hacer scroll hacia el catálogo
+    if (currentView === 'home' && term) {
+      setTimeout(() => {
+        const catalogo = document.getElementById('catalogo');
+        if (catalogo) {
+          catalogo.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
+
   const handleAuthSuccess = () => {
     // No hacer nada aquí - la redirección se maneja en el useEffect
     // El usuario será redirigido automáticamente por la lógica del App.tsx
@@ -113,11 +133,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const renderMainContent = () => {
     switch (currentView) {
       case 'shop':
-        return <ProductCatalog />;
+        return <ProductCatalog searchTerm={searchTerm} />;
       case 'cart':
         return (
           <ShoppingCart
-            onCheckout={() => setCurrentView('checkout')}
+            onCheckout={() => {
+              if (isAuthenticated) {
+                setCurrentView('checkout');
+              } else {
+                toast.warning('Para continuar con la compra debes registrarte o iniciar sesión');
+                setIntendedView('checkout');
+                setCurrentView('auth');
+              }
+            }}
             onContinueShopping={() => setCurrentView('shop')}
           />
         );
@@ -154,7 +182,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <HeroBanner onNavigate={handleNavigation} />
             <TrustIndicators />
             <FeaturedProducts />
-            <ProductCatalog />
+            <ProductCatalog searchTerm={searchTerm} />
           </>
         );
     }
@@ -189,6 +217,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           isAuthenticated={isAuthenticated}
           canAccessAdmin={canAccessAdmin()}
           onAdminNavigate={handleAdminNavigation}
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
         />
 
         <main className="flex-1 pt-4 pb-10">

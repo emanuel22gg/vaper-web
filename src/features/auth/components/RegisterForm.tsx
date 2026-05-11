@@ -71,7 +71,9 @@ function validateField(
     }
     case 'fechaNacimiento': {
       if (!value) return 'Este campo es obligatorio.';
-      if (calcAge(value) < 18) return 'Debes ser mayor de 18 años.';
+      const age = calcAge(value);
+      if (age < 18) return 'Debes ser mayor de 18 años.';
+      if (age >= 80) return 'Debes ser menor de 80 años.';
       return '';
     }
     case 'telefono': {

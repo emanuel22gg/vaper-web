@@ -152,7 +152,11 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
   );
 };
 
-export const ProductCatalog: React.FC = () => {
+interface ProductCatalogProps {
+  searchTerm?: string;
+}
+
+export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' }) => {
   const [apiProductos, setApiProductos] = useState<Producto[]>([]);
   const [apiCategorias, setApiCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -218,11 +222,20 @@ export const ProductCatalog: React.FC = () => {
   }
 
   // Obtenemos los productos para la categoría seleccionada o todos
-  const categoryProducts = selectedCategoryId === 'all'
+  let categoryProducts = selectedCategoryId === 'all'
     ? apiProductos
     : selectedCategoryId
       ? apiProductos.filter(p => p.categoriaId === selectedCategoryId)
-      : [];
+      : apiProductos; // If null, we might use all products for global search
+
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    categoryProducts = categoryProducts.filter(p => 
+      p.nombreProducto.toLowerCase().includes(term) || 
+      (p.descripcion && p.descripcion.toLowerCase().includes(term)) ||
+      (p.categoria?.nombreCategoria && p.categoria.nombreCategoria.toLowerCase().includes(term))
+    );
+  }
 
   const selectedCategoryName = selectedCategoryId === 'all'
     ? 'Todos los Productos'
@@ -234,7 +247,7 @@ export const ProductCatalog: React.FC = () => {
     <div id="catalogo" className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
 
-        {selectedCategoryId === null ? (
+        {selectedCategoryId === null && !searchTerm ? (
           <>
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-5xl font-black text-black mb-4 tracking-tight">
@@ -327,17 +340,19 @@ export const ProductCatalog: React.FC = () => {
         ) : (
           <div>
             <div className="relative flex items-center justify-center mb-16 py-6 px-4">
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedCategoryId(null)}
-                className="absolute left-4 sm:left-6 hover:bg-gray-100 text-gray-600"
-              >
-                <ArrowLeft className="h-5 w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Atrás</span>
-              </Button>
+              {selectedCategoryId !== null && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setSelectedCategoryId(null)}
+                  className="absolute left-4 sm:left-6 hover:bg-gray-100 text-gray-600"
+                >
+                  <ArrowLeft className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Atrás</span>
+                </Button>
+              )}
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <Package className="h-8 w-8 text-yellow-500" />
-                {selectedCategoryName}
+                {searchTerm && selectedCategoryId === null ? `Resultados para "${searchTerm}"` : selectedCategoryName}
               </h2>
             </div>
 
