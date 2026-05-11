@@ -341,7 +341,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Input
                 id="documento"
                 value={registerData.documento}
-                onChange={(e) => handleChange('documento', e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !/^\d+$/.test(val)) {
+                    toast.warning("No se permite texto, solo números en el documento");
+                    return;
+                  }
+                  handleChange('documento', val);
+                }}
                 onBlur={() => handleBlur('documento')}
                 className={inputClass('documento')}
                 placeholder="Ej. 1000000000"
@@ -400,7 +407,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
               <Input
                 id="telefono"
                 value={registerData.telefono}
-                onChange={(e) => handleChange('telefono', e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !/^\d+$/.test(val)) {
+                    toast.warning("No se permite texto, solo números en el teléfono");
+                    return;
+                  }
+                  if (val.length > 10) {
+                    toast.warning("El teléfono no puede tener más de 10 dígitos");
+                    return;
+                  }
+                  handleChange('telefono', val);
+                }}
                 onBlur={() => handleBlur('telefono')}
                 className={inputClass('telefono')}
                 placeholder="Ej. 3001234567"
@@ -563,7 +581,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                     type="file"
                     className="sr-only"
                     accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                          toast.error("La imagen no puede pesar más de 5MB");
+                          e.target.value = '';
+                          return;
+                        }
+                        setImageFile(file);
+                      } else {
+                        setImageFile(null);
+                      }
+                    }}
                   />
                 </label>
               </div>

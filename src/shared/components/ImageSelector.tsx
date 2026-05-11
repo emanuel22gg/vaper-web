@@ -52,6 +52,11 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
                 toast.error("Solo se permiten archivos PNG o JPG");
                 return;
             }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("La imagen no puede pesar más de 5MB");
+                e.target.value = '';
+                return;
+            }
             onFileSelect(file);
         }
     };

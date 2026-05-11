@@ -500,7 +500,14 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                         <Input
                           id="numeroDocumento"
                           value={newCliente.numeroDocumento || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, numeroDocumento: e.target.value })}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !/^\d+$/.test(val)) {
+                              toast.warning("No se permite texto, solo números en el documento");
+                              return;
+                            }
+                            setNewCliente({ ...newCliente, numeroDocumento: val });
+                          }}
                           placeholder="1234567890"
                           className={cn(numDocError ? "border-red-500 focus-visible:ring-red-500" : "")}
                         />
@@ -532,6 +539,13 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                           type="email"
                           value={newCliente.correo || ''}
                           onChange={(e) => setNewCliente({ ...newCliente, correo: e.target.value })}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            if (val && !emailRegex.test(val)) {
+                              toast.warning("El formato del correo electrónico no es válido");
+                            }
+                          }}
                           placeholder="ana.garcia@email.com"
                         />
                       </div>
@@ -540,8 +554,19 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                         <Input
                           id="telefono"
                           value={newCliente.telefono || ''}
-                          onChange={(e) => setNewCliente({ ...newCliente, telefono: e.target.value })}
-                          placeholder="+57 300 123 4567"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !/^\d+$/.test(val)) {
+                              toast.warning("No se permite texto, solo números en el teléfono");
+                              return;
+                            }
+                            if (val.length > 10) {
+                              toast.warning("El teléfono no puede tener más de 10 dígitos");
+                              return;
+                            }
+                            setNewCliente({ ...newCliente, telefono: val });
+                          }}
+                          placeholder="3001234567"
                         />
                       </div>
                     </div>

@@ -43,10 +43,19 @@ export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
       });
 
       onClose();
-    } catch (error) {
-      toast.error("Error al eliminar el producto", {
-        description: "Por favor, inténtelo nuevamente."
-      });
+    } catch (error: any) {
+      console.error("Delete product error:", error.response || error);
+      
+      // Si la API devuelve 400 o 500, asumimos que es por las relaciones de llave foránea
+      if (error.response?.status === 400 || error.response?.status === 500) {
+        toast.warning("Acción no permitida", {
+          description: error.response?.data?.message || "No se puede eliminar el producto porque tiene ventas asociadas. Por favor, cambie su estado a Inactivo."
+        });
+      } else {
+        toast.error("Error", {
+          description: "No se pudo eliminar el producto."
+        });
+      }
     } finally {
       setIsLoading(false);
     }

@@ -132,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
+    window.location.href = '/';
   };
 
   const register = async (userData: RegisterData): Promise<boolean> => {

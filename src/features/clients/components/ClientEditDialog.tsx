@@ -246,7 +246,14 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
                                     <Input
                                         id="edit-numeroDocumento"
                                         value={editingCliente.numeroDocumento || ''}
-                                        onChange={(e) => setEditingCliente({ ...editingCliente, numeroDocumento: e.target.value })}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val && !/^\d+$/.test(val)) {
+                                                toast.warning("No se permite texto, solo números en el documento");
+                                                return;
+                                            }
+                                            setEditingCliente({ ...editingCliente, numeroDocumento: val });
+                                        }}
                                         className={cn(editNumDocError ? "border-red-500 focus-visible:ring-red-500" : "")}
                                     />
                                     {editNumDocError && (
@@ -279,6 +286,13 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
                                         type="email"
                                         value={editingCliente.correo || ''}
                                         onChange={(e) => setEditingCliente({ ...editingCliente, correo: e.target.value })}
+                                        onBlur={(e) => {
+                                            const val = e.target.value;
+                                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                            if (val && !emailRegex.test(val)) {
+                                                toast.warning("El formato del correo electrónico no es válido");
+                                            }
+                                        }}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -286,7 +300,18 @@ export const ClientEditDialog: React.FC<ClientEditDialogProps> = ({
                                     <Input
                                         id="edit-telefono"
                                         value={editingCliente.telefono || ''}
-                                        onChange={(e) => setEditingCliente({ ...editingCliente, telefono: e.target.value })}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val && !/^\d+$/.test(val)) {
+                                                toast.warning("No se permite texto, solo números en el teléfono");
+                                                return;
+                                            }
+                                            if (val.length > 10) {
+                                                toast.warning("El teléfono no puede tener más de 10 dígitos");
+                                                return;
+                                            }
+                                            setEditingCliente({ ...editingCliente, telefono: val });
+                                        }}
                                     />
                                 </div>
                             </div>

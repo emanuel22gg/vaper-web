@@ -3,12 +3,15 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/u
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { MapPin, Home, CreditCard, Upload, CheckCircle, AlertTriangle, Trash2, Loader2 } from 'lucide-react';
+import { MapPin, Home, CreditCard, Upload, CheckCircle, AlertTriangle, Trash2, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { toast } from 'sonner';
-import { createVentaPedido, createDetalleVentaPedido, getProductoById, updateProducto, uploadImage } from '@/shared/services/api';
-import { VentaPedidoDto } from '@/shared/types';
+import { createVentaPedido, createDetalleVentaPedido, getProductoById, updateProducto, uploadImage, getDepartments, getCitiesByDepartment } from '@/shared/services/api';
+import { VentaPedidoDto, DepartmentColombian, CityColombian } from '@/shared/types';
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
+import { cn } from "@/shared/ui/utils";
 
 type CheckoutStep = 'pickup-choice' | 'shipping-address' | 'payment-method' | 'success';
 
@@ -42,20 +45,56 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
 
+  const [departments, setDepartments] = useState<DepartmentColombian[]>([]);
+  const [citiesMap, setCitiesMap] = useState<Record<string, CityColombian[]>>({});
+  const [openDeptPopover, setOpenDeptPopover] = useState<boolean[]>([]);
+  const [openCityPopover, setOpenCityPopover] = useState<boolean[]>([]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const depts = await getDepartments();
+        setDepartments([...depts].sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (err) {
+        console.error("Error fetching departments", err);
+      }
+    };
+    fetchLocations();
+  }, []);
+
+  const fetchCitiesForDepartment = async (deptName: string) => {
+    if (citiesMap[deptName]) return;
+    try {
+      const dept = departments.find(d => d.name === deptName);
+      if (dept) {
+        const data = await getCitiesByDepartment(dept.id);
+        setCitiesMap(prev => ({
+          ...prev,
+          [deptName]: [...data].sort((a, b) => a.name.localeCompare(b.name))
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching cities", err);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setAddresses(prev => {
         const newAddresses = [...prev];
         if (newAddresses.length > 0) {
           if (!newAddresses[0].direccion && user.direccion) newAddresses[0].direccion = user.direccion;
-          if (!newAddresses[0].departamento && user.departamento) newAddresses[0].departamento = user.departamento;
+          if (!newAddresses[0].departamento && user.departamento) {
+            newAddresses[0].departamento = user.departamento;
+            fetchCitiesForDepartment(user.departamento);
+          }
           if (!newAddresses[0].municipio && user.ciudad) newAddresses[0].municipio = user.ciudad;
           if (!newAddresses[0].barrio && user.barrio) newAddresses[0].barrio = user.barrio;
         }
         return newAddresses;
       });
     }
-  }, [user]);
+  }, [user, departments]);
 
   // Paso 1: Selección de recogida o envío
   const handlePickupChoice = (choice: 'pickup' | 'delivery') => {
@@ -85,6 +124,12 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
   const handleAddressChange = (index: number, field: keyof ShippingAddress, value: string) => {
     const newAddresses = [...addresses];
     newAddresses[index][field] = value;
+    
+    if (field === 'departamento') {
+      newAddresses[index].municipio = '';
+      fetchCitiesForDepartment(value);
+    }
+    
     setAddresses(newAddresses);
   };
 
@@ -271,7 +316,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                   <Card key={index} className="bg-muted/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-lg">
-                        Dirección {index + 1}
+                        {index === 0 ? "Dirección Predeterminada (Registro)" : "Dirección Alterna"}
                       </CardTitle>
                       {index > 0 && (
                         <Button
@@ -293,32 +338,143 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           value={address.direccion}
                           onChange={(e) => handleAddressChange(index, 'direccion', e.target.value)}
                           readOnly={index === 0 && !!user?.direccion}
-                          className={index === 0 && !!user?.direccion ? "bg-muted text-muted-foreground" : ""}
+                          className={index === 0 && !!user?.direccion ? "bg-muted text-foreground font-medium cursor-not-allowed opacity-90" : ""}
                         />
                       </div>
 
                       <div>
                         <Label htmlFor={`departamento-${index}`}>Departamento</Label>
-                        <Input
-                          id={`departamento-${index}`}
-                          placeholder="Ej: Antioquia"
-                          value={address.departamento}
-                          onChange={(e) => handleAddressChange(index, 'departamento', e.target.value)}
-                          readOnly={index === 0 && !!user?.departamento}
-                          className={index === 0 && !!user?.departamento ? "bg-muted text-muted-foreground" : ""}
-                        />
+                        {index === 0 && !!user?.departamento ? (
+                           <Input
+                             id={`departamento-${index}`}
+                             value={address.departamento}
+                             readOnly
+                             className="bg-muted text-foreground font-medium cursor-not-allowed opacity-90"
+                           />
+                        ) : (
+                          <Popover 
+                            open={openDeptPopover[index] || false} 
+                            onOpenChange={(open: boolean) => {
+                              const newOpen = [...openDeptPopover];
+                              newOpen[index] = open;
+                              setOpenDeptPopover(newOpen);
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openDeptPopover[index] || false}
+                                className="w-full justify-between"
+                              >
+                                {address.departamento
+                                  ? departments.find((dept) => dept.name === address.departamento)?.name
+                                  : "Selecciona..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Buscar departamento..." />
+                                <CommandList className="custom-scrollbar max-h-60">
+                                  <CommandEmpty>No se encontró.</CommandEmpty>
+                                  <CommandGroup>
+                                    {departments.map((dept) => (
+                                      <CommandItem
+                                        key={dept.id}
+                                        value={dept.name}
+                                        onSelect={() => {
+                                          handleAddressChange(index, 'departamento', dept.name);
+                                          setOpenDeptPopover(prev => {
+                                            const newOpen = [...prev];
+                                            newOpen[index] = false;
+                                            return newOpen;
+                                          });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            address.departamento === dept.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {dept.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor={`municipio-${index}`}>Municipio</Label>
-                        <Input
-                          id={`municipio-${index}`}
-                          placeholder="Ej: Medellín"
-                          value={address.municipio}
-                          onChange={(e) => handleAddressChange(index, 'municipio', e.target.value)}
-                          readOnly={index === 0 && !!user?.ciudad}
-                          className={index === 0 && !!user?.ciudad ? "bg-muted text-muted-foreground" : ""}
-                        />
+                        <Label htmlFor={`municipio-${index}`}>Municipio / Ciudad</Label>
+                        {index === 0 && !!user?.ciudad ? (
+                          <Input
+                            id={`municipio-${index}`}
+                            value={address.municipio}
+                            readOnly
+                            className="bg-muted text-foreground font-medium cursor-not-allowed opacity-90"
+                          />
+                        ) : (
+                          <Popover 
+                            open={openCityPopover[index] || false} 
+                            onOpenChange={(open: boolean) => {
+                              const newOpen = [...openCityPopover];
+                              newOpen[index] = open;
+                              setOpenCityPopover(newOpen);
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openCityPopover[index] || false}
+                                disabled={!address.departamento}
+                                className="w-full justify-between disabled:opacity-50"
+                              >
+                                {address.municipio
+                                  ? citiesMap[address.departamento]?.find((city) => city.name === address.municipio)?.name
+                                  : address.departamento ? "Selecciona..." : "Elige depto"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Buscar ciudad..." />
+                                <CommandList className="custom-scrollbar max-h-60">
+                                  <CommandEmpty>No se encontró.</CommandEmpty>
+                                  <CommandGroup>
+                                    {citiesMap[address.departamento]?.map((city) => (
+                                      <CommandItem
+                                        key={city.id}
+                                        value={city.name}
+                                        onSelect={() => {
+                                          handleAddressChange(index, 'municipio', city.name);
+                                          setOpenCityPopover(prev => {
+                                            const newOpen = [...prev];
+                                            newOpen[index] = false;
+                                            return newOpen;
+                                          });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            address.municipio === city.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {city.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
 
                       <div className="md:col-span-2">
@@ -329,7 +485,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           value={address.barrio}
                           onChange={(e) => handleAddressChange(index, 'barrio', e.target.value)}
                           readOnly={index === 0 && !!user?.barrio}
-                          className={index === 0 && !!user?.barrio ? "bg-muted text-muted-foreground" : ""}
+                          className={index === 0 && !!user?.barrio ? "bg-muted text-foreground font-medium cursor-not-allowed opacity-90" : ""}
                         />
                       </div>
                     </CardContent>
@@ -342,7 +498,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                     onClick={handleAddAddress}
                     className="w-full"
                   >
-                    Agregar otra dirección
+                    Agregar dirección alterna
                   </Button>
                 )}
               </CardContent>
@@ -507,7 +663,13 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                           className="hidden"
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
-                              setComprobanteFile(e.target.files[0]);
+                              const file = e.target.files[0];
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast.error("El comprobante no puede pesar más de 5MB");
+                                e.target.value = '';
+                                return;
+                              }
+                              setComprobanteFile(file);
                             }
                           }}
                         />
