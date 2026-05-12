@@ -133,9 +133,8 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       toast.error("Debe seleccionar una categoría");
       return false;
     }
-    // Validar precio solo si está ingresado y no es vacío
-    if (formData.precio && parseFloat(formData.precio) < 0) {
-      toast.error("El precio no puede ser negativo");
+    if (!formData.precio || parseFloat(formData.precio) <= 0) {
+      toast.error("El precio del producto debe ser mayor a 0");
       return false;
     }
     // Validar stock solo si está ingresado y no es vacío
@@ -264,14 +263,16 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
           {/* Precio y Stock */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="precio">Precio de Venta (Opcional)</Label>
+              <Label htmlFor="precio">Precio de Venta *</Label>
               <Input
                 id="precio"
                 type="number"
-                min=""
+                min="0.01"
+                step="0.01"
                 value={formData.precio}
                 onChange={(e) => handleInputChange('precio', e.target.value)}
                 placeholder="25000"
+                required
               />
             </div>
 

@@ -588,8 +588,14 @@ export const GestionRoles: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditRole(role)}
-                          title={role.name === 'Super Administrador' ? 'No se puede editar el rol de Super Administrador' : 'Editar rol'}
-                          disabled={role.name === 'Super Administrador'}
+                          title={
+                            role.name === 'Super Administrador'
+                              ? 'No se puede editar el rol de Super Administrador'
+                              : role.name.toLowerCase() === 'cliente'
+                              ? 'No se puede editar el rol predeterminado de Cliente'
+                              : 'Editar rol'
+                          }
+                          disabled={role.name === 'Super Administrador' || role.name.toLowerCase() === 'cliente'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -597,8 +603,22 @@ export const GestionRoles: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteRole(role)}
-                          title={role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin' ? 'No se puede eliminar un rol esencial' : 'Eliminar rol'}
-                          disabled={role.name === 'Super Administrador' || role.name === 'Administrador' || role.name === 'Admin'}
+                          title={
+                            role.name === 'Super Administrador' ||
+                            role.name === 'Administrador' ||
+                            role.name === 'Admin' ||
+                            role.name.toLowerCase() === 'cliente' ||
+                            role.name.toLowerCase() === 'empleado'
+                              ? 'No se puede eliminar un rol del sistema predeterminado'
+                              : 'Eliminar rol'
+                          }
+                          disabled={
+                            role.name === 'Super Administrador' ||
+                            role.name === 'Administrador' ||
+                            role.name === 'Admin' ||
+                            role.name.toLowerCase() === 'cliente' ||
+                            role.name.toLowerCase() === 'empleado'
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

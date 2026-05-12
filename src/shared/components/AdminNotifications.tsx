@@ -108,7 +108,7 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
           if (newlyAddedClients.length === 1) {
             const client = pendingClients.find((c: any) => c.id === newlyAddedClients[0]);
             toast.info(`¡Tienes un cliente pendiente por autorizar!`, {
-              description: `Un cliente se está registrando (ID: ${client?.id}). Autorízalo.`,
+              description: `El cliente ${client?.nombres || ''} ${client?.apellidos || ''} (Doc: ${client?.numeroDocumento || ''}) se está registrando. Autorízalo.`,
               icon: '👤',
               duration: 8000,
               action: {

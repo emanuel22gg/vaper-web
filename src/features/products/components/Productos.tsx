@@ -236,9 +236,6 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     try {
       await createProducto(data);
       await fetchData();
-      toast.success("Producto creado", {
-        description: `El producto ha sido creado exitosamente.`,
-      });
     } catch (error) {
       toast.error("Error al crear producto en la API");
     }
@@ -249,9 +246,6 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     try {
       await updateProducto(selectedProducto.id, data);
       await fetchData();
-      toast.success("Producto actualizado", {
-        description: `El producto ha sido actualizado exitosamente.`,
-      });
     } catch (error) {
       toast.error("Error al actualizar producto en la API");
       throw error;

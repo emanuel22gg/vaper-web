@@ -146,9 +146,9 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
                            <UserPlus className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">Cliente #{String(client.id).padStart(3, '0')}</p>
+                          <p className="font-bold text-gray-800">{client.nombres || ''} {client.apellidos || ''}</p>
                           <p className="text-xs font-semibold text-gray-500">
-                             {client.numeroDocumento}
+                             Doc: {client.numeroDocumento}
                           </p>
                         </div>
                       </div>

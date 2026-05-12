@@ -68,8 +68,8 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
       toast.error("El nombre del producto es obligatorio");
       return false;
     }
-    if (formData.precio && parseFloat(formData.precio) < 0) {
-      toast.error("El precio debe ser positivo");
+    if (!formData.precio || parseFloat(formData.precio) <= 0) {
+      toast.error("El precio del producto debe ser mayor a 0");
       return false;
     }
     if (!formData.descripcion.trim()) {
@@ -237,7 +237,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                     <Input
                       id="precio"
                       type="number"
-                      min="0"
+                      min="0.01"
                       step="0.01"
                       value={formData.precio}
                       onChange={(e) => handleInputChange('precio', e.target.value)}
