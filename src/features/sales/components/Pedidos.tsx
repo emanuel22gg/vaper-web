@@ -364,19 +364,6 @@ export const Pedidos: React.FC<PedidosProps> = ({
       doc.text(`$${pedido.total.toLocaleString()}`, margin + 150, y);
 
       y += 30;
-      // Signatures
-      if (y > 250) {
-        doc.addPage();
-        y = 40;
-      }
-      doc.setFontSize(10);
-      doc.line(margin, y, margin + 60, y);
-      doc.text("Firma del Cliente", margin, y + 5);
-
-      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
-      doc.text("Autorizado por", pageWidth - margin - 60, y + 5);
-
-      y += 30;
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(`Generado el ${formatDateStr(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });

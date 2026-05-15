@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 import jsPDF from "jspdf";
 import { Button } from "@/shared/ui/button";
 import {
@@ -475,20 +476,77 @@ export const Devoluciones: React.FC = () => {
 
   const handleExportPDF = (devolucion: DevolucionDto) => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = 20;
+
+    const formatDate = (date: string | Date) => {
+      return new Date(date).toLocaleDateString('es-CO');
+    };
+
+    // Header - Logo y Título
+    try {
+      if (logoImage) {
+        doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+        y += 25;
+      }
+    } catch (e) {
+      console.warn("Could not load logo image for PDF", e);
+      y += 10;
+    }
+
     doc.setFontSize(22);
-    doc.setTextColor(21, 93, 252);
-    doc.text("VAPER - COMPROBANTE DE DEVOLUCIÓN", 20, 25);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 30, 190, 30);
-    doc.setFontSize(11);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`REFERENCIA: DEV-${devolucion.id}`, 20, 45);
-    doc.text(`FECHA PROCESO: ${new Date(devolucion.fechaDevolucion).toLocaleDateString()}`, 20, 52);
-    doc.setTextColor(40, 40, 40);
+    doc.setTextColor(33, 33, 33);
+    doc.setFont("helvetica", "bold");
+    doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+    y += 10;
+    
     doc.setFontSize(14);
-    doc.text("Resumen Económico", 20, 70);
-    doc.setFontSize(12);
-    doc.text(`Monto Total Devuelto: $${devolucion.montoTotal.toLocaleString()}`, 20, 80);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.text("COMPROBANTE DE DEVOLUCIÓN", pageWidth / 2, y, { align: "center" });
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+    y += 5;
+    doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setDrawColor(33, 33, 33);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    // Info Section
+    doc.setFontSize(11);
+    doc.setTextColor(33, 33, 33);
+
+    const userVenta = ventas.find(v => Number(v.id) === Number(devolucion.ventaPedidoId));
+    const clienteNombre = userVenta ? getClienteInfo(userVenta.usuarioId) : "N/A";
+
+    // Columna Izquierda: Datos del Cliente
+    doc.setFont("helvetica", "bold");
+    doc.text("DATOS DEL CLIENTE", margin, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Cliente: ${clienteNombre}`, margin, y);
+    y += 6;
+    
+    // Columna Derecha: Datos de la Devolución
+    let yDerecha = y - 13;
+    doc.setFont("helvetica", "bold");
+    doc.text("INFO DEVOLUCIÓN", pageWidth - margin - 50, yDerecha);
+    yDerecha += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Referencia: DEV-${devolucion.id}`, pageWidth - margin - 50, yDerecha);
+    yDerecha += 6;
+    doc.text(`Fecha: ${formatDate(devolucion.fechaDevolucion)}`, pageWidth - margin - 50, yDerecha);
+    yDerecha += 6;
+
+    y = Math.max(y, yDerecha) + 15;
+
+    // Obtener concepto
     const desc = devolucion.descripcion || "";
     let concepto = desc;
     if (desc.includes(" ||| REPOSICION: ")) {
@@ -503,10 +561,40 @@ export const Devoluciones: React.FC = () => {
     
     if (!concepto || concepto === "") concepto = "Garantía General";
 
-    doc.text(`Concepto: ${concepto}`, 20, 87);
-    doc.setFontSize(10);
+    // Table Header
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.text("Concepto", margin + 5, y + 7);
+    doc.text("Monto Total Devuelto", margin + 110, y + 7);
+
+    y += 10;
+    doc.setFont("helvetica", "normal");
+
+    // Table Content
+    // Split concepto in multiple lines if it's too long
+    const splitConcepto = doc.splitTextToSize(concepto, 100);
+    doc.text(splitConcepto, margin + 5, y + 7);
+    doc.text(`$${devolucion.montoTotal.toLocaleString()}`, margin + 110, y + 7);
+    
+    y += (splitConcepto.length * 5) + 10;
+    
+    y += 5;
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    // Totals
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("TOTAL DEVUELTO:", margin + 80, y);
+    doc.text(`$${devolucion.montoTotal.toLocaleString()}`, margin + 130, y);
+
+    y += 30;
+    doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.text("Documento generado automáticamente por el sistema VAPER Admin.", 20, 130);
+    doc.text(`Generado el ${formatDate(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });
+    doc.text("Vaper One - Sistema de Gestión", pageWidth / 2, y + 4, { align: "center" });
+
     doc.save(`Devolucion_PRV_${devolucion.id}.pdf`);
     toast.success("Descarga iniciada");
   };

@@ -265,7 +265,7 @@ export const Ventas: React.FC = () => {
 
   // Estados para agregar productos
   const [selectedProducto, setSelectedProducto] = useState('');
-  const [cantidad, setCantidad] = useState(1);
+  const [cantidad, setCantidad] = useState<number | "">("");
   const [openClientes, setOpenClientes] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [openProductos, setOpenProductos] = useState(false);
@@ -790,9 +790,12 @@ export const Ventas: React.FC = () => {
     }
   };
 
-  // Función para agregar producto
   const agregarProducto = async () => {
     if (!selectedProducto) return;
+    if (cantidad === "" || cantidad <= 0) {
+      toast.error('Por favor ingresa una cantidad válida.');
+      return;
+    }
 
     const producto = productosDisponibles.find(p => p.id === parseInt(selectedProducto));
     if (!producto) return;
@@ -816,9 +819,9 @@ export const Ventas: React.FC = () => {
       id: maxId + 1,
       productoId: producto.id,
       nombreProducto: producto.nombre,
-      cantidad: cantidad,
+      cantidad: cantidad as number,
       precioUnitario: producto.precio,
-      subtotal: producto.precio * cantidad
+      subtotal: producto.precio * (cantidad as number)
     };
 
     setFormData({
@@ -827,7 +830,7 @@ export const Ventas: React.FC = () => {
     });
 
     setSelectedProducto('');
-    setCantidad(1);
+    setCantidad("");
     toast.success(`${producto.nombre} añadido a la lista`);
   };
   // Función para eliminar producto
@@ -1061,19 +1064,6 @@ export const Ventas: React.FC = () => {
       doc.setFontSize(14);
       doc.text("TOTAL:", margin + 120, y);
       doc.text(`$${venta.total.toLocaleString()}`, margin + 150, y);
-
-      y += 30;
-      // Signatures
-      if (y > 250) {
-        doc.addPage();
-        y = 40;
-      }
-      doc.setFontSize(10);
-      doc.line(margin, y, margin + 60, y);
-      doc.text("Firma del Cliente", margin, y + 5);
-
-      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
-      doc.text("Firma del Vendedor", pageWidth - margin - 60, y + 5);
 
       y += 30;
       doc.setFontSize(8);
@@ -1532,7 +1522,7 @@ export const Ventas: React.FC = () => {
                       value={formData.descuento === 0 ? '' : formData.descuento.toString()}
                       onChange={(e) => {
                         const val = e.target.value.replace(',', '.');
-                        if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
+                        if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 95)) {
                           setFormData({ ...formData, descuento: val === '' ? 0 : parseFloat(val) });
                         }
                       }}
@@ -1668,8 +1658,12 @@ export const Ventas: React.FC = () => {
                         <Input
                           type="number"
                           min="1"
+                          placeholder="0"
                           value={cantidad}
-                          onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setCantidad(isNaN(val) ? "" : val);
+                          }}
                           className="w-full bg-white border-2 border-gray-300"
                         />
                       </div>

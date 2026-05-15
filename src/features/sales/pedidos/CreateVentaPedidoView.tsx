@@ -100,14 +100,6 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
     const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
 
-    // Estados para Dirección Estructurada
-    const [addrParts, setAddrParts] = useState({
-        tipoVia: '',
-        viaPrincipal: '',
-        viaSecundaria: '',
-        placa: ''
-    });
-
     const [vigenciaDevolucion, setVigenciaDevolucion] = useState<number>(1);
 
     const getEstadoAbonosId = async () => {
@@ -122,8 +114,6 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
             return 2;
         }
     };
-
-    const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
     useEffect(() => {
         loadProductos();
@@ -160,15 +150,6 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         }
     }, [selectedDepartment, departments]);
 
-    // Concatenación de dirección en tiempo real
-    useEffect(() => {
-        const { tipoVia, viaPrincipal, viaSecundaria, placa } = addrParts;
-        if (tipoVia && viaPrincipal && viaSecundaria && placa) {
-            const fullAddr = `${tipoVia} ${viaPrincipal} # ${viaSecundaria}-${placa}`;
-            setDireccionEntrega(fullAddr);
-        }
-    }, [addrParts]);
-
     const formatCOP = (val: number) => {
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',
@@ -185,7 +166,9 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         // If empty, set to 0, otherwise convert to number to remove leading zeros
         const numericValue = rawValue === "" ? 0 : parseInt(rawValue, 10);
 
-        setCostoEnvio(numericValue);
+        if (numericValue <= 100000) {
+            setCostoEnvio(numericValue);
+        }
     };
 
     const handleAbonoInicialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -779,35 +762,9 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                         <Input id="barrio-pedido" placeholder="Ej: Centro" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
                                     </div>
 
-                                    <div className="space-y-3 p-4 rounded-lg border bg-muted/10">
-                                        <Label className="text-blue-600 font-semibold">Dirección estructural</Label>
-                                        <div className="grid grid-cols-4 gap-2 items-end">
-                                            <div className="col-span-2 space-y-1">
-                                                <Label className="text-xs text-muted-foreground">Tipo de vía</Label>
-                                                <Select value={addrParts.tipoVia} onValueChange={(v: string) => setAddrParts({ ...addrParts, tipoVia: v })}>
-                                                    <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-                                                    <SelectContent>{tiposVia.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label className="text-xs text-muted-foreground">N° principal</Label>
-                                                <Input value={addrParts.viaPrincipal} onChange={(e) => setAddrParts({ ...addrParts, viaPrincipal: e.target.value })} />
-                                            </div>
-                                            <div className="flex items-end justify-center pb-2 text-muted-foreground font-medium">#</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="space-y-1">
-                                                <Label className="text-xs text-muted-foreground">N° secundario</Label>
-                                                <Input value={addrParts.viaSecundaria} onChange={(e) => setAddrParts({ ...addrParts, viaSecundaria: e.target.value })} />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label className="text-xs text-muted-foreground">Placa</Label>
-                                                <Input value={addrParts.placa} onChange={(e) => setAddrParts({ ...addrParts, placa: e.target.value })} />
-                                            </div>
-                                        </div>
-                                        <div className="bg-muted/40 p-2 rounded-md border text-sm text-muted-foreground">
-                                            Vista previa: <span className="text-foreground font-medium">{direccionEntrega || "Complete los campos"}</span>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="direccion-pedido">Dirección de entrega</Label>
+                                        <Input id="direccion-pedido" placeholder="Ej: Cra 51A #97-83" value={direccionEntrega} onChange={(e) => setDireccionEntrega(e.target.value)} />
                                     </div>
                                     </>
                                     ) : (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Eye, Download, XCircle, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Receipt } from 'lucide-react';
+import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 import jsPDF from "jspdf";
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -236,57 +237,106 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
   const handleExportarPDF = (abono: AbonoIndividual) => {
     const doc = new jsPDF();
     const cliente = usuarios.find(u => u.id === pedido.usuarioId);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = 20;
 
-    doc.setFont("helvetica", "bold");
+    const formatDate = (date: string | Date) => {
+      return new Date(date).toLocaleDateString('es-CO');
+    };
+
+    // Header - Logo y Título
+    try {
+      if (logoImage) {
+        doc.addImage(logoImage, 'PNG', pageWidth / 2 - 25, y, 50, 20);
+        y += 25;
+      }
+    } catch (e) {
+      console.warn("Could not load logo image for PDF", e);
+      y += 10;
+    }
+
     doc.setFontSize(22);
-    doc.setTextColor(21, 93, 252); // Azul principal
-    doc.text("COMPROBANTE DE ABONO", 105, 30, { align: "center" });
-
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 40, 190, 40);
-
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Comprobante N°: AB-${abono.id}`, 20, 50);
-    doc.text(`Fecha de Registro: ${abono.fecha}`, 190, 50, { align: "right" });
-
-    // Cuadro de Información
-    doc.setFillColor(245, 247, 250);
-    doc.rect(20, 60, 170, 40, "F");
-
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(33, 33, 33);
     doc.setFont("helvetica", "bold");
-    doc.text("INFORMACIÓN DEL CLIENTE", 25, 70);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Nombre: ${cliente ? `${cliente.nombres} ${cliente.apellidos}` : 'Cliente Desconocido'}`, 25, 80);
-    doc.text(`Cédula/Documento: ${cliente?.numeroDocumento || 'N/A'}`, 25, 90);
-
-    // Detalles del Pago
-    doc.setFont("helvetica", "bold");
-    doc.text("DETALLES DEL PAGO", 20, 120);
-    doc.line(20, 122, 190, 122);
-
-    doc.setFont("helvetica", "normal");
-    doc.text("Referencia de Pedido:", 20, 135);
-    doc.text(`#${pedido.id}`, 190, 135, { align: "right" });
-
-    doc.text("Método de Pago:", 20, 145);
-    doc.text(`${abono.metodoPago}`, 190, 145, { align: "right" });
-
+    doc.text("Vaper One", pageWidth / 2, y, { align: "center" });
+    y += 10;
+    
     doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.text("COMPROBANTE DE ABONO", pageWidth / 2, y, { align: "center" });
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.text("NIT: 830.517.246-3", pageWidth / 2, y, { align: "center" });
+    y += 5;
+    doc.text("Teléfono: +57 (4) 123-4567", pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setDrawColor(33, 33, 33);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    // Info Section
+    doc.setFontSize(11);
+    doc.setTextColor(33, 33, 33);
+
+    // Columna Izquierda: Datos del Cliente
     doc.setFont("helvetica", "bold");
-    doc.text("MONTO ABONADO:", 20, 165);
-    doc.setTextColor(21, 93, 252);
-    doc.text(`$${abono.monto.toLocaleString()} COP`, 190, 165, { align: "right" });
+    doc.text("DATOS DEL CLIENTE", margin, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Cliente: ${cliente ? `${cliente.nombres} ${cliente.apellidos}` : 'Cliente Desconocido'}`, margin, y);
+    y += 6;
+    doc.text(`C.C./NIT: ${cliente?.numeroDocumento || 'N/A'}`, margin, y);
+    
+    // Columna Derecha: Datos del Abono
+    let yDerecha = y - 13;
+    doc.setFont("helvetica", "bold");
+    doc.text("INFO ABONO", pageWidth - margin - 50, yDerecha);
+    yDerecha += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Comprobante N°: AB-${abono.id}`, pageWidth - margin - 50, yDerecha);
+    yDerecha += 6;
+    doc.text(`Fecha: ${formatDate(abono.fecha)}`, pageWidth - margin - 50, yDerecha);
+    yDerecha += 6;
+    doc.text(`Pedido Asociado: #${pedido.id}`, pageWidth - margin - 50, yDerecha);
 
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Saldo Restante:", 20, 175);
-    doc.text(`$${abono.saldoRestante.toLocaleString()} COP`, 190, 175, { align: "right" });
+    y = Math.max(y, yDerecha) + 15;
 
-    doc.setDrawColor(0, 0, 0);
-    doc.line(60, 240, 150, 240);
-    doc.text("Firma Autorizada", 105, 250, { align: "center" });
+    // Table Header
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.text("Método de Pago", margin + 5, y + 7);
+    doc.text("Monto Abonado", margin + 140, y + 7);
+
+    y += 10;
+    doc.setFont("helvetica", "normal");
+
+    // Table Content
+    doc.text(`${abono.metodoPago}`, margin + 5, y + 7);
+    doc.text(`$${abono.monto.toLocaleString()}`, margin + 140, y + 7);
+    
+    y += 15;
+    
+    y += 5;
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    // Totals
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("SALDO RESTANTE:", margin + 80, y);
+    doc.text(`$${abono.saldoRestante.toLocaleString()}`, margin + 140, y);
+
+    y += 30;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Generado el ${formatDate(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });
+    doc.text("Vaper One - Sistema de Gestión", pageWidth / 2, y + 4, { align: "center" });
 
     doc.save(`Abono_${abono.id}_Pedido_${pedido.id}.pdf`);
     toast.success("Comprobante generado con éxito");

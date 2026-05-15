@@ -305,7 +305,7 @@ export const Cotizaciones: React.FC = () => {
 
   // Estados para el selector de productos temporal
   const [selectedProductId, setSelectedProductId] = useState<number>(0);
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [selectedQuantity, setSelectedQuantity] = useState<number | "">("");
 
   // Estado para búsqueda de cliente por documento
   const [busquedaDocumento, setBusquedaDocumento] = useState("");
@@ -536,7 +536,7 @@ export const Cotizaciones: React.FC = () => {
           : 0,
     });
     setSelectedProductId(0);
-    setSelectedQuantity(1);
+    setSelectedQuantity("");
     setIsEditDialogOpen(true);
   };
 
@@ -588,7 +588,7 @@ export const Cotizaciones: React.FC = () => {
 
   // Agregar producto usando el botón +
   const agregarProductoSeleccionado = () => {
-    if (selectedProductId > 0 && selectedQuantity > 0) {
+    if (selectedProductId > 0 && selectedQuantity !== "" && selectedQuantity > 0) {
       const productoInfo = productosDisponibles.find(p => p.id === selectedProductId);
       if (!productoInfo) return;
 
@@ -612,14 +612,14 @@ export const Cotizaciones: React.FC = () => {
               ...prev.productos,
               {
                 productoId: selectedProductId,
-                cantidad: selectedQuantity,
+                cantidad: selectedQuantity as number,
               },
             ],
           };
         }
       });
       setSelectedProductId(0);
-      setSelectedQuantity(1);
+      setSelectedQuantity("");
       setProductSearchTerm(''); // Limpiar buscador al agregar
     }
   };
@@ -805,7 +805,7 @@ export const Cotizaciones: React.FC = () => {
       descuentoPorcentaje: 0,
     });
     setSelectedProductId(0);
-    setSelectedQuantity(1);
+    setSelectedQuantity("");
     setClientSearchTerm("");
     setOpenSelectorCliente(false);
   };
@@ -983,19 +983,6 @@ export const Cotizaciones: React.FC = () => {
       doc.setFontSize(14);
       doc.text("TOTAL:", margin + 120, y);
       doc.text(`$${cotizacionParaPDF.total.toLocaleString()}`, margin + 150, y);
-
-      y += 30;
-      // Signatures
-      if (y > 250) {
-        doc.addPage();
-        y = 40;
-      }
-      doc.setFontSize(10);
-      doc.line(margin, y, margin + 60, y);
-      doc.text("Firma del Cliente", margin, y + 5);
-
-      doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
-      doc.text("Firma del Vendedor", pageWidth - margin - 60, y + 5);
 
       y += 30;
       doc.setFontSize(8);
@@ -1513,7 +1500,7 @@ export const Cotizaciones: React.FC = () => {
                         value={formData.descuentoPorcentaje === 0 ? '' : formData.descuentoPorcentaje.toString()}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const val = e.target.value.replace(',', '.');
-                          if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 100)) {
+                          if (val === '' || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 95)) {
                           setFormData(prev => ({ ...prev, descuentoPorcentaje: val === '' ? 0 : parseFloat(val) }));
                         }
                       }}
@@ -1626,12 +1613,12 @@ export const Cotizaciones: React.FC = () => {
                       <Input
                         type="number"
                         min="1"
+                        placeholder="0"
                         value={selectedQuantity}
-                        onChange={(e) =>
-                          setSelectedQuantity(
-                            parseInt(e.target.value) || 1,
-                          )
-                        }
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setSelectedQuantity(isNaN(val) ? "" : val);
+                        }}
                         className="w-full bg-white border-2 border-gray-300"
                       />
                     </div>

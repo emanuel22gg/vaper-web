@@ -612,16 +612,17 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                   </div>
                 )}
 
+                {(paymentMethod === 'transfer' || paymentMethod === 'cash') && deliveryType === 'delivery' && (
+                  <div className="flex items-start gap-2 text-sm font-semibold text-yellow-600 bg-yellow-100 p-3 rounded-md mt-4 mb-4 border border-yellow-300">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <p>
+                      El valor del envío no está incluido en el total del pedido, el cliente debe asumir el costo de envío
+                    </p>
+                  </div>
+                )}
+
                 {paymentMethod === 'transfer' && (
                   <>
-                    {deliveryType === 'delivery' && (
-                      <div className="flex items-start gap-2 text-sm font-semibold text-yellow-600 bg-yellow-100 p-3 rounded-md mb-4 border border-yellow-300">
-                        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                        <p>
-                          El valor del envío no está incluido en el total del pedido, el cliente debe asumir el costo de envío
-                        </p>
-                      </div>
-                    )}
                     <Card className="bg-muted/50">
                       <CardHeader>
                         <CardTitle className="text-lg">Información Bancaria</CardTitle>
