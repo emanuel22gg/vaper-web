@@ -580,12 +580,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                     name="file-upload"
                     type="file"
                     className="sr-only"
-                    accept="image/*"
+                    accept="image/jpeg, image/png, application/pdf"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+                        if (!validTypes.includes(file.type)) {
+                          toast.error("Solo se permiten archivos JPG, PNG o PDF");
+                          e.target.value = '';
+                          return;
+                        }
                         if (file.size > 5 * 1024 * 1024) {
-                          toast.error("La imagen no puede pesar más de 5MB");
+                          toast.error("El archivo no puede pesar más de 5MB");
                           e.target.value = '';
                           return;
                         }
