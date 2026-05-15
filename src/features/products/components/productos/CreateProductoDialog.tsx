@@ -242,10 +242,15 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                       value={formData.precio}
                       onChange={(e) => handleInputChange('precio', e.target.value)}
                       placeholder="25000"
-                      className="pl-9"
+                      className={`pl-9 ${formData.precio !== '' && parseFloat(formData.precio) <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       required
                     />
                   </div>
+                  {formData.precio !== '' && parseFloat(formData.precio) <= 0 && (
+                    <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                      <span className="inline-block w-3 h-3">⚠</span> El precio no puede ser $0.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -338,7 +343,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
             <Button 
               type="submit" 
               className="bg-black hover:bg-gray-800 text-white border-none"
-              disabled={isLoading || !formData.nombreProducto || !formData.categoriaId || !formData.precio || !formData.descripcion}
+              disabled={isLoading || !formData.nombreProducto || !formData.categoriaId || !formData.precio || parseFloat(formData.precio) <= 0 || !formData.descripcion}
             >
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isLoading ? 'Creando...' : 'Crear Producto'}

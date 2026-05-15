@@ -19,22 +19,37 @@ interface DeleteProductoDialogProps {
   onClose: () => void;
   producto: Producto | null;
   onProductoDeleted: () => void;
+  ventaDetalles?: any[];
+  compraDetalles?: any[];
 }
 
 export const DeleteProductoDialog: React.FC<DeleteProductoDialogProps> = ({
   isOpen,
   onClose,
   producto,
-  onProductoDeleted
+  onProductoDeleted,
+  ventaDetalles = [],
+  compraDetalles = []
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleDelete = async () => {
     if (!producto) return;
 
-    setIsLoading(true);
+    // Bloquear si tiene ventas o compras asociadas
+    const tieneVentas = ventaDetalles.some(d => d.productoId === producto.id);
+    const tieneCompras = compraDetalles.some(d => d.productoId === producto.id);
+
+    if (tieneVentas || tieneCompras) {
+      toast.error("No se puede eliminar", {
+        description: `"${producto.nombreProducto}" está asociado a ${tieneVentas ? "ventas/pedidos" : ""}${tieneVentas && tieneCompras ? " y " : ""}${tieneCompras ? "órdenes de compra" : ""}. Cambia su estado a Inactivo en su lugar.`,
+      });
+      onClose();
+      return;
+    }
 
     try {
+      setIsLoading(true);
       await deleteProducto(producto.id);
       onProductoDeleted();
 

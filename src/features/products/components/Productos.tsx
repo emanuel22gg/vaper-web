@@ -18,7 +18,10 @@ import {
   getCategorias,
   updateProducto,
   deleteProducto,
-  createProducto
+  createProducto,
+  getVentaPedidos,
+  getCompras,
+  getDetalleVentaPedidos
 } from '@/shared/services/api';
 import {
   Table,
@@ -98,6 +101,8 @@ interface ProductosProps {
 export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [ventaDetalles, setVentaDetalles] = useState<any[]>([]);
+  const [compraDetalles, setCompraDetalles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [productosFiltrados, setProductosFiltrados] = useState<
     Producto[]
@@ -125,9 +130,11 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [dataProductos, dataCategorias] = await Promise.all([
+      const [dataProductos, dataCategorias, dataVentaDetalles, dataCompras] = await Promise.all([
         getProductos(),
-        getCategorias()
+        getCategorias(),
+        getDetalleVentaPedidos(),
+        getCompras()
       ]);
 
       const linkedProductos = dataProductos.map(p => ({
@@ -137,6 +144,10 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
 
       setProductos(linkedProductos);
       setCategorias(dataCategorias);
+      setVentaDetalles(dataVentaDetalles);
+      // Aplanar detalles de compras
+      const detallesCompra = dataCompras.flatMap(c => c.detalleCompras || []);
+      setCompraDetalles(detallesCompra);
     } catch (error) {
       toast.error("Error al cargar datos de la API");
     } finally {
@@ -314,6 +325,8 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
         onClose={() => setShowDeleteDialog(false)}
         producto={selectedProducto}
         onProductoDeleted={handleProductoDeleted}
+        ventaDetalles={ventaDetalles}
+        compraDetalles={compraDetalles}
       />
 
       {/* Card principal con todo integrado */}
@@ -490,7 +503,8 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
                               onClick={() =>
                                 handleEditarProducto(producto)
                               }
-                              title="Editar producto"
+                              title={!producto.estado ? "El producto está inactivo" : "Editar producto"}
+                              disabled={!producto.estado}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -500,7 +514,8 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
                               onClick={() =>
                                 handleEliminarProducto(producto)
                               }
-                              title="Eliminar producto"
+                              title={!producto.estado ? "El producto está inactivo" : "Eliminar producto"}
+                              disabled={!producto.estado}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

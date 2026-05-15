@@ -419,6 +419,19 @@ export const Proveedores: React.FC = () => {
 
   const handleDeleteProveedor = async () => {
     if (proveedorToDelete) {
+      // Bloquear si tiene compras asociadas
+      if (hasPurchases(proveedorToDelete.id)) {
+        const nombreProveedor =
+          proveedorToDelete.tipoPersona === "natural"
+            ? `${proveedorToDelete.nombres || ""} ${proveedorToDelete.apellidos || ""}`.trim()
+            : proveedorToDelete.razonSocial;
+        toast.error("No se puede eliminar", {
+          description: `${nombreProveedor} tiene órdenes de compra asociadas. Desactívalo en su lugar.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setProveedorToDelete(null);
+        return;
+      }
       try {
         const nombreProveedor =
           proveedorToDelete.tipoPersona === "natural"
@@ -968,22 +981,26 @@ export const Proveedores: React.FC = () => {
                           onClick={() =>
                             openEditDialog(proveedor)
                           }
-                          title="Editar proveedor"
+                          title={!proveedor.estado ? "El proveedor está inactivo" : "Editar proveedor"}
+                          disabled={!proveedor.estado}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className={`${hasPurchases(proveedor.id)
+                          className={`${!proveedor.estado || hasPurchases(proveedor.id)
                               ? "opacity-50 cursor-not-allowed"
                               : "text-red-600 hover:text-red-700 hover:bg-red-50"
                             }`}
                           title={
-                            hasPurchases(proveedor.id)
-                              ? "No se puede eliminar un proveedor con compras asociadas"
-                              : "Eliminar proveedor"
+                            !proveedor.estado
+                              ? "El proveedor está inactivo"
+                              : hasPurchases(proveedor.id)
+                                ? "No se puede eliminar un proveedor con compras asociadas"
+                                : "Eliminar proveedor"
                           }
+                          disabled={!proveedor.estado}
                           onClick={() =>
                             confirmDeleteProveedor(proveedor)
                           }

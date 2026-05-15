@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useUsers } from '../hooks/useUsers';
 import { User, Role, UserRole, Permission, UsuarioDto } from '@/shared/types';
-import { getDepartments } from '@/shared/services/api';
+import { getDepartments, getVentaPedidos } from '@/shared/services/api';
 import { Button } from '@/shared/ui/button';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -77,6 +77,12 @@ export const GestionUsuarios: React.FC = () => {
   // Estados para el dialog de confirmación
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [ventas, setVentas] = useState<any[]>([]);
+
+  // Cargar ventas para validar asociaciones al eliminar
+  React.useEffect(() => {
+    getVentaPedidos().then(setVentas).catch(() => {});
+  }, []);
 
   // Estado simplificado para crear usuario (solo documento, nombre, apellido, correo)
   const [newUser, setNewUser] = useState({
@@ -381,6 +387,17 @@ export const GestionUsuarios: React.FC = () => {
 
   const confirmDeleteUser = () => {
     if (userToDelete) {
+      // Bloquear si tiene ventas/pedidos asociados
+      const tieneVentas = ventas.some(v => v.usuarioId === parseInt(userToDelete.id));
+      if (tieneVentas) {
+        toast.error("No se puede eliminar", {
+          description: `${userToDelete.firstName} ${userToDelete.lastName} tiene pedidos o ventas asociadas. Desactívalo en su lugar.`,
+        });
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        return;
+      }
+
       deleteUser(userToDelete.id);
 
       // Toast de confirmación de eliminación
@@ -790,7 +807,7 @@ export const GestionUsuarios: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleEditUser(user)}
-                                disabled={user.role.name === 'Super Administrador'}
+                                disabled={user.role.name === 'Super Administrador' || !user.isActive}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -798,9 +815,11 @@ export const GestionUsuarios: React.FC = () => {
                             <TooltipContent>
                               {user.role.name === 'Super Administrador'
                                 ? "No se puede editar un super administrador"
-                                : user.role.name === 'Cliente'
-                                  ? "Editar información detallada del cliente"
-                                  : "Editar usuario"}
+                                : !user.isActive
+                                  ? "El usuario está inactivo"
+                                  : user.role.name === 'Cliente'
+                                    ? "Editar información detallada del cliente"
+                                    : "Editar usuario"}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -811,13 +830,17 @@ export const GestionUsuarios: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteUser(user)}
-                                disabled={user.role.name === 'Super Administrador'}
+                                disabled={user.role.name === 'Super Administrador' || !user.isActive}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {user.role.name === 'Super Administrador' ? 'No se puede eliminar un super administrador' : 'Eliminar usuario'}
+                              {user.role.name === 'Super Administrador'
+                                ? 'No se puede eliminar un super administrador'
+                                : !user.isActive
+                                  ? 'El usuario está inactivo'
+                                  : 'Eliminar usuario'}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

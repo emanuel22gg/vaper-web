@@ -347,6 +347,15 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
 
   const handleDeleteCliente = async () => {
     if (clienteToDelete) {
+      // Bloquear si tiene ventas asociadas
+      if (hasSales(clienteToDelete.id)) {
+        toast.error("No se puede eliminar", {
+          description: `${clienteToDelete.nombres} ${clienteToDelete.apellidos} tiene pedidos o ventas asociadas. Desactívalo en su lugar.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setClienteToDelete(null);
+        return;
+      }
       try {
         setLoading(true);
         await deleteUsuario(clienteToDelete.id);
@@ -867,22 +876,26 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditCliente(cliente)}
-                          title="Editar cliente"
+                          title={!cliente.estadoUsuario ? "El cliente está inactivo" : "Editar cliente"}
+                          disabled={!cliente.estadoUsuario}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className={`${hasSales(cliente.id)
+                          className={`${!cliente.estadoUsuario || hasSales(cliente.id)
                             ? "opacity-50 cursor-not-allowed"
                             : "text-red-600 hover:text-red-700 hover:bg-red-50"
                             }`}
                           title={
-                            hasSales(cliente.id)
-                              ? "No se puede eliminar un cliente con ventas asociadas"
-                              : "Eliminar cliente"
+                            !cliente.estadoUsuario
+                              ? "El cliente está inactivo"
+                              : hasSales(cliente.id)
+                                ? "No se puede eliminar un cliente con ventas asociadas"
+                                : "Eliminar cliente"
                           }
+                          disabled={!cliente.estadoUsuario}
                           onClick={() => openDeleteDialog(cliente)}
                         >
                           <Trash2 className="h-4 w-4" />

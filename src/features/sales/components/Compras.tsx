@@ -409,6 +409,17 @@ export const Compras: React.FC = () => {
       return;
     }
 
+    // Validar que ningún producto tenga precio de compra o venta en 0
+    const productosConPrecioInvalido = newOrden.productos.filter(
+      (p) => p.id && (p.precioCompra <= 0 || p.precioVenta <= 0),
+    );
+    if (productosConPrecioInvalido.length > 0) {
+      toast.error("Precios inválidos", {
+        description: "Todos los productos deben tener precio de compra y precio de venta mayores a $0.",
+      });
+      return;
+    }
+
     if (isDuplicateFactura(newOrden.numeroFactura)) {
       toast.error("Factura duplicada", {
         description: "Ya existe una compra con este número de factura.",
@@ -451,7 +462,7 @@ export const Compras: React.FC = () => {
           await updateProducto(productoOriginal.id, {
             id: productoOriginal.id,
             nombreProducto: productoOriginal.nombreProducto,
-            precio: productoOriginal.precio,
+            precio: p.precioVenta,
             stock: productoOriginal.stock + p.cantidad,
             categoriaId: productoOriginal.categoriaId,
             descripcion: productoOriginal.descripcion,
@@ -594,7 +605,29 @@ export const Compras: React.FC = () => {
 
             <Dialog
               open={isCreateDialogOpen}
-              onOpenChange={setIsCreateDialogOpen}
+              onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (!open) {
+                  setNewOrden({
+                    proveedorId: 0,
+                    numeroFactura: "",
+                    fechaFactura: "",
+                    productos: [
+                      {
+                        id: 0,
+                        nombre: "",
+                        cantidad: 0,
+                        precioCompra: 0,
+                        precioVenta: 0,
+                        codigo: "",
+                      },
+                    ],
+                  });
+                  setProductoSearchTerm("");
+                  setShowSearchDropdown(null);
+                  setSearchResults([]);
+                }
+              }}
             >
               <DialogTrigger asChild>
                 <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700">
@@ -701,6 +734,8 @@ export const Compras: React.FC = () => {
                         id="fechaFactura"
                         type="date"
                         value={newOrden.fechaFactura}
+                        min={(() => { const d = new Date(); d.setDate(d.getDate() - 15); return d.toISOString().split("T")[0]; })()}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                           setNewOrden({ ...newOrden, fechaFactura: e.target.value })
                         }
@@ -800,12 +835,16 @@ export const Compras: React.FC = () => {
                                     updateFormProducto(
                                       index,
                                       "precioCompra",
-                                      parseInt(
-                                        e.target.value,
-                                      ) || 0,
+                                      parseInt(e.target.value) || 0,
                                     )
                                   }
+                                  className={producto.id && producto.precioCompra <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
+                                {producto.id && producto.precioCompra <= 0 && (
+                                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                                    <AlertTriangle className="h-3 w-3" /> No puede ser $0
+                                  </p>
+                                )}
                               </div>
                               <div>
                                 <Label className="text-xs">
@@ -819,12 +858,16 @@ export const Compras: React.FC = () => {
                                     updateFormProducto(
                                       index,
                                       "precioVenta",
-                                      parseInt(
-                                        e.target.value,
-                                      ) || 0,
+                                      parseInt(e.target.value) || 0,
                                     )
                                   }
+                                  className={producto.id && producto.precioVenta <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
+                                {producto.id && producto.precioVenta <= 0 && (
+                                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                                    <AlertTriangle className="h-3 w-3" /> No puede ser $0
+                                  </p>
+                                )}
                               </div>
                               <Button
                                 variant="outline"
@@ -884,7 +927,8 @@ export const Compras: React.FC = () => {
                     onClick={handleCreateOrden}
                     disabled={
                       !newOrden.proveedorId ||
-                      newOrden.productos.every((p) => !p.id)
+                      newOrden.productos.every((p) => !p.id) ||
+                      newOrden.productos.some((p) => p.id && (p.precioCompra <= 0 || p.precioVenta <= 0))
                     }
                     className="min-w-[120px] bg-black hover:bg-gray-800 text-white"
                   >
