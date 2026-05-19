@@ -92,16 +92,6 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
   const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
   const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
 
-  // Estados para Dirección Estructurada (Creación)
-  const [addrParts, setAddrParts] = useState({
-    tipoVia: '',
-    viaPrincipal: '',
-    viaSecundaria: '',
-    placa: ''
-  });
-
-  // Tipos de Vía Estándar
-  const tiposVia = ['Calle', 'Carrera', 'Transversal', 'Diagonal', 'Circular', 'Avenida', 'Pasaje'];
 
 
   const [newCliente, setNewCliente] = useState<Partial<UsuarioDto>>({
@@ -158,14 +148,6 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
     }
   }, [selectedDepartment, departments]);
 
-  // Efecto para concatenar dirección de creación
-  useEffect(() => {
-    const { tipoVia, viaPrincipal, viaSecundaria, placa } = addrParts;
-    if (tipoVia && viaPrincipal && viaSecundaria && placa) {
-      const fullAddr = `${tipoVia} ${viaPrincipal} # ${viaSecundaria}-${placa}`;
-      setNewCliente(prev => ({ ...prev, direccion: fullAddr }));
-    }
-  }, [addrParts]);
 
   // Validación de documento en tiempo real (Creación)
   useEffect(() => {
@@ -394,7 +376,6 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
       tipoCliente: 'Minorista',
       departamento: ''
     });
-    setAddrParts({ tipoVia: '', viaPrincipal: '', viaSecundaria: '', placa: '' });
     setSelectedDepartment('');
   };
 
@@ -687,59 +668,14 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
                       />
                     </div>
 
-                    <div className="space-y-3">
-                      <Label className="text-blue-600 font-semibold">Dirección Estructural *</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Tipo Vía</Label>
-                          <Select
-                            value={addrParts.tipoVia}
-                            onValueChange={(val: string) => setAddrParts({ ...addrParts, tipoVia: val })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tiposVia.map(tipo => (
-                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">N° Principal</Label>
-                          <Input
-                            placeholder="67"
-                            value={addrParts.viaPrincipal}
-                            onChange={(e) => setAddrParts({ ...addrParts, viaPrincipal: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">N° Secundario</Label>
-                          <div className="flex items-center">
-                            <span className="mr-1 text-gray-500">#</span>
-                            <Input
-                              placeholder="102"
-                              value={addrParts.viaSecundaria}
-                              onChange={(e) => setAddrParts({ ...addrParts, viaSecundaria: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">N° Placa</Label>
-                          <div className="flex items-center">
-                            <span className="mr-1 text-gray-500">-</span>
-                            <Input
-                              placeholder="25"
-                              value={addrParts.placa}
-                              onChange={(e) => setAddrParts({ ...addrParts, placa: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded border text-sm italic text-gray-600">
-                        Vista previa: {newCliente.direccion || 'Ingrese los campos de dirección'}
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="direccion">Dirección *</Label>
+                      <Input
+                        id="direccion"
+                        value={newCliente.direccion || ''}
+                        onChange={(e) => setNewCliente({ ...newCliente, direccion: e.target.value })}
+                        placeholder="Calle 67 # 102-25"
+                      />
                     </div>
                   </TabsContent>
 

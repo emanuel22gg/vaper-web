@@ -487,6 +487,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  // Limpiar el payload después de que el módulo destino lo consume,
+  // para que no persista en visitas posteriores al mismo módulo.
+  useEffect(() => {
+    if (navigationPayload !== null) {
+      const timer = setTimeout(() => setNavigationPayload(null), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [navigationPayload]);
+
 
 
   // Función para volver a la lista

@@ -1031,7 +1031,7 @@ export const Devoluciones: React.FC = () => {
                                     <div
                                       className={cn(
                                         "h-4 w-4 mx-auto rounded border flex items-center justify-center cursor-pointer",
-                                        isSelected ? "bg-[rgb(21,93,252)] border-[rgb(21,93,252)] text-white" : "bg-background border-input"
+                                        isSelected ? "bg-[rgb(21,93,252)] border-[rgb(21,93,252)] text-white" : "bg-background border-2 border-gray-400"
                                       )}
                                       onClick={() => {
                                         if (isSelected) {
@@ -1133,7 +1133,7 @@ export const Devoluciones: React.FC = () => {
               <TabsContent value="reposicion" className="space-y-4">
                 {ventaEncontrada && (
                   <>
-                    <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                    <div className="p-3 border rounded-lg space-y-2 bg-muted/30 relative z-20">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Label className="flex items-center gap-2 text-sm font-medium">
                           <Plus className="h-4 w-4" />
@@ -1146,7 +1146,7 @@ export const Devoluciones: React.FC = () => {
                           Reposición: {totalReposicionCant} / {totalDevueltoCant} uds.
                         </Badge>
                       </div>
-                      <div className="relative z-10">
+                      <div className="relative z-20">
                         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground pointer-events-none" />
                         <Input
                           placeholder="Buscar por nombre..."
@@ -1215,7 +1215,7 @@ export const Devoluciones: React.FC = () => {
                       <div className="border rounded-lg overflow-hidden">
                         <div className="max-h-[150px] overflow-y-auto">
                           <Table>
-                            <TableHeader className="sticky top-0 z-10 bg-muted/50">
+                            <TableHeader className="sticky top-0 bg-muted/50">
                               <TableRow>
                                 <TableHead className="px-4">Producto</TableHead>
                                 <TableHead className="text-center w-[100px]">Cantidad</TableHead>
@@ -1491,8 +1491,12 @@ export const Devoluciones: React.FC = () => {
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Diálogo de Confirmación de Anulación */}
-          <AlertDialog open={isAnularDialogOpen} onOpenChange={setIsAnularDialogOpen}>
+          {/* Diálogo de Confirmación de Anulación - movido fuera del Dialog de nueva devolución */}
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Confirmación de Anulación */}
+      <AlertDialog open={isAnularDialogOpen} onOpenChange={setIsAnularDialogOpen}>
             <AlertDialogContent className="rounded-2xl border-none shadow-2xl max-w-md">
               <AlertDialogHeader>
                 <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
@@ -1549,8 +1553,6 @@ export const Devoluciones: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </DialogContent>
-      </Dialog>
 
       {/* View Devolucion Dialog */}
       <Dialog
