@@ -158,6 +158,11 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
       return;
     }
 
+    if (!paymentMethod) {
+      toast.error('Debe seleccionar un método de pago para continuar.');
+      return;
+    }
+
     if (paymentMethod === 'transfer' && !comprobanteFile) {
       toast.error('Debe adjuntar el comprobante de pago para pedidos por transferencia.');
       return;
@@ -682,6 +687,14 @@ export const Checkout: React.FC<CheckoutProps> = ({ onBack, onSuccess }) => {
                       </CardFooter>
                     </Card>
                   </>)}
+                {/* Aviso si no se ha seleccionado método de pago */}
+                {!paymentMethod && (
+                  <div className="flex items-center gap-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 p-3 rounded-md">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <span>Debes seleccionar un método de pago para continuar.</span>
+                  </div>
+                )}
+
                 {/* Resumen del pedido */}
                 <Card className="bg-muted/50">
                   <CardHeader>

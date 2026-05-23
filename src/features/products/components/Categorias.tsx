@@ -319,6 +319,7 @@ export const Categorias: React.FC = () => {
                             size="sm"
                             onClick={() => openEditDialog(categoria)}
                             title="Editar categoría"
+                            disabled={!categoria.estado}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -330,6 +331,7 @@ export const Categorias: React.FC = () => {
                               setIsDeleteDialogOpen(true);
                             }}
                             title="Eliminar categoría"
+                            disabled={!categoria.estado}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

@@ -92,7 +92,7 @@ import {
 } from "lucide-react";
 import logoImage from "@/assets/da58514cc4a62145203981edd12b890ba8690130.png";
 import { cn } from "@/shared/ui/utils";
-import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion } from "@/shared/services/api";
+import { getUsuarios, getProductos, getCotizaciones, createCotizacion, updateCotizacion, deleteCotizacion, getDetallesByCotizacion, createDetalleCotizacion, createVentaPedido, createDetalleVentaPedido } from "@/shared/services/api";
 import { CotizacionDto, DetalleCotizacionDto } from "@/shared/types";
 import { LoadingScreen } from "@/shared/components/LoadingScreen";
 
@@ -808,6 +808,88 @@ export const Cotizaciones: React.FC = () => {
     setSelectedQuantity("");
     setClientSearchTerm("");
     setOpenSelectorCliente(false);
+  };
+
+  const [isConverting, setIsConverting] = useState(false);
+
+  const convertirAVenta = async (cotizacion: Cotizacion) => {
+    setIsConverting(true);
+    const loadingToast = toast.loading("Convirtiendo cotización a venta...");
+    try {
+      // 1. Obtener detalles si no están cargados
+      let productosAConvertir = cotizacion.productos;
+      if (productosAConvertir.length === 0) {
+        const detalles = await getDetallesByCotizacion(cotizacion.id);
+        productosAConvertir = detalles.map(d => {
+          const prodInfo = productosDisponibles.find(p => p.id === d.productoId);
+          return {
+            id: d.productoId,
+            codigo: prodInfo?.codigo || "N/A",
+            nombre: d.nombreProducto || prodInfo?.nombre || "Producto",
+            descripcion: prodInfo?.descripcion || "",
+            precioUnitario: Number(d.precioUnitario),
+            cantidad: d.cantidad,
+            subtotal: Number(d.subtotal || 0),
+            categoria: prodInfo?.categoria || "General",
+            disponible: true
+          };
+        });
+      }
+
+      // 2. Crear VentaPedido
+      const payloadVenta = {
+        usuarioId: cotizacion.cliente.id || 3, // fallback si no hay id válido
+        estadoId: 1, // 1 = Completado / Entregado
+        metodoPago: "Efectivo", // Valor por defecto
+        direccionEntrega: "Venta Presencial",
+        ciudadEntrega: "Local",
+        departamentoEntrega: "Local",
+        barrio: "Local",
+        observaciones: `Generada a partir de Cotización COT-${String(cotizacion.id).padStart(3, '0')}`,
+        subtotal: cotizacion.subtotal,
+        descuento: cotizacion.descuento,
+        envio: 0,
+        total: cotizacion.total,
+        vigenciaDevolucion: 1,
+        tipoVenta: "Venta"
+      };
+
+      const responseVenta = await createVentaPedido(payloadVenta as any);
+      const createdVentaId = responseVenta.id || responseVenta.Id || responseVenta.ID;
+
+      // 3. Crear DetallesVentaPedido y actualizar stock
+      if (createdVentaId) {
+        for (const item of productosAConvertir) {
+          await createDetalleVentaPedido({
+            ventaPedidoId: createdVentaId,
+            productoId: item.id, // el id del ProductoCotizacion es el productoId
+            cantidad: item.cantidad,
+            precioUnitario: item.precioUnitario,
+            subtotal: item.subtotal
+          });
+
+          // Actualizar stock
+          const getRes = await fetch(`/api/Productoes/${item.id}`);
+          if (getRes.ok) {
+            const pOriginal = await getRes.json();
+            await fetch(`/api/Productoes/${item.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...pOriginal, stock: pOriginal.stock - item.cantidad })
+            });
+          }
+        }
+      }
+
+      toast.success("Cotización convertida a venta exitosamente. Revisa la sección de Ventas.", { id: loadingToast });
+      setIsDetailDialogOpen(false);
+      
+    } catch (error) {
+      console.error("Error al convertir a venta:", error);
+      toast.error("Ocurrió un error al intentar convertir la cotización a venta.", { id: loadingToast });
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   // Función para obtener el badge del estado

@@ -440,6 +440,6 @@ export const notificarRechazo = async (id: number): Promise<void> => {
     await api.post(`/Usuarios/${id}/NotificarRechazo`);
 };
 
-export const notificarEstadoPedido = async (id: number): Promise<void> => {
-    await api.post(`/VentaPedidos/${id}/NotificarEstado`);
+export const notificarEstadoPedido = async (id: number, guia?: string): Promise<void> => {
+    await api.post(`/VentaPedidos/${id}/NotificarEstado`, { guia });
 };

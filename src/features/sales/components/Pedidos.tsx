@@ -91,6 +91,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pedidoToUpdate, setPedidoToUpdate] = useState<VentaPedidoDto | null>(null);
   const [newStatusId, setNewStatusId] = useState<number>(0);
+  const [guia, setGuia] = useState<string>('');
 
   // Estados para mostrar detalle completo del pedido
   const [showDetallePedido, setShowDetallePedido] = useState(false);
@@ -385,6 +386,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const handleCambiarEstado = (pedido: VentaPedidoDto) => {
     setPedidoToUpdate(pedido);
     setNewStatusId(pedido.estadoId);
+    setGuia('');
     setIsStatusDialogOpen(true);
   };
 
@@ -450,7 +452,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
 
         // Notificar al cliente por correo sobre el cambio de estado
         try {
-          await notificarEstadoPedido(pedidoToUpdate.id!);
+          await notificarEstadoPedido(pedidoToUpdate.id!, guia);
         } catch (e) {
           console.warn("No se pudo enviar notificación de estado al cliente:", e);
         }
@@ -500,14 +502,16 @@ export const Pedidos: React.FC<PedidosProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="p-8 pt-6">
-            <CreateVentaPedidoView
-              embedInDialog
-              onBack={() => setShowCreateView(false)}
-              onSuccess={() => {
-                setShowCreateView(false);
-                fetchData();
-              }}
-            />
+            {showCreateView && (
+              <CreateVentaPedidoView
+                embedInDialog
+                onBack={() => setShowCreateView(false)}
+                onSuccess={() => {
+                  setShowCreateView(false);
+                  fetchData();
+                }}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -715,6 +719,19 @@ export const Pedidos: React.FC<PedidosProps> = ({
               );
             })}
           </div>
+
+          {statuses.find(s => s.id === newStatusId)?.nombreEstado.toLowerCase() === 'enviado' && (
+            <div className="mt-2 mb-1">
+              <Label className="text-xs text-gray-500 mb-1 block">Guía (Opcional)</Label>
+              <Input 
+                placeholder="Ej. SERVI-123456" 
+                value={guia} 
+                onChange={(e) => setGuia(e.target.value)} 
+                disabled={isUpdatingStatus}
+                className="text-sm h-8"
+              />
+            </div>
+          )}
 
           <DialogFooter className="gap-1.5 pt-1">
             <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>

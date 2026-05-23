@@ -561,6 +561,11 @@ export const Ventas: React.FC = () => {
       return;
     }
 
+    if (!formData.metodoPago) {
+      toast.error('Debe seleccionar un método de pago para registrar la venta.');
+      return;
+    }
+
     const loadingToast = toast.loading('Guardando venta...');
 
     try {
@@ -1290,6 +1295,7 @@ export const Ventas: React.FC = () => {
         }
         if (!open) {
           setClientSearchTerm('');
+          resetForm();
         }
         setIsCreateDialogOpen(open);
       }}>
@@ -1798,7 +1804,7 @@ export const Ventas: React.FC = () => {
             </Button>
             <Button
               onClick={handleCreateVenta}
-              disabled={!formData.nombreCliente || formData.items.length === 0}
+              disabled={!formData.nombreCliente || formData.items.length === 0 || !formData.metodoPago}
               className="bg-black hover:bg-gray-800 text-white border-none min-w-[120px]"
             >
               Crear Venta
