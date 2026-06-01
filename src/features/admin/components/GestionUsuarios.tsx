@@ -213,7 +213,7 @@ export const GestionUsuarios: React.FC = () => {
       await createUser({
         username: newUser.documento,
         email: newUser.email,
-        password: 'temp123',
+        password: newUser.documento,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         numeroDocumento: newUser.documento,
@@ -229,8 +229,8 @@ export const GestionUsuarios: React.FC = () => {
 
       // Toast de confirmación de creación
       toast.success("Usuario creado", {
-        description: `${newUser.firstName} ${newUser.lastName} ha sido creado exitosamente con el rol ${newUser.role}.`,
-        duration: 4000,
+        description: `${newUser.firstName} ha sido creado. El usuario y contraseña inicial es su número de documento.`,
+        duration: 5000,
       });
 
       setNewUser({

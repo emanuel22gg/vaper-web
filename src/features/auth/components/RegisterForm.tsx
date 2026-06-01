@@ -7,13 +7,15 @@ import { Label } from '@/shared/ui/label';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import * as apiService from '@/shared/services/api';
 import { toast } from "sonner";
-import { Upload, CheckCircle, FileImage, X, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, FileImage, X, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { DepartmentColombian, CityColombian } from '@/shared/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/shared/ui/utils";
+import { checkPasswordStrength } from '@/shared/utils/passwordStrength';
+import { Progress } from '@/shared/ui/progress';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -64,9 +66,6 @@ function validateField(
     }
     case 'password': {
       if (!value) return 'Este campo es obligatorio.';
-      if (value.length < 8) return 'Mínimo 8 caracteres.';
-      if (!/[A-Z]/.test(value)) return 'Debe tener al menos una mayúscula.';
-      if (!/\d/.test(value)) return 'Debe tener al menos un número.';
       return '';
     }
     case 'fechaNacimiento': {
@@ -100,6 +99,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   const [cities, setCities] = useState<CityColombian[]>([]);
   const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
   const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [registerData, setRegisterData] = useState({
     firstName: '',
@@ -188,6 +188,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   const inputClass = (field: RequiredField) => {
     const base = "bg-black/50 border text-white rounded-xl h-9 text-sm transition-all focus:ring-1";
     if (!touched[field]) return `${base} border-gray-700 focus:border-yellow-500 focus:ring-yellow-500`;
+    
+    if (field === 'password') {
+      const score = checkPasswordStrength(registerData.password).score;
+      if (score < 5) return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
+      return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
+    }
+
     if (fieldErrors[field]) return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
     return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
   };
@@ -212,6 +219,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
     setFieldErrors(allErrors);
 
     if (hasErrors) return;
+
+    const passwordStrength = checkPasswordStrength(registerData.password);
+    if (passwordStrength.score < 5) {
+      setError('La contraseña no cumple con todos los requisitos de seguridad.');
+      return;
+    }
 
     if (!imageFile) {
       setError('Debes adjuntar un comprobante o foto de tu documento de identidad para validar la mayoría de edad.');
@@ -273,7 +286,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   // Helper para mostrar el mensaje de error bajo el campo
   const FieldError = ({ field }: { field: RequiredField }) =>
     touched[field] && fieldErrors[field] ? (
-      <p className="text-red-400 text-xs mt-1">{fieldErrors[field]}</p>
+      <div className="text-[10px] text-red-400 mt-1 flex items-start gap-1 px-1 leading-tight">
+        <span>•</span>
+        <span>{fieldErrors[field]}</span>
+      </div>
     ) : null;
 
   return (
@@ -374,16 +390,59 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-gray-300 text-xs font-medium">Contraseña *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={registerData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                onBlur={() => handleBlur('password')}
-                className={inputClass('password')}
-                placeholder="Crea contraseña"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={registerData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  onBlur={() => handleBlur('password')}
+                  className={`${inputClass('password')} pr-10`}
+                  placeholder="Crea contraseña"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
               <FieldError field="password" />
+              {registerData.password && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Fortaleza:</span>
+                    <span className={`text-xs font-semibold ${checkPasswordStrength(registerData.password).score >= 4 ? 'text-green-400' :
+                      checkPasswordStrength(registerData.password).score >= 3 ? 'text-blue-400' :
+                        checkPasswordStrength(registerData.password).score >= 2 ? 'text-yellow-400' :
+                          'text-red-400'
+                      }`}>
+                      {checkPasswordStrength(registerData.password).label}
+                    </span>
+                  </div>
+                  <Progress
+                    value={(checkPasswordStrength(registerData.password).score / 5) * 100}
+                    className="h-1.5 bg-gray-800"
+                    indicatorClassName={checkPasswordStrength(registerData.password).color}
+                  />
+                  {checkPasswordStrength(registerData.password).feedback.length > 0 && (
+                    <div className="text-[11px] text-gray-400 mt-1">
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {checkPasswordStrength(registerData.password).feedback.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fechaNacimiento" className="text-gray-300 text-xs font-medium">F. Nacimiento *</Label>
