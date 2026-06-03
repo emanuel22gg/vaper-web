@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
-import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados } from '@/shared/services/api';
+import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados, getAbonos } from '@/shared/services/api';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -165,7 +165,7 @@ interface Venta {
   impuestos?: number;
   envio?: number;
   total: number;
-  estado: 'aceptada' | 'anulada' | 'en abonos'; // Cambiado: aceptada, anulada y en abonos
+  estado: 'aceptada' | 'anulada' | 'en abonos' | 'vencida'; // Añadido: vencida
   metodoPago: string;
   tipoVenta: 'directa' | 'pedido'; // Nuevo campo
   pedidoId?: number; // Para ventas por pedido
@@ -365,9 +365,10 @@ export const Ventas: React.FC = () => {
 
   const fetchVentas = async (currentProds?: Producto[], currentClientes?: Usuario[]) => {
     try {
-      const [ventasRaw, detallesRaw] = await Promise.all([
+      const [ventasRaw, detallesRaw, abonosRaw] = await Promise.all([
         getVentaPedidos(),
-        getDetalleVentaPedidos()
+        getDetalleVentaPedidos(),
+        getAbonos()
       ]);
 
       const prods = currentProds || productosDisponibles;
@@ -377,13 +378,34 @@ export const Ventas: React.FC = () => {
       const idAbonos = estados.find((e: any) => e.nombreEstado.toLowerCase().includes('abono'))?.id || -1;
 
       const ventasMapeadas: Venta[] = ventasRaw
-        .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || v.estadoId === idAbonos || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
+        .filter((v: any) => v.tipoVenta === 'Pedido' ? (v.estadoId === 1 || v.plazoAbonos !== null || (v.estadoId === 3 && v.observaciones?.includes('[Cancelado desde Ventas]'))) : true)
         .map(v => {
           const vid = Number(v.id);
           const cliente = clients.find(c => Number(c.id) === Number(v.usuarioId));
           const detallesVenta = detallesRaw.filter(
             (d: any) => Number(d.ventaPedidoId ?? d.VentaPedidoId) === vid
           );
+
+          let estadoCalculado: 'aceptada' | 'anulada' | 'en abonos' | 'vencida' = v.estadoId === 1 ? 'aceptada' : 'anulada';
+          if (v.plazoAbonos !== null) {
+            const pedidoAbonos = abonosRaw.filter((a: any) => a.ventaPedidoId === vid && a.estado);
+            const totalAbonado = pedidoAbonos.reduce((sum: number, a: any) => sum + a.monto, 0);
+            const saldoPendiente = v.total - totalAbonado;
+            
+            if (saldoPendiente <= 0) {
+              estadoCalculado = 'aceptada';
+            } else {
+              const fechaInicio = v.fechaCreacion ? new Date(v.fechaCreacion) : new Date();
+              const fechaVencimiento = new Date(fechaInicio);
+              fechaVencimiento.setMonth(fechaVencimiento.getMonth() + v.plazoAbonos);
+              
+              if (new Date() > fechaVencimiento) {
+                estadoCalculado = 'vencida';
+              } else {
+                estadoCalculado = 'en abonos';
+              }
+            }
+          }
 
           return {
             id: vid || 0,
@@ -413,7 +435,7 @@ export const Ventas: React.FC = () => {
             descuento: Math.max(0, Math.round((v.subtotal + (v.envio || 0)) - v.total)),
             envio: v.envio || 0,
             total: v.total,
-            estado: v.estadoId === 1 ? 'aceptada' : (v.estadoId === idAbonos ? 'en abonos' : 'anulada'),
+            estado: estadoCalculado,
             metodoPago: v.metodoPago,
             tipoCliente: cliente?.tipoCliente || 'Minorista',
             tipoVenta: v.tipoVenta === 'Venta' ? 'directa' : 'pedido',
@@ -919,7 +941,8 @@ export const Ventas: React.FC = () => {
     const variants = {
       'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90', label: 'Aceptada' },
       'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700', label: 'Anulada' },
-      'en abonos': { variant: 'outline' as const, icon: <Receipt className="h-3 w-3" />, color: 'border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100', label: 'Saldo Pendiente' }
+      'en abonos': { variant: 'outline' as const, icon: <Receipt className="h-3 w-3" />, color: 'border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100', label: 'Saldo Pendiente' },
+      'vencida': { variant: 'destructive' as const, icon: <AlertCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700', label: 'Vencida' }
     };
 
     const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
@@ -1179,6 +1202,8 @@ export const Ventas: React.FC = () => {
               <SelectContent>
                 <SelectItem value="todos">Todos los estados</SelectItem>
                 <SelectItem value="aceptada">Aceptada</SelectItem>
+                <SelectItem value="en abonos">Saldo Pendiente</SelectItem>
+                <SelectItem value="vencida">Vencida</SelectItem>
                 <SelectItem value="anulada">Anulada</SelectItem>
               </SelectContent>
             </Select>
@@ -1262,8 +1287,8 @@ export const Ventas: React.FC = () => {
                         size="sm"
                         onClick={() => handleVerAbonos(venta)}
                         title="Ver abonos"
-                        disabled={venta.estado !== 'en abonos'}
-                        className={venta.estado === 'en abonos' ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
+                        disabled={venta.estado !== 'en abonos' && venta.estado !== 'vencida'}
+                        className={(venta.estado === 'en abonos' || venta.estado === 'vencida') ? "border-indigo-200 text-indigo-600 hover:bg-indigo-50" : ""}
                       >
                         <Receipt className="h-4 w-4" />
                       </Button>

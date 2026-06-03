@@ -1638,12 +1638,22 @@ export const Devoluciones: React.FC = () => {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs font-medium text-gray-500">Cliente</Label>
-                          <p className="text-sm font-medium text-gray-900">
-                            {(() => {
-                              const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
-                              return userVenta ? getClienteInfo(userVenta.usuarioId) : "N/A";
-                            })()}
-                          </p>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">
+                              {(() => {
+                                const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                                const usuario = userVenta ? usuarios.find(u => Number(u.id) === Number(userVenta.usuarioId)) : null;
+                                return usuario ? `${usuario.nombres} ${usuario.apellidos}` : "N/A";
+                              })()}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {(() => {
+                                const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                                const usuario = userVenta ? usuarios.find(u => Number(u.id) === Number(userVenta.usuarioId)) : null;
+                                return usuario && usuario.numeroDocumento ? `${usuario.tipoDocumento || 'Doc'}: ${usuario.numeroDocumento}` : "";
+                              })()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1654,48 +1664,142 @@ export const Devoluciones: React.FC = () => {
                       <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Motivo de Devolución</h4>
                       <div className="bg-red-50 rounded-lg p-6 space-y-4 border border-red-100">
                          <p className="text-sm text-red-900 leading-relaxed font-medium">
-                           {selectedDevolucion.motivo || "Sin observaciones registradas."}
+                           {(() => {
+                              let m = selectedDevolucion.motivo || selectedDevolucion.descripcion || "Sin observaciones registradas.";
+                              if (m.includes(" ||| REPOSICION: ")) m = m.split(" ||| REPOSICION: ")[0].replace("MOTIVO: ", "");
+                              else if (m.startsWith("MOTIVO: ")) m = m.replace("MOTIVO: ", "");
+                              return m;
+                           })()}
                          </p>
                       </div>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="productos" className="space-y-8 animate-in fade-in-50 duration-500">
-                    <div className="space-y-4">
-                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles del Retorno</h4>
-                      <div className="border border-gray-100 rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader className="bg-gray-50">
-                            <TableRow>
-                              <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
-                              <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant. Devuelta</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {detallesDevolucion.filter(det => Number(det.devolucionId) === Number(selectedDevolucion.id)).map((detalle, idx) => {
-                               const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
-                               const dVenta = userVenta?.detalleVenta_Pedido?.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
-                               const pData = productos.find(p => Number(p.id) === Number(dVenta?.productoId));
-                               return (
-                                <TableRow key={detalle.id || idx} className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
-                                  <TableCell className="text-xs font-medium text-gray-900">
-                                    {pData?.nombreProducto || `Producto ID #${dVenta?.productoId || "N/A"}`}
-                                  </TableCell>
-                                  <TableCell className="text-xs text-center text-gray-600">{detalle.cantidad}</TableCell>
-                                </TableRow>
-                              );
-                            })}
-                            {detallesDevolucion.filter(det => Number(det.devolucionId) === Number(selectedDevolucion.id)).length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={2} className="text-center py-8 text-muted-foreground text-sm">
-                                  No hay artículos registrados para esta devolución.
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
+                    {(() => {
+                      // Parsear reposiciones
+                      let reposiciones: { cantidad: number, nombre: string, precioUnitario: number }[] = [];
+                      const desc = selectedDevolucion.descripcion || "";
+                      if (desc.includes(" ||| REPOSICION: ")) {
+                        const repString = desc.split(" ||| REPOSICION: ")[1];
+                        if (repString) {
+                          const items = repString.split(", ");
+                          reposiciones = items.map(item => {
+                            const match = item.match(/(\d+)x\s+(.*)/);
+                            if (match) {
+                              const qty = parseInt(match[1]);
+                              const name = match[2];
+                              const prod = productos.find(p => p.nombreProducto === name || (p as any).nombre === name);
+                              return { cantidad: qty, nombre: name, precioUnitario: prod?.precio || 0 };
+                            }
+                            return { cantidad: 1, nombre: item, precioUnitario: 0 };
+                          });
+                        }
+                      }
+
+                      const devueltos = detallesDevolucion.filter(det => Number(det.devolucionId) === Number(selectedDevolucion.id));
+                      const totalDevueltoValor = selectedDevolucion.montoTotal || 0;
+                      const totalReposicionValor = reposiciones.reduce((acc, r) => acc + (r.precioUnitario * r.cantidad), 0);
+                      const diferencia = totalReposicionValor - totalDevueltoValor;
+
+                      return (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Panel Devueltos */}
+                            <div className="space-y-4">
+                              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                <ArrowLeft className="h-3.5 w-3.5 text-red-500" /> Artículos Devueltos (Entran)
+                              </h4>
+                              <div className="border border-gray-100 rounded-lg overflow-hidden bg-white">
+                                <Table>
+                                  <TableHeader className="bg-red-50/50">
+                                    <TableRow>
+                                      <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                                      <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant.</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {devueltos.map((detalle, idx) => {
+                                      const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
+                                      const dVenta = userVenta?.detalleVenta_Pedido?.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
+                                      const pData = productos.find(p => Number(p.id) === Number(dVenta?.productoId));
+                                      return (
+                                        <TableRow key={detalle.id || idx}>
+                                          <TableCell className="text-xs font-medium text-gray-900">
+                                            {pData?.nombreProducto || `Producto ID #${dVenta?.productoId || "N/A"}`}
+                                          </TableCell>
+                                          <TableCell className="text-xs text-center font-bold text-red-600">{detalle.cantidad}</TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                    {devueltos.length === 0 && (
+                                      <TableRow>
+                                        <TableCell colSpan={2} className="text-center py-6 text-muted-foreground text-xs">Sin artículos</TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+
+                            {/* Panel Repuestos */}
+                            <div className="space-y-4">
+                              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                <ArrowRight className="h-3.5 w-3.5 text-emerald-500" /> Artículos Entregados (Salen)
+                              </h4>
+                              <div className="border border-gray-100 rounded-lg overflow-hidden bg-white">
+                                <Table>
+                                  <TableHeader className="bg-emerald-50/50">
+                                    <TableRow>
+                                      <TableHead className="text-[10px] font-bold uppercase tracking-tight h-10">Producto</TableHead>
+                                      <TableHead className="text-center text-[10px] font-bold uppercase tracking-tight h-10">Cant.</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {reposiciones.map((rep, idx) => (
+                                      <TableRow key={idx}>
+                                        <TableCell className="text-xs font-medium text-gray-900">{rep.nombre}</TableCell>
+                                        <TableCell className="text-xs text-center font-bold text-emerald-600">{rep.cantidad}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                    {reposiciones.length === 0 && (
+                                      <TableRow>
+                                        <TableCell colSpan={2} className="text-center py-6 text-muted-foreground text-xs">Sin artículos de reposición</TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Resumen Financiero */}
+                          <div className="mt-8 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Resumen Financiero</h4>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-tight font-bold">Total Devuelto (A favor)</p>
+                                <p className="text-lg font-black text-gray-900">${totalDevueltoValor.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-tight font-bold">Total Entregado (A cargo)</p>
+                                <p className="text-lg font-black text-gray-900">${totalReposicionValor > 0 ? totalReposicionValor.toLocaleString() : "0 (No calculado)"}</p>
+                              </div>
+                              <div className="pl-4 border-l border-gray-200">
+                                <p className="text-[10px] text-gray-500 uppercase tracking-tight font-bold">Diferencia Neta</p>
+                                {diferencia === 0 ? (
+                                  <p className="text-lg font-black text-gray-600">$0 (Mano a Mano)</p>
+                                ) : diferencia > 0 ? (
+                                  <p className="text-lg font-black text-emerald-600">+${Math.abs(diferencia).toLocaleString()} <span className="text-[10px] text-gray-500">(Cobrado al cliente)</span></p>
+                                ) : (
+                                  <p className="text-lg font-black text-red-600">-${Math.abs(diferencia).toLocaleString()} <span className="text-[10px] text-gray-500">(Saldo a favor cliente)</span></p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </TabsContent>
                 </Tabs>
               </div>
