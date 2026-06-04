@@ -30,7 +30,7 @@ import { DepartmentColombian, CityColombian } from '@/shared/types';
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
 import { cn } from "@/shared/ui/utils";
-import { checkPasswordStrength } from '@/shared/utils/passwordStrength';
+import {  } from '@/shared/utils/passwordStrength';
 import { Progress } from '@/shared/ui/progress';
 import {
   AlertDialog,
@@ -167,7 +167,7 @@ export const UserProfile: React.FC = () => {
       return;
     }
 
-    const strength = checkPasswordStrength(passwordData.newPassword);
+    const strength = (passwordData.newPassword);
     if (strength.score < 5) {
       toast.error('Error', { description: 'La contraseña no cumple con todos los requisitos.' });
       return;
@@ -600,23 +600,23 @@ export const UserProfile: React.FC = () => {
                   <div className="space-y-2 pt-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Fortaleza:</span>
-                      <span className={`text-xs font-semibold ${checkPasswordStrength(passwordData.newPassword).score >= 4 ? 'text-green-600' :
-                        checkPasswordStrength(passwordData.newPassword).score >= 3 ? 'text-blue-600' :
-                          checkPasswordStrength(passwordData.newPassword).score >= 2 ? 'text-yellow-600' :
+                      <span className={`text-xs font-semibold ${(passwordData.newPassword).score >= 4 ? 'text-green-600' :
+                        (passwordData.newPassword).score >= 3 ? 'text-blue-600' :
+                          (passwordData.newPassword).score >= 2 ? 'text-yellow-600' :
                             'text-red-600'
                         }`}>
-                        {checkPasswordStrength(passwordData.newPassword).label}
+                        {(passwordData.newPassword).label}
                       </span>
                     </div>
                     <Progress
-                      value={(checkPasswordStrength(passwordData.newPassword).score / 5) * 100}
+                      value={((passwordData.newPassword).score / 5) * 100}
                       className="h-1.5 bg-gray-200"
-                      indicatorClassName={checkPasswordStrength(passwordData.newPassword).color}
+                      indicatorClassName={(passwordData.newPassword).color}
                     />
-                    {checkPasswordStrength(passwordData.newPassword).feedback.length > 0 && (
+                    {(passwordData.newPassword).feedback.length > 0 && (
                       <div className="text-[11px] text-gray-500 mt-1">
                         <ul className="list-disc list-inside space-y-0.5">
-                          {checkPasswordStrength(passwordData.newPassword).feedback.map((item, index) => (
+                          {(passwordData.newPassword).feedback.map((item, index) => (
                             <li key={index}>{item}</li>
                           ))}
                         </ul>
