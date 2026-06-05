@@ -1548,7 +1548,7 @@ export const Devoluciones: React.FC = () => {
                   onClick={handleAnularDevolucion}
                   className="rounded-xl font-bold text-xs h-12 flex-1 bg-red-600 hover:bg-red-700 text-white border-none shadow-lg shadow-red-200"
                 >
-                  Sí, Anular Ticket
+                  Sí, Anular 
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1595,20 +1595,14 @@ export const Devoluciones: React.FC = () => {
                     <Receipt className="h-8 w-8" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      Ticket DEV-{String(selectedDevolucion.id).padStart(3, '0')}
-                    </h3>
-                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                      <span className="font-mono text-gray-400">{new Date(selectedDevolucion.fechaDevolucion).toLocaleDateString('es-CO')}</span>
-                      <span className="text-gray-300">•</span>
-                      <span className="flex items-center gap-1">
-                        <User className="h-3.5 w-3.5" />
-                        {(() => {
-                          const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
-                          return userVenta ? getClienteInfo(userVenta.usuarioId) : "N/A";
-                        })()}
+                    <div className="flex items-baseline gap-3">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        DEV-{String(selectedDevolucion.id).padStart(3, '0')}
+                      </h3>
+                      <span className="text-lg font-medium text-gray-700">
+                        {new Date(selectedDevolucion.fechaDevolucion).toLocaleDateString('es-CO')}
                       </span>
-                    </p>
+                    </div>
                   </div>
                 </div>
 
@@ -1630,7 +1624,7 @@ export const Devoluciones: React.FC = () => {
 
                   <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
                     <div className="space-y-6">
-                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles de la Transacción Original</h4>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Detalles de la Transacción </h4>
                       <div className="grid grid-cols-2 gap-x-12 gap-y-6">
                         <div className="space-y-1">
                           <Label className="text-xs font-medium text-gray-500">Venta Relacionada</Label>
