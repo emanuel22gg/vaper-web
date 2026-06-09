@@ -21,8 +21,8 @@ const AppContent: React.FC = () => {
         user.role.name === "Administrador" ||
         user.role.name === "Admin" ||
         user.role.name === "Empleado" ||
-        user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');
-      const isClient = user.role.name === "Cliente" && !user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');
+        (user.role.permissions && user.role.permissions.length > 0);
+      const isClient = user.role.name === "Cliente" && (!user.role.permissions || user.role.permissions.length === 0);
 
       if (isAdminOrEmployee) {
         setShouldRedirectToAdmin(true);
