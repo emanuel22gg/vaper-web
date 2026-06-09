@@ -1221,7 +1221,7 @@ export const GestionUsuarios: React.FC = () => {
                       </div>
                       <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex justify-center p-4">
                         <img 
-                          src={selectedUser.documentoUrl} 
+                          src={selectedUser.documentoUrl.toLowerCase().includes('cloudinary') && selectedUser.documentoUrl.toLowerCase().endsWith('.pdf') ? selectedUser.documentoUrl.replace(/\.pdf$/i, '.jpg') : selectedUser.documentoUrl} 
                           alt="Documento de Identidad" 
                           className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm"
                         />

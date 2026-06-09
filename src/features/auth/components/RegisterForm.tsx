@@ -40,7 +40,8 @@ function calcAge(dateStr: string): number {
 function validateField(
   field: string,
   value: string,
-  tipoDocumento?: string
+  tipoDocumento?: string,
+  existingUsers: any[] = []
 ): string {
   switch (field) {
     case 'firstName':
@@ -57,11 +58,13 @@ function validateField(
       const max = tipoDocumento === 'TI' ? 11 : 10;
       if (value.length < min) return `Mínimo ${min} dígitos para ${tipoDocumento}.`;
       if (value.length > max) return `Máximo ${max} dígitos para ${tipoDocumento}.`;
+      if (existingUsers.some(u => u.numeroDocumento === value)) return 'Este documento ya está registrado.';
       return '';
     }
     case 'email': {
       if (!value.trim()) return 'Este campo es obligatorio.';
       if (!EMAIL_REGEX.test(value)) return 'Ingresa un correo válido.';
+      if (existingUsers.some(u => u.correo?.toLowerCase() === value.toLowerCase())) return 'Este correo ya está en uso.';
       return '';
     }
     case 'password': {
@@ -119,39 +122,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   // Errores por campo y campos que ya fueron tocados
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredField, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<RequiredField, boolean>>>({});
+  const [existingUsers, setExistingUsers] = useState<any[]>([]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Marca el campo como tocado y valida al salir del foco
   const handleBlur = useCallback((field: RequiredField) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+    const msg = validateField(field, registerData[field], registerData.tipoDocumento, existingUsers);
     setFieldErrors(prev => ({ ...prev, [field]: msg }));
-  }, [registerData]);
+  }, [registerData, existingUsers]);
 
   // Actualiza el valor y valida en tiempo real si el campo ya fue tocado
   const handleChange = useCallback((field: RequiredField, value: string) => {
     setRegisterData(prev => {
       const next = { ...prev, [field]: value };
       if (touched[field]) {
-        const msg = validateField(field, value, next.tipoDocumento);
+        const msg = validateField(field, value, next.tipoDocumento, existingUsers);
         setFieldErrors(fe => ({ ...fe, [field]: msg }));
       }
       return next;
     });
-  }, [touched]);
+  }, [touched, existingUsers]);
 
   // Al cambiar tipo de documento, re-valida el número si ya fue tocado
   const handleTipoDocumentoChange = useCallback((value: string) => {
     setRegisterData(prev => {
       const next = { ...prev, tipoDocumento: value };
       if (touched['documento']) {
-        const msg = validateField('documento', next.documento, value);
+        const msg = validateField('documento', next.documento, value, existingUsers);
         setFieldErrors(fe => ({ ...fe, documento: msg }));
       }
       return next;
     });
-  }, [touched]);
+  }, [touched, existingUsers]);
 
   React.useEffect(() => {
     const fetchDepartments = async () => {
@@ -162,7 +166,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
         console.error("Error fetching departments", err);
       }
     };
+    const fetchUsersForValidation = async () => {
+      try {
+        const users = await apiService.getUsuarios();
+        setExistingUsers(users);
+      } catch (err) {
+        console.error("Error fetching users for validation", err);
+      }
+    };
     fetchDepartments();
+    fetchUsersForValidation();
   }, []);
 
   React.useEffect(() => {
@@ -210,7 +223,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
 
     for (const field of REQUIRED_FIELDS) {
       allTouched[field] = true;
-      const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+      const msg = validateField(field, registerData[field], registerData.tipoDocumento, existingUsers);
       allErrors[field] = msg;
       if (msg) hasErrors = true;
     }

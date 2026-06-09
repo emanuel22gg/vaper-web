@@ -143,7 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Verificar si ya existe el usuario
       const apiUsers = await apiService.getUsuarios();
       const existingUser = apiUsers.find(u =>
-        u.correo === userData.email
+        u.correo.toLowerCase() === userData.email.toLowerCase() || 
+        u.numeroDocumento === userData.username
       );
 
       if (existingUser) {
