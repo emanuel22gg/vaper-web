@@ -3,7 +3,7 @@ import { ShoppingCart, AlertCircle, Clock, Package, ChevronRight, BellRing, User
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/ui/card';
-import { getProductos, getVentaPedidos, getEstados, getUsuarios } from '@/shared/services/api';
+import { getProductos, getVentaPedidos, getEstados, getUsuarios, getAbonos } from '@/shared/services/api';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
 
 interface AdminNotificationsViewProps {
@@ -23,11 +23,12 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const [productos, pedidos, estados, usuarios] = await Promise.all([
+      const [productos, pedidos, estados, usuarios, abonos] = await Promise.all([
         getProductos(),
         getVentaPedidos(),
         getEstados(),
         getUsuarios(),
+        getAbonos(),
       ]);
 
       const lowStock = productos.filter((p: any) => p.stock <= 5 && p.estado);
@@ -46,7 +47,13 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
 
       const today = new Date();
       const expiring = pedidos.filter((p: any) => {
-        if (p.estadoId === 6 || (p.plazoAbonos && p.plazoAbonos > 0)) {
+        if (p.plazoAbonos !== null) {
+            const pedidoAbonos = abonos.filter((a: any) => a.ventaPedidoId === p.id && a.estado);
+            const totalAbonado = pedidoAbonos.reduce((sum: number, a: any) => sum + a.monto, 0);
+            const saldoPendiente = p.total - totalAbonado;
+            
+            if (saldoPendiente <= 0) return false;
+
             const fechaInicio = p.fechaCreacion ? new Date(p.fechaCreacion) : new Date();
             const fechaVencimiento = new Date(fechaInicio);
             fechaVencimiento.setMonth(fechaVencimiento.getMonth() + (p.plazoAbonos || 1));
@@ -54,7 +61,7 @@ export function AdminNotificationsView({ onNavigate }: AdminNotificationsViewPro
             const diffTime = fechaVencimiento.getTime() - today.getTime();
             const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            return p.estadoId === 6 && diasRestantes <= 7;
+            return diasRestantes <= 7;
         }
         return false;
       });

@@ -32,11 +32,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Obtener todos los usuarios de la API
       const apiUsers = await apiService.getUsuarios();
 
-      // 2. Buscar el usuario que coincida con correo/documento/username y contraseña
-      const foundUserApi = apiUsers.find(u =>
-        (u.correo === usernameOrEmail || u.numeroDocumento === usernameOrEmail || (u as any).username === usernameOrEmail) &&
-        u.contraseña === password
-      );
+      // 2. Buscar el usuario que coincida con correo/documento/username y contraseña (ignorando mayúsculas/minúsculas)
+      const searchKey = usernameOrEmail.toLowerCase();
+      const foundUserApi = apiUsers.find(u => {
+        const correoStr = (u.correo || '').toLowerCase();
+        const docStr = (u.numeroDocumento || '').toLowerCase();
+        const usernameStr = ((u as any).username || '').toLowerCase();
+        return (correoStr === searchKey || docStr === searchKey || usernameStr === searchKey) && u.contraseña === password;
+      });
 
       if (!foundUserApi) {
         throw new Error('InvalidCredentials');
@@ -140,7 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Verificar si ya existe el usuario
       const apiUsers = await apiService.getUsuarios();
       const existingUser = apiUsers.find(u =>
-        u.correo === userData.email
+        u.correo.toLowerCase() === userData.email.toLowerCase() || 
+        u.numeroDocumento === userData.username
       );
 
       if (existingUser) {

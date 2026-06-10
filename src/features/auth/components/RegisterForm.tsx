@@ -7,13 +7,15 @@ import { Label } from '@/shared/ui/label';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import * as apiService from '@/shared/services/api';
 import { toast } from "sonner";
-import { Upload, CheckCircle, FileImage, X, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, FileImage, X, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { DepartmentColombian, CityColombian } from '@/shared/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/shared/ui/utils";
+import { checkPasswordStrength } from '@/shared/utils/passwordStrength';
+import { Progress } from '@/shared/ui/progress';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -38,7 +40,8 @@ function calcAge(dateStr: string): number {
 function validateField(
   field: string,
   value: string,
-  tipoDocumento?: string
+  tipoDocumento?: string,
+  existingUsers: any[] = []
 ): string {
   switch (field) {
     case 'firstName':
@@ -55,18 +58,17 @@ function validateField(
       const max = tipoDocumento === 'TI' ? 11 : 10;
       if (value.length < min) return `Mínimo ${min} dígitos para ${tipoDocumento}.`;
       if (value.length > max) return `Máximo ${max} dígitos para ${tipoDocumento}.`;
+      if (existingUsers.some(u => u.numeroDocumento === value)) return 'Este documento ya está registrado.';
       return '';
     }
     case 'email': {
       if (!value.trim()) return 'Este campo es obligatorio.';
       if (!EMAIL_REGEX.test(value)) return 'Ingresa un correo válido.';
+      if (existingUsers.some(u => u.correo?.toLowerCase() === value.toLowerCase())) return 'Este correo ya está en uso.';
       return '';
     }
     case 'password': {
       if (!value) return 'Este campo es obligatorio.';
-      if (value.length < 8) return 'Mínimo 8 caracteres.';
-      if (!/[A-Z]/.test(value)) return 'Debe tener al menos una mayúscula.';
-      if (!/\d/.test(value)) return 'Debe tener al menos un número.';
       return '';
     }
     case 'fechaNacimiento': {
@@ -100,6 +102,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   const [cities, setCities] = useState<CityColombian[]>([]);
   const [isDeptPopoverOpen, setIsDeptPopoverOpen] = useState(false);
   const [isCityPopoverOpen, setIsCityPopoverOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [registerData, setRegisterData] = useState({
     firstName: '',
@@ -119,39 +122,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   // Errores por campo y campos que ya fueron tocados
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredField, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<RequiredField, boolean>>>({});
+  const [existingUsers, setExistingUsers] = useState<any[]>([]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Marca el campo como tocado y valida al salir del foco
   const handleBlur = useCallback((field: RequiredField) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+    const msg = validateField(field, registerData[field], registerData.tipoDocumento, existingUsers);
     setFieldErrors(prev => ({ ...prev, [field]: msg }));
-  }, [registerData]);
+  }, [registerData, existingUsers]);
 
   // Actualiza el valor y valida en tiempo real si el campo ya fue tocado
   const handleChange = useCallback((field: RequiredField, value: string) => {
     setRegisterData(prev => {
       const next = { ...prev, [field]: value };
       if (touched[field]) {
-        const msg = validateField(field, value, next.tipoDocumento);
+        const msg = validateField(field, value, next.tipoDocumento, existingUsers);
         setFieldErrors(fe => ({ ...fe, [field]: msg }));
       }
       return next;
     });
-  }, [touched]);
+  }, [touched, existingUsers]);
 
   // Al cambiar tipo de documento, re-valida el número si ya fue tocado
   const handleTipoDocumentoChange = useCallback((value: string) => {
     setRegisterData(prev => {
       const next = { ...prev, tipoDocumento: value };
       if (touched['documento']) {
-        const msg = validateField('documento', next.documento, value);
+        const msg = validateField('documento', next.documento, value, existingUsers);
         setFieldErrors(fe => ({ ...fe, documento: msg }));
       }
       return next;
     });
-  }, [touched]);
+  }, [touched, existingUsers]);
 
   React.useEffect(() => {
     const fetchDepartments = async () => {
@@ -162,7 +166,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
         console.error("Error fetching departments", err);
       }
     };
+    const fetchUsersForValidation = async () => {
+      try {
+        const users = await apiService.getUsuarios();
+        setExistingUsers(users);
+      } catch (err) {
+        console.error("Error fetching users for validation", err);
+      }
+    };
     fetchDepartments();
+    fetchUsersForValidation();
   }, []);
 
   React.useEffect(() => {
@@ -188,6 +201,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   const inputClass = (field: RequiredField) => {
     const base = "bg-black/50 border text-white rounded-xl h-9 text-sm transition-all focus:ring-1";
     if (!touched[field]) return `${base} border-gray-700 focus:border-yellow-500 focus:ring-yellow-500`;
+    
+    if (field === 'password') {
+      const score = checkPasswordStrength(registerData.password).score;
+      if (score < 5) return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
+      return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
+    }
+
     if (fieldErrors[field]) return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
     return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
   };
@@ -203,7 +223,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
 
     for (const field of REQUIRED_FIELDS) {
       allTouched[field] = true;
-      const msg = validateField(field, registerData[field], registerData.tipoDocumento);
+      const msg = validateField(field, registerData[field], registerData.tipoDocumento, existingUsers);
       allErrors[field] = msg;
       if (msg) hasErrors = true;
     }
@@ -212,6 +232,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
     setFieldErrors(allErrors);
 
     if (hasErrors) return;
+
+    const passwordStrength = checkPasswordStrength(registerData.password);
+    if (passwordStrength.score < 5) {
+      setError('La contraseña no cumple con todos los requisitos de seguridad.');
+      return;
+    }
 
     if (!imageFile) {
       setError('Debes adjuntar un comprobante o foto de tu documento de identidad para validar la mayoría de edad.');
@@ -273,7 +299,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
   // Helper para mostrar el mensaje de error bajo el campo
   const FieldError = ({ field }: { field: RequiredField }) =>
     touched[field] && fieldErrors[field] ? (
-      <p className="text-red-400 text-xs mt-1">{fieldErrors[field]}</p>
+      <div className="text-[10px] text-red-400 mt-1 flex items-start gap-1 px-1 leading-tight">
+        <span>•</span>
+        <span>{fieldErrors[field]}</span>
+      </div>
     ) : null;
 
   return (
@@ -374,16 +403,59 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-gray-300 text-xs font-medium">Contraseña *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={registerData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                onBlur={() => handleBlur('password')}
-                className={inputClass('password')}
-                placeholder="Crea contraseña"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={registerData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  onBlur={() => handleBlur('password')}
+                  className={`${inputClass('password')} pr-10`}
+                  placeholder="Crea contraseña"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
               <FieldError field="password" />
+              {registerData.password && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Fortaleza:</span>
+                    <span className={`text-xs font-semibold ${checkPasswordStrength(registerData.password).score >= 4 ? 'text-green-400' :
+                      checkPasswordStrength(registerData.password).score >= 3 ? 'text-blue-400' :
+                        checkPasswordStrength(registerData.password).score >= 2 ? 'text-yellow-400' :
+                          'text-red-400'
+                      }`}>
+                      {checkPasswordStrength(registerData.password).label}
+                    </span>
+                  </div>
+                  <Progress
+                    value={(checkPasswordStrength(registerData.password).score / 5) * 100}
+                    className="h-1.5 bg-gray-800"
+                    indicatorClassName={checkPasswordStrength(registerData.password).color}
+                  />
+                  {checkPasswordStrength(registerData.password).feedback.length > 0 && (
+                    <div className="text-[11px] text-gray-400 mt-1">
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {checkPasswordStrength(registerData.password).feedback.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fechaNacimiento" className="text-gray-300 text-xs font-medium">F. Nacimiento *</Label>

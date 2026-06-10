@@ -306,8 +306,8 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         try {
             setGuardando(true);
 
-            // Determinar estado basado en el método de pago (6 = En Abonos, 2 = Pendiente)
-            const estadoFinal = metodoPago === "Abonos" ? 6 : 2;
+            // Determinar estado basado en el método de pago (Siempre iniciarán en Pendiente: 2)
+            const estadoFinal = 2;
 
             const pedidoData: VentaPedidoDto = {
                 usuarioId: clienteEncontrado.id,

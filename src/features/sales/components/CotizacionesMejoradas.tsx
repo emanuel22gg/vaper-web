@@ -183,7 +183,7 @@ interface Cotizacion {
   descuento: number;
   impuestos: number;
   total: number;
-  estado: "aceptada" | "anulada";
+  estado: string;
   condicionesPago: CondicionesPago;
   politicasCancelacion: PoliticasCancelacion;
   observaciones?: string;
@@ -260,7 +260,7 @@ export const Cotizaciones: React.FC = () => {
             descuento: Number(c.descuento || 0),
             impuestos: 0,
             total: Number(c.total || 0),
-            estado: (c.estadoId === 3 ? "anulada" : "aceptada") as "anulada" | "aceptada",
+            estado: c.nombreEstado?.toLowerCase() || (c.estadoId === 10 ? "expirada" : (c.estadoId === 9 ? "vigente" : (c.estadoId === 3 ? "anulada" : "aceptada"))),
             condicionesPago: {
               tipoPago: "contado" as "contado" | "credito",
               metodoPago: ["Efectivo"],
@@ -709,7 +709,7 @@ export const Cotizaciones: React.FC = () => {
         subtotal,
         descuento,
         vigencia: vigenciaDias,
-        estadoId: 1 // 1 = Aceptada
+        estadoId: 9 // 9 = Vigente
       };
 
       const createdCotizacion = await createCotizacion(cotizacionData);
@@ -762,7 +762,7 @@ export const Cotizaciones: React.FC = () => {
         descuento,
         impuestos: 0,
         total,
-        estado: "aceptada",
+        estado: "vigente",
         condicionesPago: formData.condicionesPago,
         politicasCancelacion: { permiteCancelacion: true },
         creadoPor: "Usuario Actual",
@@ -895,11 +895,13 @@ export const Cotizaciones: React.FC = () => {
   // Función para obtener el badge del estado
   const getEstadoBadge = (estado: string) => {
     const variants = {
+      'vigente': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-green-600 hover:bg-green-700 text-white', label: 'Vigente' },
+      'expirada': { variant: 'secondary' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-orange-500 hover:bg-orange-600 text-white', label: 'Expirada' },
       'aceptada': { variant: 'default' as const, icon: <CheckCircle className="h-3 w-3" />, color: 'bg-black hover:bg-black/90 text-white', label: 'Aceptada' },
       'anulada': { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" />, color: 'bg-red-600 hover:bg-red-700 text-white', label: 'Anulada' },
     };
 
-    const config = variants[estado.toLowerCase() as keyof typeof variants] || variants.aceptada;
+    const config = variants[estado.toLowerCase() as keyof typeof variants] || { variant: 'default' as const, icon: <Info className="h-3 w-3" />, color: 'bg-blue-500 hover:bg-blue-600 text-white', label: estado };
 
     return (
       <Badge
@@ -1129,6 +1131,12 @@ export const Cotizaciones: React.FC = () => {
               <SelectContent>
                 <SelectItem value="todos">
                   Todos los estados
+                </SelectItem>
+                <SelectItem value="vigente">
+                  Vigente
+                </SelectItem>
+                <SelectItem value="expirada">
+                  Expirada
                 </SelectItem>
                 <SelectItem value="aceptada">
                   Aceptada

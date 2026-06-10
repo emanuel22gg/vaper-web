@@ -29,6 +29,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
   const [showRegister, setShowRegister] = useState(false);
   const [sentEmail, setSentEmail] = useState('');
   const [resetToken, setResetToken] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutTime, setLockoutTime] = useState(0);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (lockoutTime > 0) {
+      timer = setInterval(() => {
+        setLockoutTime((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (lockoutTime === 0 && failedAttempts >= 3) {
+      setFailedAttempts(0);
+    }
+    return () => clearInterval(timer);
+  }, [lockoutTime, failedAttempts]);
 
   // Estados para login
   const [loginData, setLoginData] = useState({
@@ -43,22 +57,33 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutTime > 0) return;
+
     setIsLoading(true);
     setError('');
 
     try {
       await login(loginData.username, loginData.password);
+      setFailedAttempts(0);
       onSuccess?.();
     } catch (err: any) {
       console.error('Error en handleLogin:', err);
-      if (err.message === 'UserDeactivated') {
-        setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
-      } else if (err.message === 'UserPendingApproval') {
-        setError('Tu cuenta aún no ha sido aprobada. Estamos verificando tu documento.');
-      } else if (err.message === 'RoleDeactivated') {
-        setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+
+      if (newAttempts >= 3) {
+        setLockoutTime(30);
+        setError('Demasiados intentos fallidos. Cuenta bloqueada temporalmente.');
       } else {
-        setError('Credenciales incorrectas o usuario no encontrado. Intenta nuevamente.');
+        if (err.message === 'UserDeactivated') {
+          setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
+        } else if (err.message === 'UserPendingApproval') {
+          setError('Tu cuenta aún no ha sido aprobada. Estamos verificando tu documento.');
+        } else if (err.message === 'RoleDeactivated') {
+          setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
+        } else {
+          setError(`Credenciales incorrectas. Te quedan ${3 - newAttempts} intento(s).`);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -261,10 +286,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                 <div className="pt-4 space-y-5">
                   <Button
                     type="submit"
-                    className="w-full h-12 text-base bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] transition-all duration-300"
-                    disabled={isLoading}
+                    className="w-full h-12 text-base bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading || lockoutTime > 0}
                   >
-                    {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+                    {isLoading ? 'Verificando...' : lockoutTime > 0 ? `Bloqueado (${lockoutTime}s)` : 'Iniciar Sesión'}
                   </Button>
 
                   <div className="flex flex-col space-y-2 text-center">

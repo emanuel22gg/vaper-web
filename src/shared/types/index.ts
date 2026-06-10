@@ -371,5 +371,6 @@ export interface CotizacionDto {
   descuento: number;
   vigencia?: number;
   estadoId: number;
+  nombreEstado?: string;
   detalleCotizaciones?: DetalleCotizacionDto[];
 }

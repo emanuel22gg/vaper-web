@@ -213,7 +213,7 @@ export const GestionUsuarios: React.FC = () => {
       await createUser({
         username: newUser.documento,
         email: newUser.email,
-        password: 'temp123',
+        password: newUser.documento,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         numeroDocumento: newUser.documento,
@@ -229,8 +229,8 @@ export const GestionUsuarios: React.FC = () => {
 
       // Toast de confirmación de creación
       toast.success("Usuario creado", {
-        description: `${newUser.firstName} ${newUser.lastName} ha sido creado exitosamente con el rol ${newUser.role}.`,
-        duration: 4000,
+        description: `${newUser.firstName} ha sido creado. El usuario y contraseña inicial es su número de documento.`,
+        duration: 5000,
       });
 
       setNewUser({
@@ -1221,7 +1221,7 @@ export const GestionUsuarios: React.FC = () => {
                       </div>
                       <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex justify-center p-4">
                         <img 
-                          src={selectedUser.documentoUrl} 
+                          src={selectedUser.documentoUrl.toLowerCase().includes('cloudinary') && selectedUser.documentoUrl.toLowerCase().endsWith('.pdf') ? selectedUser.documentoUrl.replace(/\.pdf$/i, '.jpg') : selectedUser.documentoUrl} 
                           alt="Documento de Identidad" 
                           className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm"
                         />

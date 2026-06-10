@@ -20,7 +20,9 @@ import {
   UserCircle,
   Lock,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDepartments, getCitiesByDepartment } from '@/shared/services/api';
@@ -28,6 +30,8 @@ import { DepartmentColombian, CityColombian } from '@/shared/types';
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/shared/ui/command";
 import { cn } from "@/shared/ui/utils";
+import {  } from '@/shared/utils/passwordStrength';
+import { Progress } from '@/shared/ui/progress';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +47,8 @@ export const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -158,6 +164,12 @@ export const UserProfile: React.FC = () => {
 
     if (passwordData.newPassword.length < 6) {
       toast.error('Error', { description: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+
+    const strength = (passwordData.newPassword);
+    if (strength.score < 5) {
+      toast.error('Error', { description: 'La contraseña no cumple con todos los requisitos.' });
       return;
     }
 
@@ -565,26 +577,85 @@ export const UserProfile: React.FC = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-gray-700">Nueva Contraseña</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  placeholder="Ingresa tu nueva contraseña"
-                  className="bg-gray-50 border-gray-300 text-gray-900"
-                />
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    placeholder="Ingresa tu nueva contraseña"
+                    className="bg-gray-50 border-gray-300 text-gray-900 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-500 hover:text-yellow-500"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {passwordData.newPassword && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Fortaleza:</span>
+                      <span className={`text-xs font-semibold ${(passwordData.newPassword).score >= 4 ? 'text-green-600' :
+                        (passwordData.newPassword).score >= 3 ? 'text-blue-600' :
+                          (passwordData.newPassword).score >= 2 ? 'text-yellow-600' :
+                            'text-red-600'
+                        }`}>
+                        {(passwordData.newPassword).label}
+                      </span>
+                    </div>
+                    <Progress
+                      value={((passwordData.newPassword).score / 5) * 100}
+                      className="h-1.5 bg-gray-200"
+                      indicatorClassName={(passwordData.newPassword).color}
+                    />
+                    {(passwordData.newPassword).feedback.length > 0 && (
+                      <div className="text-[11px] text-gray-500 mt-1">
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {(passwordData.newPassword).feedback.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-gray-700">Confirmar Nueva Contraseña</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  placeholder="Confirma tu nueva contraseña"
-                  className="bg-gray-50 border-gray-300 text-gray-900"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    placeholder="Confirma tu nueva contraseña"
+                    className="bg-gray-50 border-gray-300 text-gray-900 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-500 hover:text-yellow-500"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  {passwordData.confirmPassword && (
+                    <div className="absolute top-1/2 -translate-y-1/2" style={{ right: '2.5rem' }}>
+                      {passwordData.newPassword === passwordData.confirmPassword ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="pt-4">

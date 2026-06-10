@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { getProductos, getVentaPedidos, getEstados, getUsuarios } from '@/shared/services/api';
+import { getProductos, getVentaPedidos, getEstados, getUsuarios, getAbonos } from '@/shared/services/api';
 import { Bell } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -45,11 +45,12 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const [productos, pedidos, estados, usuarios] = await Promise.all([
+      const [productos, pedidos, estados, usuarios, abonos] = await Promise.all([
         getProductos(),
         getVentaPedidos(),
         getEstados(),
         getUsuarios(),
+        getAbonos(),
       ]);
 
       const lowStockProducts = productos.filter((p: any) => p.stock <= 5 && p.estado);
@@ -138,7 +139,13 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
 
       const today = new Date();
       const expiringInstallments = pedidos.filter((p: any) => {
-        if (p.estadoId === 6 || (p.plazoAbonos && p.plazoAbonos > 0)) {
+        if (p.plazoAbonos !== null) {
+            const pedidoAbonos = abonos.filter((a: any) => a.ventaPedidoId === p.id && a.estado);
+            const totalAbonado = pedidoAbonos.reduce((sum: number, a: any) => sum + a.monto, 0);
+            const saldoPendiente = p.total - totalAbonado;
+            
+            if (saldoPendiente <= 0) return false;
+
             const fechaInicio = p.fechaCreacion ? new Date(p.fechaCreacion) : new Date();
             const fechaVencimiento = new Date(fechaInicio);
             fechaVencimiento.setMonth(fechaVencimiento.getMonth() + (p.plazoAbonos || 1));
@@ -146,7 +153,7 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
             const diffTime = fechaVencimiento.getTime() - today.getTime();
             const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            return p.estadoId === 6 && diasRestantes <= 7;
+            return diasRestantes <= 7;
         }
         return false;
       });

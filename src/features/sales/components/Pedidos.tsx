@@ -106,7 +106,11 @@ export const Pedidos: React.FC<PedidosProps> = ({
   const getStatusName = (id: number) => {
     const status = statuses.find(s => s.id === id);
     if (!status) return "cargando...";
-    const name = status.nombreEstado.toLowerCase();
+    let name = status.nombreEstado.toLowerCase();
+    
+    // El estado logístico no debe ser 'abonos', así que lo forzamos visualmente a 'pendiente'
+    if (name.includes('abono')) return 'pendiente';
+    
     if (name === 'anulado' || name === 'anulada') return 'cancelado';
     return name;
   };
@@ -586,6 +590,7 @@ export const Pedidos: React.FC<PedidosProps> = ({
                   <TableHead>Cliente</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Total</TableHead>
+                  <TableHead>Pago</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -593,13 +598,13 @@ export const Pedidos: React.FC<PedidosProps> = ({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-48 text-center">
+                    <TableCell colSpan={8} className="h-48 text-center">
                       <LoadingScreen message="Cargando pedidos..." />
                     </TableCell>
                   </TableRow>
                 ) : paginatedPedidos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                       No se encontraron pedidos.
                     </TableCell>
                   </TableRow>
@@ -614,6 +619,24 @@ export const Pedidos: React.FC<PedidosProps> = ({
                       </TableCell>
                       <TableCell className="font-medium">
                         ${pedido.total.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {pedido.plazoAbonos !== null ? (
+                          <Badge variant="outline" className="border-indigo-200 text-indigo-700 bg-indigo-50">
+                            En Abonos
+                          </Badge>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              (pedido.metodoPago === 'Otro' || pedido.metodoPago?.toLowerCase() === 'efectivo')
+                                ? "border-emerald-200 text-emerald-700 bg-emerald-50"
+                                : "border-blue-200 text-blue-700 bg-blue-50"
+                            }
+                          >
+                            {pedido.metodoPago === 'Otro' ? 'Efectivo' : pedido.metodoPago}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -687,37 +710,46 @@ export const Pedidos: React.FC<PedidosProps> = ({
           </DialogHeader>
 
           <div className="py-2 flex flex-col gap-1">
-            {[
-              { label: 'Pendiente',    icon: '🕐', colorSelected: 'border-yellow-400 bg-yellow-50 ring-1 ring-yellow-300' },
-              { label: 'Despachando', icon: '📦', colorSelected: 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'   },
-              { label: 'Enviado',     icon: '🚚', colorSelected: 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-300' },
-              { label: 'Entregado',   icon: '✅', colorSelected: 'border-green-400 bg-green-50 ring-1 ring-green-300' },
-              { label: 'Cancelado',   icon: '❌', colorSelected: 'border-red-400 bg-red-50 ring-1 ring-red-300'      },
-            ].map((option) => {
-              const match = statuses.find(s =>
-                s.nombreEstado.toLowerCase() === option.label.toLowerCase() ||
-                (option.label === 'Cancelado' && ['anulada','anulado','cancelado'].includes(s.nombreEstado.toLowerCase()))
-              );
-              if (!match) return null;
-              const isSelected = newStatusId === match.id;
-              const isCurrent = pedidoToUpdate?.estadoId === match.id;
-              return (
-                <button
-                  key={match.id}
-                  type="button"
-                  onClick={() => setNewStatusId(match.id)}
-                  disabled={isUpdatingStatus}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all text-left
-                    ${isSelected ? option.colorSelected : 'border-gray-200 bg-white hover:bg-gray-50'}
-                    ${isUpdatingStatus ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
-                  `}
-                >
-                  <span className="text-sm">{option.icon}</span>
-                  <span className="flex-1 text-sm font-medium text-gray-800">{option.label}</span>
-                  {isSelected && <CheckCircle className="h-4 w-4 text-gray-600 shrink-0" />}
-                </button>
-              );
-            })}
+            {(() => {
+              const isRecogida = pedidoToUpdate?.direccionEntrega?.toLowerCase().includes('recogida') || false;
+              let options = [
+                { label: 'Pendiente',    icon: '🕐', colorSelected: 'border-yellow-400 bg-yellow-50 ring-1 ring-yellow-300' },
+                { label: 'Despachando', icon: '📦', colorSelected: 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'   },
+                { label: 'Enviado',     icon: '🚚', colorSelected: 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-300' },
+                { label: 'Entregado',   icon: '✅', colorSelected: 'border-green-400 bg-green-50 ring-1 ring-green-300' },
+                { label: 'Cancelado',   icon: '❌', colorSelected: 'border-red-400 bg-red-50 ring-1 ring-red-300'      },
+              ];
+
+              if (isRecogida) {
+                options = options.filter(o => o.label !== 'Despachando' && o.label !== 'Enviado');
+              }
+
+              return options.map((option) => {
+                const match = statuses.find(s =>
+                  s.nombreEstado.toLowerCase() === option.label.toLowerCase() ||
+                  (option.label === 'Cancelado' && ['anulada','anulado','cancelado'].includes(s.nombreEstado.toLowerCase()))
+                );
+                if (!match) return null;
+                const isSelected = newStatusId === match.id;
+                const isCurrent = pedidoToUpdate?.estadoId === match.id;
+                return (
+                  <button
+                    key={match.id}
+                    type="button"
+                    onClick={() => setNewStatusId(match.id)}
+                    disabled={isUpdatingStatus}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all text-left
+                      ${isSelected ? option.colorSelected : 'border-gray-200 bg-white hover:bg-gray-50'}
+                      ${isUpdatingStatus ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    <span className="text-sm">{option.icon}</span>
+                    <span className="flex-1 text-sm font-medium text-gray-800">{option.label}</span>
+                    {isSelected && <CheckCircle className="h-4 w-4 text-gray-600 shrink-0" />}
+                  </button>
+                );
+              });
+            })()}
           </div>
 
           {statuses.find(s => s.id === newStatusId)?.nombreEstado.toLowerCase() === 'enviado' && (

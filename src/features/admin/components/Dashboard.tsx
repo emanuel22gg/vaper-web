@@ -267,7 +267,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   };
 
-  const isClient = user.role.name === "Cliente" && !hasPermission("Ver Dashboard");
+  const isClient = user.role.name === "Cliente" && (!user.role.permissions || user.role.permissions.length === 0);
 
   const getViewTitle = () => {
     if (detailView) {

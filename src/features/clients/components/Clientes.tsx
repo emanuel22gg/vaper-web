@@ -912,9 +912,9 @@ export const Clientes: React.FC<ClientesProps> = ({ initialSearchTerm = '' }) =>
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex justify-center p-4">
                   <img 
-                      src={clientToValidate.documentoUrl} 
+                      src={clientToValidate.documentoUrl.toLowerCase().includes('cloudinary') && clientToValidate.documentoUrl.toLowerCase().endsWith('.pdf') ? clientToValidate.documentoUrl.replace(/\.pdf$/i, '.jpg') : clientToValidate.documentoUrl} 
                       alt="Documento de Identidad" 
-                      className="w-full object-contain hover:scale-110 transition-transform duration-300 cursor-zoom-in"
+                      className="w-full max-h-[500px] object-contain hover:scale-110 transition-transform duration-300 cursor-zoom-in rounded-md shadow-sm"
                   />
               </div>
               <div className="flex gap-4 pt-4 border-t border-gray-100">

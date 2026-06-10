@@ -31,7 +31,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const { user, isAuthenticated } = useAuth();
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos'>('home');
-  const [activeAdminView, setActiveAdminView] = useState<string>('dashboard');
+  const [activeAdminView, setActiveAdminView] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [intendedView, setIntendedView] = useState<string | null>(null);
 
@@ -43,13 +43,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         user.role.name === 'Administrador' ||
         user.role.name === 'Admin' ||
         user.role.name === 'Empleado' ||
-        user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');
+        (user.role.permissions && user.role.permissions.length > 0);
 
       if (isAdminOrEmployee) {
         // Solo redirigir si no estamos ya en el panel admin
         if (currentView !== 'admin') {
           setCurrentView('admin');
-          setActiveAdminView('dashboard');
+          setActiveAdminView('');
         }
 
         // Notificar que la redirección ya se procesó
@@ -87,9 +87,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setCurrentView(view);
     setIsSideMenuOpen(false);
 
-    // Si navega al admin, resetear la vista administrativa al dashboard
+    // Si navega al admin, permitir que el Dashboard decida la vista inicial según permisos
     if (view === 'admin') {
-      setActiveAdminView('dashboard');
+      setActiveAdminView('');
     }
 
     // Resetear la redirección automática cuando el usuario navega manualmente
@@ -108,7 +108,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       user.role.name === 'Administrador' ||
       user.role.name === 'Admin' ||
       user.role.name === 'Empleado' ||
-      user.role.permissions?.some((p: any) => p.name === 'Ver Dashboard');
+      (user.role.permissions && user.role.permissions.length > 0);
   };
 
   const handleSearchChange = (term: string) => {

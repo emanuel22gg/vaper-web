@@ -65,8 +65,8 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
             ]);
 
             setAllPedidos(pedidosData);
-            // Interesan pedidos en "En Abonos" (6) y los ya "Pagados/Entregados" (1) para historial
-            setPedidos(pedidosData.filter(p => p.estadoId === 6 || p.estadoId === 1));
+            // Interesan pedidos en "En Abonos" (basado en plazoAbonos)
+            setPedidos(pedidosData.filter(p => p.plazoAbonos !== null));
             setUsuarios(usuariosData);
             setAbonos(abonosData);
         } catch (error) {
@@ -80,9 +80,13 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
     // Estadísticas globales (siempre visibles)
     const stats = useMemo(() => {
         const today = new Date();
-        // Las estadísticas solo cuentan deudas ACTIVAS (Estado 6)
+        // Las estadísticas solo cuentan deudas ACTIVAS (saldoPendiente > 0)
         const baseData = pedidos
-            .filter(p => p.estadoId === 6)
+            .filter(p => {
+                const pedidoAbonos = abonos.filter(a => a.ventaPedidoId === p.id && a.estado);
+                const totalAbonado = pedidoAbonos.reduce((sum, a) => sum + a.monto, 0);
+                return (p.total - totalAbonado) > 0;
+            })
             .map(pedido => {
                 const pedidoAbonos = abonos.filter(a => a.ventaPedidoId === pedido.id && a.estado);
                 const totalAbonado = pedidoAbonos.reduce((sum, a) => sum + a.monto, 0);
@@ -112,7 +116,6 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
 
     // Resultados filtrados por búsqueda
     const processedResults = useMemo(() => {
-        if (!searchQuery.trim()) return [];
 
         const today = new Date();
         const search = searchQuery.toLowerCase();
@@ -132,7 +135,7 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 let estadoAlerta: 'danger' | 'warning' | 'success' | 'paid' = 'success';
-                if (saldoPendiente <= 0 || pedido.estadoId === 1) estadoAlerta = 'paid';
+                if (saldoPendiente <= 0) estadoAlerta = 'paid';
                 else if (diasRestantes < 0) estadoAlerta = 'danger';
                 else if (diasRestantes <= 7) estadoAlerta = 'warning';
 
@@ -153,12 +156,31 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 };
             })
             .filter(item => {
+                if (!search) {
+                    // Si no hay búsqueda, mostrar todas las deudas activas (con abonos y saldo pendiente)
+                    return item.pedidoOriginal.plazoAbonos !== null && item.saldoPendiente > 0;
+                }
+
+                const isNumeric = /^\d+$/.test(search);
                 const isIdSearch = item.pedidoId.toString() === search;
-                const isClientSearch = item.clienteNombre.toLowerCase().includes(search) || item.clienteDocumento.includes(search);
                 
-                // Si busca por cliente, forzamos que solo sea estado 6 y tenga saldo pendiente
+                let isClientSearch = item.clienteNombre.toLowerCase().includes(search);
+                
+                // Si es un número corto (ej: "33"), no hacemos búsqueda parcial en el documento
+                // para evitar que traiga documentos como "103345". Solo lo hacemos si es largo.
+                if (isNumeric) {
+                    if (search.length > 3) {
+                        isClientSearch = isClientSearch || item.clienteDocumento.includes(search);
+                    } else {
+                        isClientSearch = isClientSearch || item.clienteDocumento === search; // Solo coincidencia exacta si es corto
+                    }
+                } else {
+                    isClientSearch = isClientSearch || item.clienteDocumento.includes(search);
+                }
+                
+                // Si busca por cliente, forzamos que solo sea abono y tenga saldo pendiente
                 if (isClientSearch && !isIdSearch) {
-                    if (item.pedidoOriginal.estadoId !== 6 || item.saldoPendiente <= 0) {
+                    if (item.pedidoOriginal.plazoAbonos === null || item.saldoPendiente <= 0) {
                         return false;
                     }
                 }
@@ -176,8 +198,8 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
             const esBuscandoId = /^\d+$/.test(search);
             if (esBuscandoId) {
                 const pedidoBuscado = allPedidos.find(p => p.id?.toString() === search);
-                if (pedidoBuscado && pedidoBuscado.estadoId !== 6) {
-                    toast.warning("Pedidos sin abonos pendientes");
+                if (pedidoBuscado && pedidoBuscado.plazoAbonos === null) {
+                    toast.warning("El pedido ingresado no tiene modalidad de abonos");
                 }
             }
         }
@@ -282,15 +304,18 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 </Card>
             </div>
 
-            {/* Resultados de Búsqueda */}
+            {/* Resultados de Cartera */}
             <div className="space-y-4">
-                {(hasSearched || searchQuery !== '') && (
                     <Card>
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <CardTitle>Resultados de la Búsqueda</CardTitle>
-                                    <CardDescription>Se encontraron {processedResults.length} registros para "{searchQuery}"</CardDescription>
+                                    <CardTitle>{searchQuery ? "Resultados de la Búsqueda" : "Deudas Activas"}</CardTitle>
+                                    <CardDescription>
+                                        {searchQuery 
+                                            ? `Se encontraron ${processedResults.length} registros para "${searchQuery}"`
+                                            : `Mostrando ${processedResults.length} clientes con deudas activas.`}
+                                    </CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
@@ -386,7 +411,6 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                             </div>
                         </CardContent>
                     </Card>
-                )}
             </div>
         </div>
     );
