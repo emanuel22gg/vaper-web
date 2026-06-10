@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Download, Smartphone } from 'lucide-react';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 import { getCategorias } from '@/shared/services/api';
 import { Categoria } from '@/shared/types';
@@ -64,6 +64,19 @@ export function Footer({ onNavigate }: FooterProps) {
               <Facebook className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
               <Instagram className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
               <Twitter className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
+            </div>
+
+            {/* Download App Button */}
+            <div className="pt-2">
+              <a 
+                href="/vaperMovil.apk" 
+                download="vaperMovil.apk"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/20"
+              >
+                <Smartphone className="h-5 w-5" />
+                Descargar App Android
+                <Download className="h-4 w-4 ml-1" />
+              </a>
             </div>
           </div>
 
