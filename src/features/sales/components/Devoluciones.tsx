@@ -106,7 +106,8 @@ import {
   DetalleDevolucionDto,
   VentaPedidoDto,
   ProductoDto,
-  UsuarioDto
+  UsuarioDto,
+  DetalleVentaPedidoDto
 } from "@/shared/types";
 import { LoadingScreen } from "@/shared/components/LoadingScreen";
 import {
@@ -123,6 +124,7 @@ export const Devoluciones: React.FC = () => {
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
   const [productos, setProductos] = useState<ProductoDto[]>([]);
   const [ventas, setVentas] = useState<VentaPedidoDto[]>([]);
+  const [detallesVentas, setDetallesVentas] = useState<DetalleVentaPedidoDto[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -153,6 +155,12 @@ export const Devoluciones: React.FC = () => {
   const [devolucionToAnular, setDevolucionToAnular] = useState<DevolucionDto | null>(null);
   const [activeTab, setActiveTab] = useState("venta");
 
+  // Estado para exportar
+  const currentD = new Date();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(new Date(currentD.getFullYear(), currentD.getMonth(), 1).toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState(currentD.toISOString().split('T')[0]);
+
   // Totales de unidades
   const totalDevueltoCant = formData.productosSeleccionados.reduce((acc, p) => acc + (p.cantidad || 0), 0);
   const totalReposicionCant = formData.productosReposicion.reduce((acc, p) => acc + (p.cantidad || 0), 0);
@@ -161,12 +169,13 @@ export const Devoluciones: React.FC = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [devs, dets, usr, prods, vts] = await Promise.all([
+      const [devs, dets, usr, prods, vts, detVts] = await Promise.all([
         getDevoluciones(),
         getDetalleDevoluciones(),
         getUsuarios(),
         getProductos(),
-        getVentaPedidos()
+        getVentaPedidos(),
+        getDetalleVentaPedidos()
       ]);
 
       // Mapear nombres de clientes para facilitar filtrado
@@ -184,6 +193,7 @@ export const Devoluciones: React.FC = () => {
       setUsuarios(usr || []);
       setProductos(prods || []);
       setVentas(vts || []);
+      setDetallesVentas(detVts || []);
     } catch (error) {
       console.error("Error sincronizando devoluciones:", error);
       toast.error("Error al cargar datos de devoluciones");
@@ -361,9 +371,10 @@ export const Devoluciones: React.FC = () => {
         return `${p.cantidad}x ${prod?.nombreProducto || `Item #${p.productoId}`}`;
       }).join(", ");
 
-      const descripcionConsolidada = `MOTIVO: ${formData.motivo || "Garantía General"}${resumenReposicion ? ` ||| REPOSICION: ${resumenReposicion}` : ""}`;
-
       const diferenciaNetos = totalReposicion - totalDevuelto;
+      const difText = diferenciaNetos > 0 ? `Saldo a favor tienda: +$${Math.abs(diferenciaNetos).toLocaleString()}` : diferenciaNetos < 0 ? `Saldo a favor cliente: -$${Math.abs(diferenciaNetos).toLocaleString()}` : `Cambio mano a mano ($0)`;
+
+      const descripcionConsolidada = `MOTIVO: ${formData.motivo || "Garantía General"}${resumenReposicion ? ` ||| REPOSICION: ${resumenReposicion}` : ""} ||| FINANZAS: Valor Devuelto $${totalDevuelto.toLocaleString()} vs Valor Entregado $${totalReposicion.toLocaleString()} (${difText})`;
 
       const nuevaDev: DevolucionDto = {
         ventaPedidoId: ventaEncontrada.id!,
@@ -379,6 +390,7 @@ export const Devoluciones: React.FC = () => {
 
       if (!devId) throw new Error("No se pudo obtener el ID de la devolución");
 
+      // 3. Modificar la Factura y Crear Detalles de Devolución
       let detallesOriginales = [...(ventaEncontrada.detalleVenta_Pedido || [])];
       const mapaConsolidado = new Map<number, any>();
 
@@ -432,10 +444,20 @@ export const Devoluciones: React.FC = () => {
       for (const [prodId, data] of mapaConsolidado.entries()) {
         if (data.action === 'update') {
           if (data.finalQty <= 0) {
-            await deleteDetalleVentaPedido(data.originalDetail.id);
+            // EN LUGAR DE BORRAR (que causa error de llave foránea), lo ponemos en 0
+            await updateDetalleVentaPedido(data.originalDetail.id, {
+              id: data.originalDetail.id,
+              ventaPedidoId: ventaEncontrada.id!,
+              productoId: data.productoId,
+              cantidad: 0,
+              precioUnitario: data.originalDetail.precioUnitario,
+              subtotal: 0
+            });
           } else if (data.finalQty !== data.originalQty || data.precioUnitario !== data.originalDetail.precioUnitario) {
             await updateDetalleVentaPedido(data.originalDetail.id, {
-              ...data.originalDetail,
+              id: data.originalDetail.id,
+              ventaPedidoId: ventaEncontrada.id!,
+              productoId: data.productoId,
               cantidad: data.finalQty,
               precioUnitario: data.precioUnitario,
               subtotal: data.finalQty * data.precioUnitario
@@ -456,9 +478,23 @@ export const Devoluciones: React.FC = () => {
       const nuevoSubtotal = (ventaEncontrada.subtotal || 0) + diferenciaNetos;
       
       await updateVentaPedido(ventaEncontrada.id!, {
-        ...ventaEncontrada,
+        id: ventaEncontrada.id!,
+        usuarioId: ventaEncontrada.usuarioId,
+        estadoId: ventaEncontrada.estadoId,
+        fechaCreacion: ventaEncontrada.fechaCreacion,
+        fechaEntrega: ventaEncontrada.fechaEntrega,
+        metodoPago: ventaEncontrada.metodoPago || "Transferencia",
+        direccionEntrega: ventaEncontrada.direccionEntrega || "Venta Presencial",
+        ciudadEntrega: ventaEncontrada.ciudadEntrega || "Local",
+        departamentoEntrega: ventaEncontrada.departamentoEntrega || "Local",
+        observaciones: ventaEncontrada.observaciones,
+        comprobanteUrl: ventaEncontrada.comprobanteUrl,
+        plazoAbonos: ventaEncontrada.plazoAbonos || null,
+        tipoVenta: ventaEncontrada.tipoVenta || "Venta",
+        subtotal: nuevoSubtotal,
+        envio: ventaEncontrada.envio || 0,
         total: nuevoTotal,
-        subtotal: nuevoSubtotal
+        vigenciaDevolucion: ventaEncontrada.vigenciaDevolucion || 1
       });
 
       toast.success("Cambio Procesado", {
@@ -612,7 +648,7 @@ export const Devoluciones: React.FC = () => {
       const detallesTicket = detallesDevolucion.filter(det => det.devolucionId === dev.id);
       const ventaOriginal = ventas.find(v => Number(v.id) === Number(dev.ventaPedidoId));
       for (const det of detallesTicket) {
-        const detalleVenta = ventaOriginal?.detalleVenta_Pedido?.find(d => d.id === det.detalleVentaPedidoId);
+        const detalleVenta = detallesVentas.find(d => Number(d.id) === Number(det.detalleVentaPedidoId));
         const productoIdReal = detalleVenta?.productoId;
         if (productoIdReal) {
           const prod = productos.find(p => p.id === productoIdReal);
@@ -691,6 +727,67 @@ export const Devoluciones: React.FC = () => {
 
   // Remover el early return de `currentView === "detail"`
 
+  const handleExportCSV = () => {
+    // 1. Filtrar devoluciones por fecha
+    const start = new Date(exportStartDate + "T00:00:00");
+    const end = new Date(exportEndDate + "T23:59:59");
+
+    const devolucionesFiltradas = devoluciones.filter(d => {
+      const dDate = new Date(d.fechaDevolucion);
+      return dDate >= start && dDate <= end && d.estadoId === 5; // Solo devoluciones aceptadas
+    });
+
+    const devolucionIds = devolucionesFiltradas.map(d => Number(d.id || (d as any).Id));
+
+    // 2. Filtrar detallesDevolucion
+    const detallesFiltrados = detallesDevolucion.filter(det => 
+      devolucionIds.includes(Number(det.devolucionId))
+    );
+
+    // 3. Agrupar por productoId
+    const agrupado: Record<number, number> = {};
+    detallesFiltrados.forEach(det => {
+      const detalleVenta = detallesVentas.find(d => Number(d.id) === Number(det.detalleVentaPedidoId));
+      const productoIdReal = detalleVenta ? Number(detalleVenta.productoId ?? (detalleVenta as any).ProductoId) : null;
+      
+      if (productoIdReal) {
+        agrupado[productoIdReal] = (agrupado[productoIdReal] || 0) + det.cantidad;
+      }
+    });
+
+    // 4. Crear data y ordenar
+    const rows = Object.entries(agrupado).map(([prodId, cantidad]) => {
+      const prod = productos.find(p => p.id === Number(prodId));
+      return {
+        id: prodId,
+        nombre: prod?.nombreProducto || `Producto #${prodId}`,
+        cantidad
+      };
+    }).sort((a, b) => b.cantidad - a.cantidad);
+
+    if (rows.length === 0) {
+      toast.warning("No hay productos devueltos en este rango de fechas.");
+      return;
+    }
+
+    // 5. Generar CSV
+    let csvContent = "\uFEFF"; // BOM para Excel
+    csvContent += "ID;Nombre del Producto;Cantidad\n";
+    rows.forEach(row => {
+      csvContent += `${row.id};"${row.nombre.replace(/"/g, '""')}";${row.cantidad}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Reporte_Defectuosos_${exportStartDate}_al_${exportEndDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsExportModalOpen(false);
+    toast.success("Reporte descargado correctamente");
+  };
 
   return (
     <div className="space-y-6">
@@ -704,6 +801,55 @@ export const Devoluciones: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2 w-full lg:w-auto">
+            <Dialog open={isExportModalOpen} onOpenChange={setIsExportModalOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full lg:w-auto border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar Defectuosos (Excel)
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Exportar Reporte de Defectuosos</DialogTitle>
+                  <DialogDescription>
+                    Selecciona el rango de fechas para generar el reporte de productos devueltos.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="fechaInicio">Fecha Inicial</Label>
+                    <Input
+                      id="fechaInicio"
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="fechaFin">Fecha Final</Label>
+                    <Input
+                      id="fechaFin"
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                  <Button type="button" variant="outline" onClick={() => setIsExportModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="button" variant="default" onClick={handleExportCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar a Excel
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Button
               onClick={() => setIsNewDialogOpen(true)}
               className="bg-[rgb(21,93,252)] hover:bg-blue-700 w-full lg:w-auto"
@@ -1003,7 +1149,8 @@ export const Devoluciones: React.FC = () => {
                           id="fecha-devolucion"
                           type="date"
                           value={formData.fechaDevolucion}
-                          onChange={(e) => setFormData(p => ({ ...p, fechaDevolucion: e.target.value }))}
+                          disabled
+                          className="bg-gray-100 cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -1021,7 +1168,7 @@ export const Devoluciones: React.FC = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(ventaEncontrada.detalleVenta_Pedido || []).map((p) => {
+                            {(ventaEncontrada.detalleVenta_Pedido || []).filter(p => p.cantidad > 0).map((p) => {
                               const selectedItem = formData.productosSeleccionados.find(ps => ps.productoId === p.productoId);
                               const isSelected = !!selectedItem;
 
@@ -1040,7 +1187,7 @@ export const Devoluciones: React.FC = () => {
                                             productosSeleccionados: prev.productosSeleccionados.filter(ps => ps.productoId !== p.productoId)
                                           }));
                                         } else {
-                                          handleAgregarProducto(p.productoId, p.cantidad, "Garantía");
+                                          handleAgregarProducto(p.productoId, 1, "Garantía");
                                         }
                                       }}
                                     >
@@ -1077,15 +1224,15 @@ export const Devoluciones: React.FC = () => {
                                           max={p.cantidad}
                                           value={selectedItem?.cantidad || ''}
                                           onChange={(e) => {
-                                              const raw = e.target.value;
-                                              if (raw === '') {
-                                                   setFormData(prev => ({ ...prev, productosSeleccionados: prev.productosSeleccionados.map(ps => ps.productoId === p.productoId ? { ...ps, cantidad: '' as any } : ps) }));
-                                                   return;
-                                              }
-                                              const val = parseInt(raw, 10);
-                                              if (isNaN(val)) return;
-                                              const finalVal = val > p.cantidad ? p.cantidad : val;
-                                              setFormData(prev => ({ ...prev, productosSeleccionados: prev.productosSeleccionados.map(ps => ps.productoId === p.productoId ? { ...ps, cantidad: finalVal } : ps) }));
+                                            const val = parseInt(e.target.value, 10);
+                                            if (!isNaN(val) && val >= 1 && val <= p.cantidad) {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    productosSeleccionados: prev.productosSeleccionados.map(ps =>
+                                                        ps.productoId === p.productoId ? { ...ps, cantidad: val } : ps
+                                                    )
+                                                }));
+                                            }
                                           }}
                                         />
                                         <button
@@ -1105,7 +1252,7 @@ export const Devoluciones: React.FC = () => {
                                         </button>
                                       </div>
                                     ) : (
-                                      <span className="text-xs text-muted-foreground italic">Seleccione</span>
+                                      <span className="text-xs text-muted-foreground italic">-</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
@@ -1139,11 +1286,8 @@ export const Devoluciones: React.FC = () => {
                           <Plus className="h-4 w-4" />
                           Catálogo de reposición
                         </Label>
-                        <Badge variant="outline" className={cn(
-                          "text-xs font-normal",
-                          totalReposicionCant === totalDevueltoCant ? "border-amber-200 bg-amber-50 text-amber-800" : ""
-                        )}>
-                          Reposición: {totalReposicionCant} / {totalDevueltoCant} uds.
+                        <Badge variant="outline" className="text-xs font-normal border-blue-200 bg-blue-50 text-blue-800">
+                          {totalReposicionCant} uds. seleccionadas
                         </Badge>
                       </div>
                       <div className="relative z-20">
@@ -1176,10 +1320,7 @@ export const Devoluciones: React.FC = () => {
                                 key={p.id}
                                 className="p-2 hover:bg-muted/80 cursor-pointer flex justify-between items-center border-b last:border-0"
                                 onClick={() => {
-                                  if (totalReposicionCant >= totalDevueltoCant) {
-                                    toast.error("Límite alcanzado", { description: `Máximo ${totalDevueltoCant} unidades.` });
-                                    return;
-                                  }
+                                  // Se elimina el límite de cantidad para permitir cuadrar los montos libremente
                                   setFormData(prev => {
                                     const existing = prev.productosReposicion.find(pr => pr.productoId === p.id);
                                     if (existing) {
@@ -1275,17 +1416,13 @@ export const Devoluciones: React.FC = () => {
                                                 if (isNaN(val)) return;
                                                 
                                                 const finalValPre = val > stockMax ? stockMax : val;
-                                                // Restricción extra: no superar el total devuelto
-                                                const cupoRestante = totalDevueltoCant - (totalReposicionCant - (p.cantidad || 0));
-                                                const finalVal = Math.min(finalValPre, cupoRestante);
 
                                                 if (val > stockMax) toast.error(`Stock insuficiente. Máximo: ${stockMax}`);
-                                                else if (val > cupoRestante) toast.error(`Máximo permitido por devolución: ${cupoRestante} uds.`);
                                                 
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     productosReposicion: prev.productosReposicion.map(pr =>
-                                                      pr.productoId === p.productoId ? { ...pr, cantidad: finalVal } : pr
+                                                      pr.productoId === p.productoId ? { ...pr, cantidad: finalValPre } : pr
                                                     )
                                                 }));
                                             }}
@@ -1307,16 +1444,12 @@ export const Devoluciones: React.FC = () => {
                                               onClick={() => {
                                                 const stock = productos.find(pr => pr.id === p.productoId)?.stock || 0;
                                                 if (p.cantidad < stock) {
-                                                  if (totalReposicionCant < totalDevueltoCant) {
-                                                    setFormData(prev => ({
-                                                      ...prev,
-                                                      productosReposicion: prev.productosReposicion.map(pr =>
-                                                        pr.productoId === p.productoId ? { ...pr, cantidad: pr.cantidad + 1 } : pr
-                                                      )
-                                                    }));
-                                                  } else {
-                                                    toast.error("Límite de devolución alcanzado");
-                                                  }
+                                                  setFormData(prev => ({
+                                                    ...prev,
+                                                    productosReposicion: prev.productosReposicion.map(pr =>
+                                                      pr.productoId === p.productoId ? { ...pr, cantidad: pr.cantidad + 1 } : pr
+                                                    )
+                                                  }));
                                                 } else {
                                                   toast.error("Stock insuficiente");
                                                 }
@@ -1433,14 +1566,41 @@ export const Devoluciones: React.FC = () => {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button
-                  className="bg-black hover:bg-gray-800 text-white min-w-[180px]"
-                  onClick={() => setShowConfirmDialog(true)}
-                  disabled={!ventaEncontrada || formData.productosSeleccionados.length === 0 || !saleValidity?.isValid || totalReposicionCant > totalDevueltoCant}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Procesar devolución
-                </Button>
+                <div className="flex flex-col items-end gap-2">
+                  {(() => {
+                    const totalDev = formData.productosSeleccionados.reduce((acc, ps) => {
+                      const prod = productos.find(p => p.id === ps.productoId);
+                      return acc + (prod?.precio || 0) * ps.cantidad;
+                    }, 0);
+                    const totalRep = formData.productosReposicion.reduce((acc, pr) => acc + pr.cantidad * pr.precioUnitario, 0);
+                    const diff = totalRep - totalDev;
+                    
+                    if (diff < 0) {
+                      return <span className="text-xs text-red-600 font-semibold animate-pulse">Agrega más productos (Faltan ${Math.abs(diff).toLocaleString()})</span>;
+                    }
+                    return null;
+                  })()}
+                  <Button
+                    className="bg-black hover:bg-gray-800 text-white min-w-[180px]"
+                    onClick={() => setShowConfirmDialog(true)}
+                    disabled={
+                      !ventaEncontrada || 
+                      formData.productosSeleccionados.length === 0 || 
+                      !saleValidity?.isValid || 
+                      (() => {
+                        const tDev = formData.productosSeleccionados.reduce((acc, ps) => {
+                          const prod = productos.find(p => p.id === ps.productoId);
+                          return acc + (prod?.precio || 0) * ps.cantidad;
+                        }, 0);
+                        const tRep = formData.productosReposicion.reduce((acc, pr) => acc + pr.cantidad * pr.precioUnitario, 0);
+                        return tRep < tDev;
+                      })()
+                    }
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Procesar devolución
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -1675,7 +1835,10 @@ export const Devoluciones: React.FC = () => {
                       let reposiciones: { cantidad: number, nombre: string, precioUnitario: number }[] = [];
                       const desc = selectedDevolucion.descripcion || "";
                       if (desc.includes(" ||| REPOSICION: ")) {
-                        const repString = desc.split(" ||| REPOSICION: ")[1];
+                        let repString = desc.split(" ||| REPOSICION: ")[1];
+                        if (repString.includes(" ||| FINANZAS: ")) {
+                          repString = repString.split(" ||| FINANZAS: ")[0];
+                        }
                         if (repString) {
                           const items = repString.split(", ");
                           reposiciones = items.map(item => {
@@ -1714,8 +1877,7 @@ export const Devoluciones: React.FC = () => {
                                   </TableHeader>
                                   <TableBody>
                                     {devueltos.map((detalle, idx) => {
-                                      const userVenta = ventas.find(v => Number(v.id) === Number(selectedDevolucion.ventaPedidoId));
-                                      const dVenta = userVenta?.detalleVenta_Pedido?.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
+                                      const dVenta = detallesVentas.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
                                       const pData = productos.find(p => Number(p.id) === Number(dVenta?.productoId));
                                       return (
                                         <TableRow key={detalle.id || idx}>

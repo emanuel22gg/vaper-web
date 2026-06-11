@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
-import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados, getAbonos } from '@/shared/services/api';
+import { updateVentaPedido, getVentaPedidoById, createVentaPedido, createDetalleVentaPedido, getVentaPedidos, getDetalleVentaPedidos, getEstados, getAbonos, getDevoluciones, getDetalleDevoluciones } from '@/shared/services/api';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -177,6 +177,7 @@ interface Venta {
   creadoPor: string;
   motivoAnulacion?: string;
   tipoCliente?: string;
+  tieneDevolucion?: boolean;
 }
 
 // Datos simulados
@@ -188,6 +189,8 @@ export const Ventas: React.FC = () => {
   // Inicialización de ventas vacía para cargar desde API
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [isLoadingVentas, setIsLoadingVentas] = useState(false);
+  const [devolucionesGlobal, setDevolucionesGlobal] = useState<any[]>([]);
+  const [detallesDevolucionGlobal, setDetallesDevolucionGlobal] = useState<any[]>([]);
 
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
   const [clientesDisponibles, setClientesDisponibles] = useState<Usuario[]>([]);
@@ -365,11 +368,16 @@ export const Ventas: React.FC = () => {
 
   const fetchVentas = async (currentProds?: Producto[], currentClientes?: Usuario[]) => {
     try {
-      const [ventasRaw, detallesRaw, abonosRaw] = await Promise.all([
+      const [ventasRaw, detallesRaw, abonosRaw, devsRaw, detDevsRaw] = await Promise.all([
         getVentaPedidos(),
         getDetalleVentaPedidos(),
-        getAbonos()
+        getAbonos(),
+        getDevoluciones(),
+        getDetalleDevoluciones()
       ]);
+
+      setDevolucionesGlobal(devsRaw || []);
+      setDetallesDevolucionGlobal(detDevsRaw || []);
 
       const prods = currentProds || productosDisponibles;
       const clients = currentClientes || clientesDisponibles;
@@ -443,7 +451,8 @@ export const Ventas: React.FC = () => {
             fechaCreacion: v.fechaCreacion || '',
             fechaActualizacion: v.fechaCreacion || '',
             creadoPor: 'Sistema',
-            pagos: []
+            pagos: [],
+            tieneDevolucion: devsRaw?.some((d: any) => Number(d.ventaPedidoId) === vid && d.estadoId === 5)
           };
         });
 
@@ -1851,18 +1860,25 @@ export const Ventas: React.FC = () => {
                       Información completa de la venta y productos.
                     </DialogDescription>
                   </div>
-                  <Badge 
-                    variant={selectedVenta.estado === 'aceptada' ? "default" : selectedVenta.estado === 'anulada' ? "destructive" : "secondary"}
-                    className={`px-3 py-1 rounded-full text-[12px] font-bold ${
-                      selectedVenta.estado === 'aceptada'
-                        ? "bg-green-50 text-green-700 border-green-100"
-                        : selectedVenta.estado === 'anulada'
-                        ? "bg-red-50 text-red-700 border-red-100"
-                        : "bg-blue-50 text-blue-700 border-blue-100"
-                    }`}
-                  >
-                    {selectedVenta.estado.charAt(0).toUpperCase() + selectedVenta.estado.slice(1)}
-                  </Badge>
+                  <div className="flex gap-2">
+                    {selectedVenta.tieneDevolucion && (
+                      <Badge className="px-3 py-1 rounded-full text-[12px] font-bold bg-amber-50 text-amber-700 border-amber-100">
+                        Con Devolución
+                      </Badge>
+                    )}
+                    <Badge 
+                      variant={selectedVenta.estado === 'aceptada' ? "default" : selectedVenta.estado === 'anulada' ? "destructive" : "secondary"}
+                      className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                        selectedVenta.estado === 'aceptada'
+                          ? "bg-green-50 text-green-700 border-green-100"
+                          : selectedVenta.estado === 'anulada'
+                          ? "bg-red-50 text-red-700 border-red-100"
+                          : "bg-blue-50 text-blue-700 border-blue-100"
+                      }`}
+                    >
+                      {selectedVenta.estado.charAt(0).toUpperCase() + selectedVenta.estado.slice(1)}
+                    </Badge>
+                  </div>
                 </div>
               </DialogHeader>
 
@@ -1901,6 +1917,14 @@ export const Ventas: React.FC = () => {
                     >
                       <ShoppingCart className="h-4 w-4" /> Productos ({selectedVenta.items.length})
                     </TabsTrigger>
+                    {selectedVenta.tieneDevolucion && (
+                      <TabsTrigger 
+                        value="devoluciones" 
+                        className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-600 rounded-none transition-all"
+                      >
+                        <AlertCircle className="h-4 w-4" /> Historial de Devoluciones
+                      </TabsTrigger>
+                    )}
                   </TabsList>
 
                   <TabsContent value="info" className="space-y-10 animate-in fade-in-50 duration-500">
@@ -1994,6 +2018,50 @@ export const Ventas: React.FC = () => {
                       </div>
                     </div>
                   </TabsContent>
+
+                  {selectedVenta.tieneDevolucion && (
+                    <TabsContent value="devoluciones" className="space-y-6 animate-in fade-in-50 duration-500">
+                      <div className="space-y-6">
+                        <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Registro de Cambios</h4>
+                        <div className="space-y-4">
+                          {devolucionesGlobal.filter(d => Number(d.ventaPedidoId) === selectedVenta.id && d.estadoId === 5).map((dev, i) => (
+                            <div key={dev.id || i} className="border border-amber-100 bg-amber-50/30 rounded-lg p-4 space-y-3">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-semibold text-amber-900 text-sm">Devolución DEV-{String(dev.id).padStart(3, '0')}</p>
+                                  <p className="text-xs text-amber-700">{formatDate(dev.fechaDevolucion)}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                  <span className="font-bold text-sm text-gray-900">${(dev.montoTotal || 0).toLocaleString()}</span>
+                                  <Badge className="bg-amber-100 text-amber-800 border-amber-200">Aceptada</Badge>
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-700 space-y-2 mt-3">
+                                {(() => {
+                                  const text = String(dev.descripcion || dev.motivo || "Garantía General");
+                                  const parts: string[] = text.split("|||").map((p: string) => p.trim());
+                                  return parts.map((part: string, idx: number) => {
+                                    const colonIndex = part.indexOf(":");
+                                    if (colonIndex === -1) {
+                                      return <p key={`text-${idx}-${part.substring(0, 10)}`} className="text-xs text-gray-600">{part}</p>;
+                                    }
+                                    const label = part.substring(0, colonIndex).trim();
+                                    const value = part.substring(colonIndex + 1).trim();
+                                    return (
+                                      <div key={`block-${label}-${idx}`} className="bg-white/60 p-2.5 rounded-md border border-amber-200/40">
+                                        <span className="font-bold text-[10px] uppercase text-amber-800/80 tracking-wider">{label}</span>
+                                        <p className="text-xs mt-1 text-gray-800 font-medium">{value}</p>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </TabsContent>
+                  )}
                 </Tabs>
               </div>
 
