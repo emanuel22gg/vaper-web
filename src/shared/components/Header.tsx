@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, User, ShoppingCart, Menu, LogOut, FileText } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -18,17 +19,16 @@ import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png'
 
 interface HeaderProps {
   onMenuToggle: () => void;
-  currentView: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos';
-  onNavigate: (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => void;
+  currentView: string;
   user: any;
   isAuthenticated: boolean;
   canAccessAdmin: boolean;
-  onAdminNavigate?: (view: string) => void;
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
 }
 
-export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenticated, canAccessAdmin, onAdminNavigate, searchTerm, onSearchChange }: HeaderProps) {
+export function Header({ onMenuToggle, currentView, user, isAuthenticated, canAccessAdmin, searchTerm, onSearchChange }: HeaderProps) {
+  const navigate = useNavigate();
   const { getCartItemCount } = useCart();
   const { logout } = useAuth();
 
@@ -56,7 +56,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
             >
               <Menu className="h-6 w-6" />
             </Button>
-          )}<div className="flex items-center cursor-pointer" onClick={() => onNavigate('home')}>
+          )}<div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
             <img
               src={logoImage}
               alt="VaperMedellín Logo"
@@ -76,14 +76,14 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
               <Button
                 variant={currentView === 'home' ? 'default' : 'ghost'}
                 className="text-[rgb(0,0,0)] hover:text-yellow-500 bg-[rgb(240,177,0,100)]"
-                onClick={() => onNavigate('home')}
+                onClick={() => navigate('/')}
               >
                 Inicio
               </Button>
               <Button
                 variant={currentView === 'shop' ? 'default' : 'ghost'}
                 className="text-[rgb(0,0,0)] hover:text-yellow-500 bg-[rgb(240,177,0,100)]"
-                onClick={() => onNavigate('shop')}
+                onClick={() => navigate('/shop')}
               >
                 Tienda
               </Button>
@@ -91,7 +91,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
                 <Button
                   variant={currentView === 'pedidos' ? 'default' : 'ghost'}
                   className="text-[rgb(0,0,0)] hover:text-yellow-500 bg-[rgb(240,177,0,100)]"
-                  onClick={() => onNavigate('pedidos')}
+                  onClick={() => navigate('/pedidos')}
                 >
                   Mis Pedidos
                 </Button>
@@ -119,7 +119,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
               <Button
                 variant="ghost"
                 className="relative text-black hover:text-yellow-500"
-                onClick={() => onNavigate('cart')}
+                onClick={() => navigate('/cart')}
               >
                 <ShoppingCart className="h-6 w-6" />
                 <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs h-5 w-5 p-0 flex items-center justify-center">
@@ -131,7 +131,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
 
           {/* Campanita de Notificaciones para Admin */}
           {isAuthenticated && canAccessAdmin && currentView === 'admin' && (
-            <AdminNotifications onNavigate={onNavigate} onAdminNavigate={onAdminNavigate} />
+            <AdminNotifications />
           )}
 
           {/* Menú de usuario */}
@@ -154,19 +154,19 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
               <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-100 shadow-md">
                 <DropdownMenuLabel className="font-semibold text-gray-900">Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
-                <DropdownMenuItem onClick={() => onNavigate('profile')} className="cursor-pointer hover:bg-gray-50 font-medium">
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer hover:bg-gray-50 font-medium">
                   <User className="mr-2 h-4 w-4" />
                   <span>Mi Perfil</span>
                 </DropdownMenuItem>
 
                 {canAccessAdmin && (
                   currentView === 'admin' ? (
-                    <DropdownMenuItem onClick={() => onNavigate('shop')} className="cursor-pointer hover:bg-gray-50 font-medium">
+                    <DropdownMenuItem onClick={() => navigate('/shop')} className="cursor-pointer hover:bg-gray-50 font-medium">
                       <span className="mr-2">🏪</span>
                       <span>Ir a la Tienda</span>
                     </DropdownMenuItem>
                   ) : (
-                    <DropdownMenuItem onClick={() => onNavigate('admin')} className="cursor-pointer hover:bg-gray-50 font-medium">
+                    <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer hover:bg-gray-50 font-medium">
                       <span className="mr-2">🛡️</span>
                       <span>Panel Admin</span>
                     </DropdownMenuItem>
@@ -176,7 +176,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuItem onClick={() => {
                   logout();
-                  onNavigate('home');
+                  navigate('/');
                 }} className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700 font-medium">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cerrar Sesión</span>
@@ -187,7 +187,7 @@ export function Header({ onMenuToggle, currentView, onNavigate, user, isAuthenti
             <Button
               variant="ghost"
               className="flex items-center gap-2 text-black hover:text-yellow-500 bg-[rgb(240,177,0,100)]"
-              onClick={() => onNavigate('auth')}
+              onClick={() => navigate('/auth')}
             >
               <User className="h-5 w-5" />
               <span className="hidden sm:inline">Iniciar Sesión</span>

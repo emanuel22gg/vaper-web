@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   Home,
@@ -36,13 +37,10 @@ import { useAuth } from '@/shared/hooks/useAuth';
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  currentView: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos';
-  onNavigate: (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => void;
+  currentView: string;
   user: any;
   isAuthenticated: boolean;
   canAccessAdmin: boolean;
-  // Nuevas props para navegación administrativa
-  onAdminNavigate?: (view: string) => void;
   activeAdminView?: string;
 }
 
@@ -50,29 +48,35 @@ export function SideMenu({
   isOpen,
   onClose,
   currentView,
-  onNavigate,
   user,
   isAuthenticated,
   canAccessAdmin,
-  onAdminNavigate,
   activeAdminView
 }: SideMenuProps) {
+  const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const handleNavigation = (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => {
-    onNavigate(view);
-    // Solo cerramos si estamos en móvil? Por ahora mantengamos la navegación
+  const handleNavigation = (view: string) => {
+    switch (view) {
+      case 'home': navigate('/'); break;
+      case 'shop': navigate('/shop'); break;
+      case 'cart': navigate('/cart'); break;
+      case 'checkout': navigate('/checkout'); break;
+      case 'profile': navigate('/profile'); break;
+      case 'admin': navigate('/admin'); break;
+      case 'auth': navigate('/auth'); break;
+      case 'pedidos': navigate('/pedidos'); break;
+      default: navigate('/'); break;
+    }
   };
 
   const handleAdminNavigation = (view: string) => {
-    if (onAdminNavigate) {
-      onAdminNavigate(view);
-    }
+    navigate(`/admin/${view}`);
   };
 
   const handleLogout = () => {
     logout();
-    onNavigate('home');
+    navigate('/');
   };
 
   const getRoleIcon = () => {

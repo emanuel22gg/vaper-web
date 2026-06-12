@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getProductos, getVentaPedidos, getEstados, getUsuarios, getAbonos } from '@/shared/services/api';
 import { Bell } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 
-interface AdminNotificationsProps {
-  onNavigate: (view: any) => void;
-  onAdminNavigate?: (view: string, payload?: any) => void;
-}
+interface AdminNotificationsProps {}
 
-export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotificationsProps) {
+export function AdminNotifications({}: AdminNotificationsProps = {}) {
+  const navigate = useNavigate();
   // Alertas
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
 
@@ -20,28 +19,16 @@ export function AdminNotifications({ onNavigate, onAdminNavigate }: AdminNotific
   const isFirstLoad = React.useRef(true);
   
   const handleNavigateToCenter = useCallback(() => {
-    if (onAdminNavigate) {
-      onAdminNavigate('notificaciones');
-    } else {
-      onNavigate('admin');
-    }
-  }, [onAdminNavigate, onNavigate]);
+    navigate('/admin/notificaciones');
+  }, [navigate]);
 
   const handleNavigateToPedidos = useCallback((pedidoId?: string) => {
-    if (onAdminNavigate) {
-      onAdminNavigate('pedidos', pedidoId);
-    } else {
-      onNavigate('admin');
-    }
-  }, [onAdminNavigate, onNavigate]);
+    navigate('/admin/pedidos', { state: { payload: pedidoId } });
+  }, [navigate]);
 
   const handleNavigateToClientes = useCallback((documento?: string) => {
-    if (onAdminNavigate) {
-      onAdminNavigate('clientes', documento);
-    } else {
-      onNavigate('admin');
-    }
-  }, [onAdminNavigate, onNavigate]);
+    navigate('/admin/clientes', { state: { payload: documento } });
+  }, [navigate]);
 
   const fetchNotifications = useCallback(async () => {
     try {

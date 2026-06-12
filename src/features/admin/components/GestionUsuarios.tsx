@@ -258,6 +258,19 @@ export const GestionUsuarios: React.FC = () => {
     }
   };
 
+  const normalizeTipoDocumento = (tipo?: string) => {
+    if (!tipo) return 'C.C';
+    const normalized = tipo.toUpperCase().replace(/\./g, '');
+    if (normalized === 'TI') return 'T.I';
+    if (normalized === 'CC') return 'C.C';
+    if (normalized === 'CE') return 'C.E';
+    if (normalized === 'NIT') return 'NIT';
+    if (normalized === 'PP' || normalized === 'PASAPORTE') return 'P.P';
+    
+    // Si no coincide, retornamos el valor original o C.C por defecto
+    return 'C.C';
+  };
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setEditUserData({
@@ -271,7 +284,7 @@ export const GestionUsuarios: React.FC = () => {
       barrio: user.barrio || '',
       departamento: '', // Campo requerido en UsuarioDto
       fechaNacimiento: user.fechaNacimiento || '',
-      tipoDocumento: user.tipoDocumento || 'C.C',
+      tipoDocumento: normalizeTipoDocumento(user.tipoDocumento),
       role: user.role.name as UserRole,
       isActive: user.isActive
     });
@@ -533,7 +546,7 @@ export const GestionUsuarios: React.FC = () => {
                             <Label htmlFor="create-tipoDocumento">Tipo de Documento *</Label>
                             <Select
                               value={newUser.tipoDocumento}
-                              onValueChange={(value: 'T.I' | 'C.C') => setNewUser({ ...newUser, tipoDocumento: value })}
+                              onValueChange={(value: string) => setNewUser({ ...newUser, tipoDocumento: value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar tipo" />
@@ -541,6 +554,9 @@ export const GestionUsuarios: React.FC = () => {
                               <SelectContent>
                                 <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
                                 <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
+                                <SelectItem value="C.E">Cédula de Extranjería (C.E)</SelectItem>
+                                <SelectItem value="NIT">NIT</SelectItem>
+                                <SelectItem value="P.P">Pasaporte (P.P)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -751,7 +767,7 @@ export const GestionUsuarios: React.FC = () => {
                     <TableCell>
                       <div className="text-sm font-medium">
                         <Badge variant="outline" className="mr-1 text-[10px] px-1 h-4">
-                          {user.tipoDocumento}
+                          {normalizeTipoDocumento(user.tipoDocumento)}
                         </Badge>
                         {user.numeroDocumento}
                       </div>
@@ -922,7 +938,7 @@ export const GestionUsuarios: React.FC = () => {
                     <Label htmlFor="edit-tipoDocumento">Tipo de Documento</Label>
                     <Select
                       value={editUserData.tipoDocumento}
-                      onValueChange={(value: 'T.I' | 'C.C') => setEditUserData({ ...editUserData, tipoDocumento: value })}
+                      onValueChange={(value: string) => setEditUserData({ ...editUserData, tipoDocumento: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar tipo" />
@@ -930,6 +946,9 @@ export const GestionUsuarios: React.FC = () => {
                       <SelectContent>
                         <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
                         <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
+                        <SelectItem value="C.E">Cédula de Extranjería (C.E)</SelectItem>
+                        <SelectItem value="NIT">NIT</SelectItem>
+                        <SelectItem value="P.P">Pasaporte (P.P)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1153,7 +1172,11 @@ export const GestionUsuarios: React.FC = () => {
                         <Label className="text-xs font-medium text-gray-500">Tipo de Documento</Label>
                         <p className="text-sm font-medium text-gray-900">
                           {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
-                            selectedUser.tipoDocumento === 'C.C' ? 'Cédula de Ciudadanía (C.C)' : 'Cédula de Ciudadanía'}
+                            selectedUser.tipoDocumento === 'C.C' || selectedUser.tipoDocumento === 'CC' ? 'Cédula de Ciudadanía (C.C)' :
+                            selectedUser.tipoDocumento === 'C.E' || selectedUser.tipoDocumento === 'CE' ? 'Cédula de Extranjería (C.E)' :
+                            selectedUser.tipoDocumento === 'NIT' ? 'NIT' :
+                            selectedUser.tipoDocumento === 'P.P' || selectedUser.tipoDocumento === 'PP' ? 'Pasaporte (P.P)' :
+                            selectedUser.tipoDocumento || 'No registrado'}
                         </p>
                       </div>
                       <div className="space-y-1">

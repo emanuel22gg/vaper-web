@@ -113,6 +113,7 @@ interface Usuario {
   correo: string;
   telefono: string;
   numeroDocumento: string;
+  tipoCliente?: string | null;
 }
 
 interface FormularioCotizacion {

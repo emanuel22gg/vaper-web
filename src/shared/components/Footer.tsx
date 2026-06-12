@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Download, Smartphone } from 'lucide-react';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
 import { getCategorias } from '@/shared/services/api';
 import { Categoria } from '@/shared/types';
 
-interface FooterProps {
-  onNavigate?: (view: 'home') => void;
-}
+interface FooterProps {}
 
-export function Footer({ onNavigate }: FooterProps) {
+export function Footer({}: FooterProps = {}) {
+  const navigate = useNavigate();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
@@ -18,10 +18,8 @@ export function Footer({ onNavigate }: FooterProps) {
   }, []);
 
   const handleCategoryClick = (categoriaId: number) => {
-    // Si estamos en otra vista, primero navegar a home
-    if (onNavigate) {
-      onNavigate('home');
-    }
+    // Navegar a la página principal
+    navigate('/');
     // Pequeño delay para que el catálogo se monte antes de disparar el evento
     setTimeout(() => {
       window.dispatchEvent(

@@ -1,10 +1,10 @@
 import vapeImage from 'figma:asset/6c1887bd6eba23fed5ff96a23e2c0895aa21c8a1.png';
+import { useNavigate } from 'react-router-dom';
 
-interface HeroBannerProps {
-  onNavigate?: (view: 'home' | 'shop' | 'profile' | 'admin' | 'auth' | 'cart' | 'checkout' | 'pedidos') => void;
-}
+interface HeroBannerProps {}
 
-export function HeroBanner({ onNavigate }: HeroBannerProps) {
+export function HeroBanner({}: HeroBannerProps = {}) {
+  const navigate = useNavigate();
   return (
     <section className="bg-black text-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 py-16">
@@ -20,7 +20,7 @@ export function HeroBanner({ onNavigate }: HeroBannerProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={() => onNavigate && onNavigate('shop')}
+                onClick={() => navigate('/shop')}
                 className="bg-yellow-500 text-black px-8 py-3 rounded-lg font-medium hover:bg-yellow-400 transition-colors"
               >
                 Ver Catálogo

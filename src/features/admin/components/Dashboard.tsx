@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Button } from "@/shared/ui/button";
 import {
@@ -476,12 +477,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalVentas = realPedidos.reduce((sum, item) => (item.estadoId === 1 || item.estadoId === 5) ? sum + item.total : sum, 0);
   const productosVendidosTotal = realPedidos.reduce((sum, item) => (item.estadoId === 1 || item.estadoId === 5) ? sum + (item.detalleVenta_Pedido?.reduce((s, d) => s + d.cantidad, 0) || 0) : sum, 0);
 
+  const navigate = useNavigate();
+
   // Función para manejar navegación interna y notificar al padre
   const handleViewChange = (view: string, payload?: any) => {
     setActiveView(view);
     setDetailView(null); // Limpiar vista de detalle cuando cambia la vista principal
     setSubViewPedido(null); // Limpiar sub-vistas
     setNavigationPayload(payload || null);
+    
+    navigate(`/admin/${view}`, { state: { payload } });
+    
     if (onAdminNavigate) {
       onAdminNavigate(view);
     }

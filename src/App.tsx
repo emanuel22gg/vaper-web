@@ -5,13 +5,13 @@ import { CartProvider } from "@/shared/contexts/CartContext";
 import { LandingPage } from "@/features/public/components/LandingPage";
 import { Toaster } from "sonner";
 
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+
 // Componente que maneja el routing principal
 const AppContent: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const [shouldRedirectToAdmin, setShouldRedirectToAdmin] =
-    useState(false);
-  const [shouldRedirectToShop, setShouldRedirectToShop] =
-    useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Detectar cuando un admin/empleado hace login
   useEffect(() => {
@@ -24,28 +24,19 @@ const AppContent: React.FC = () => {
         (user.role.permissions && user.role.permissions.length > 0);
       const isClient = user.role.name === "Cliente" && (!user.role.permissions || user.role.permissions.length === 0);
 
-      if (isAdminOrEmployee) {
-        setShouldRedirectToAdmin(true);
-        setShouldRedirectToShop(false);
-      } else if (isClient) {
-        setShouldRedirectToShop(true);
-        setShouldRedirectToAdmin(false);
+      // Redirigir al admin si entra a raíz o a auth
+      if (isAdminOrEmployee && (location.pathname === '/' || location.pathname === '/auth')) {
+        navigate('/admin');
+      } else if (isClient && (location.pathname === '/auth')) {
+        navigate('/shop');
       }
     }
-  }, [isAuthenticated, user]);
-
-  // Función para resetear la redirección (cuando el usuario navega manualmente)
-  const resetRedirection = () => {
-    setShouldRedirectToAdmin(false);
-    setShouldRedirectToShop(false);
-  };
+  }, [isAuthenticated, user, navigate, location.pathname]);
 
   return (
-    <LandingPage
-      shouldRedirectToAdmin={shouldRedirectToAdmin}
-      shouldRedirectToShop={shouldRedirectToShop}
-      onResetRedirection={resetRedirection}
-    />
+    <Routes>
+      <Route path="/*" element={<LandingPage />} />
+    </Routes>
   );
 };
 
