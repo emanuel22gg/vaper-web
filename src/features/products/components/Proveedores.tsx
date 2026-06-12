@@ -1158,45 +1158,7 @@ export const Proveedores: React.FC = () => {
                 </div>
               </div>
 
-              <Separator className="bg-gray-100" />
 
-              {/* Información Comercial */}
-              <div className="space-y-6">
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Información Comercial y Bancaria</h4>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Categoría de Productos</Label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {selectedProveedor.productos?.map((p, i) => (
-                        <Badge key={i} variant="outline" className="text-[10px] font-bold text-gray-500 border-gray-200">
-                          {p}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-500">Volumen de Compras</Label>
-                    <p className="text-lg font-black text-gray-900">
-                      ${(selectedProveedor.totalCompras || 0).toLocaleString("es-CO")}
-                    </p>
-                  </div>
-                  {(selectedProveedor.banco || selectedProveedor.numeroCuenta) && (
-                    <div className="col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-gray-400 uppercase">Banco / Entidad</Label>
-                          <p className="text-sm font-semibold text-gray-800">{selectedProveedor.banco || 'N/A'}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-gray-400 uppercase">Cuenta</Label>
-                          <p className="text-sm font-mono font-bold text-gray-800">{selectedProveedor.numeroCuenta || 'N/A'}</p>
-                          <p className="text-[10px] text-gray-500 uppercase">{selectedProveedor.tipoCuenta || 'Ahorros'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* Observaciones */}
               {selectedProveedor.observaciones && (
@@ -1521,71 +1483,6 @@ export const Proveedores: React.FC = () => {
               </div>
 
               <Separator />
-
-              {/* Información Bancaria */}
-              <div className="space-y-4">
-                <h4 className="font-medium">
-                  Información Bancaria (Opcional)
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-banco">Banco</Label>
-                    <Input
-                      id="edit-banco"
-                      value={selectedProveedor.banco || ""}
-                      onChange={(e) =>
-                        setSelectedProveedor({
-                          ...selectedProveedor,
-                          banco: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-numeroCuenta">
-                      Número de Cuenta
-                    </Label>
-                    <Input
-                      id="edit-numeroCuenta"
-                      value={
-                        selectedProveedor.numeroCuenta || ""
-                      }
-                      onChange={(e) =>
-                        setSelectedProveedor({
-                          ...selectedProveedor,
-                          numeroCuenta: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-tipoCuenta">
-                      Tipo de Cuenta
-                    </Label>
-                    <Select
-                      value={selectedProveedor.tipoCuenta || ""}
-                      onValueChange={(value: string) =>
-                        setSelectedProveedor({
-                          ...selectedProveedor,
-                          tipoCuenta: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Ahorros">
-                          Ahorros
-                        </SelectItem>
-                        <SelectItem value="Corriente">
-                          Corriente
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
 
               <Separator />
 

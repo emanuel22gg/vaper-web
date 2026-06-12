@@ -187,6 +187,7 @@ export interface Producto {
   id: number;
   nombreProducto: string;
   precio: number;
+  precioMayorista?: number;
   stock: number;
   categoriaId: number;
   descripcion: string;
@@ -200,6 +201,7 @@ export interface ProductoDto {
   id?: number;
   nombreProducto: string;
   precio: number;
+  precioMayorista?: number;
   stock: number;
   categoriaId: number;
   descripcion: string;

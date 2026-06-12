@@ -46,6 +46,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
     descripcion: '',
     categoriaId: '',
     precio: '',
+    precioMayorista: '',
     stock: '',
     estado: true,
     imagen: '',
@@ -134,6 +135,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
         nombreProducto: formData.nombreProducto.trim(),
         descripcion: formData.descripcion.trim(),
         precio: formData.precio ? parseFloat(formData.precio) : 0,
+        precioMayorista: formData.precioMayorista ? parseFloat(formData.precioMayorista) : undefined,
         stock: formData.stock ? parseInt(formData.stock) : 0,
         categoriaId: parseInt(formData.categoriaId),
         estado: formData.estado,
@@ -163,6 +165,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
       descripcion: '',
       categoriaId: '',
       precio: '',
+      precioMayorista: '',
       stock: '',
       estado: true,
       imagen: '',
@@ -229,7 +232,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="precio">Precio *</Label>
                   <div className="relative">
@@ -251,6 +254,24 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                       <span className="inline-block w-3 h-3">⚠</span> El precio no puede ser $0.
                     </p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="precioMayorista">Precio Mayorista</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="precioMayorista"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={formData.precioMayorista}
+                      onChange={(e) => handleInputChange('precioMayorista', e.target.value)}
+                      placeholder="20000"
+                      className="pl-9"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Opcional</p>
                 </div>
 
                 <div className="space-y-2">

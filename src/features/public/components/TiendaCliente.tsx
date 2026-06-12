@@ -206,6 +206,9 @@ export const TiendaCliente: React.FC = () => {
     product: Producto,
     variante?: string,
   ) => {
+    const isMayorista = user?.tipoCliente === 'Mayorista';
+    const currentPrice = isMayorista && product.precioMayorista && product.precioMayorista > 0 ? product.precioMayorista : product.precio;
+
     const stringId = product.id.toString();
     const existingItem = cart.find(
       (item) =>
@@ -236,7 +239,7 @@ export const TiendaCliente: React.FC = () => {
           id: stringId,
           productoId: product.id,
           nombre: product.nombreProducto,
-          precio: product.precio,
+          precio: currentPrice,
           cantidad: 1,
           stock: product.stock,
           imagen: product.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop",
@@ -519,7 +522,11 @@ export const TiendaCliente: React.FC = () => {
             <>
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product) => {
+                    const isMayorista = user?.tipoCliente === 'Mayorista';
+                    const currentPrice = isMayorista && product.precioMayorista && product.precioMayorista > 0 ? product.precioMayorista : product.precio;
+
+                    return (
                     <div
                       key={product.id}
                       className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 relative"
@@ -564,8 +571,13 @@ export const TiendaCliente: React.FC = () => {
                         </h3>
 
                         <div className="mt-auto pt-3 border-t border-gray-50">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
+                          <div className="flex flex-col mb-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xl font-bold text-black">${currentPrice.toLocaleString('es-CO')}</span>
+                            </div>
+                            {isMayorista && product.precioMayorista && product.precioMayorista > 0 && product.precioMayorista < product.precio && (
+                              <span className="text-xs text-gray-400 line-through mt-1">Normal: ${product.precio.toLocaleString('es-CO')}</span>
+                            )}
                           </div>
 
                           <div className="flex gap-2 w-full">
@@ -603,7 +615,7 @@ export const TiendaCliente: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-12">
@@ -642,11 +654,16 @@ export const TiendaCliente: React.FC = () => {
                           {selectedProduct.descripcion}
                         </p>
 
-                        <div className="flex items-center space-x-2 mb-4">
-                          <span className="text-3xl font-bold text-green-600">
-                            $
-                            {selectedProduct.precio.toLocaleString()}
-                          </span>
+                        <div className="flex flex-col mb-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-3xl font-bold text-green-600">
+                              $
+                              {user?.tipoCliente === 'Mayorista' && selectedProduct.precioMayorista && selectedProduct.precioMayorista > 0 ? selectedProduct.precioMayorista.toLocaleString() : selectedProduct.precio.toLocaleString()}
+                            </span>
+                          </div>
+                          {user?.tipoCliente === 'Mayorista' && selectedProduct.precioMayorista && selectedProduct.precioMayorista > 0 && selectedProduct.precioMayorista < selectedProduct.precio && (
+                            <span className="text-sm text-gray-400 line-through mt-1">Normal: ${selectedProduct.precio.toLocaleString()}</span>
+                          )}
                         </div>
 
                         <div className="space-y-2">

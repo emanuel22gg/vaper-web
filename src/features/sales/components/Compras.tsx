@@ -128,6 +128,7 @@ export const Compras: React.FC = () => {
         cantidad: 0,
         precioCompra: 0,
         precioVenta: 0,
+        precioVentaMayorista: 0,
         codigo: "",
       },
     ],
@@ -243,6 +244,7 @@ export const Compras: React.FC = () => {
                 id: productoOriginal.id,
                 nombreProducto: productoOriginal.nombreProducto,
                 precio: productoOriginal.precio,
+                precioMayorista: productoOriginal.precioMayorista,
                 stock: Math.max(0, productoOriginal.stock - detalle.cantidad),
                 categoriaId: productoOriginal.categoriaId,
                 descripcion: productoOriginal.descripcion,
@@ -463,6 +465,7 @@ export const Compras: React.FC = () => {
             id: productoOriginal.id,
             nombreProducto: productoOriginal.nombreProducto,
             precio: p.precioVenta,
+            precioMayorista: p.precioVentaMayorista > 0 ? p.precioVentaMayorista : productoOriginal.precioMayorista,
             stock: productoOriginal.stock + p.cantidad,
             categoriaId: productoOriginal.categoriaId,
             descripcion: productoOriginal.descripcion,
@@ -485,6 +488,7 @@ export const Compras: React.FC = () => {
             cantidad: 0,
             precioCompra: 0,
             precioVenta: 0,
+            precioVentaMayorista: 0,
             codigo: "",
           },
         ],
@@ -507,6 +511,7 @@ export const Compras: React.FC = () => {
           cantidad: 0,
           precioCompra: 0,
           precioVenta: 0,
+          precioVentaMayorista: 0,
           codigo: "",
         },
       ],
@@ -531,6 +536,7 @@ export const Compras: React.FC = () => {
               cantidad: p.cantidad || 1,
               precioCompra: producto.precio,
               precioVenta: producto.precio * 1.2, // Precio de venta 20% más que el de compra
+              precioVentaMayorista: producto.precioMayorista || 0,
               codigo: String(producto.id), // O usar un campo codigo si existe en Producto
             }
             : p,
@@ -619,6 +625,7 @@ export const Compras: React.FC = () => {
                         cantidad: 0,
                         precioCompra: 0,
                         precioVenta: 0,
+                        precioVentaMayorista: 0,
                         codigo: "",
                       },
                     ],
@@ -754,8 +761,8 @@ export const Compras: React.FC = () => {
                             key={index}
                             className="space-y-2"
                           >
-                            <div className="grid grid-cols-6 gap-2 items-end">
-                              <div className="col-span-2 relative">
+                            <div className="flex flex-row gap-2 items-start w-full">
+                              <div className="flex-[2] min-w-[200px] relative">
                                 <Label className="text-xs">
                                   Buscar Producto
                                 </Label>
@@ -801,7 +808,7 @@ export const Compras: React.FC = () => {
                                   </div>
                                 )}
                               </div>
-                              <div>
+                              <div className="w-[80px]">
                                 <Label className="text-xs">
                                   Cantidad
                                 </Label>
@@ -823,7 +830,7 @@ export const Compras: React.FC = () => {
                                   }
                                 />
                               </div>
-                              <div>
+                              <div className="flex-1 min-w-[100px]">
                                 <Label className="text-xs">
                                   Precio Compra
                                 </Label>
@@ -838,15 +845,15 @@ export const Compras: React.FC = () => {
                                       parseInt(e.target.value) || 0,
                                     )
                                   }
-                                  className={producto.id && producto.precioCompra <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
+                                  className={producto.id > 0 && producto.precioCompra <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
-                                {producto.id && producto.precioCompra <= 0 && (
+                                {producto.id > 0 && producto.precioCompra <= 0 && (
                                   <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                                     <AlertTriangle className="h-3 w-3" /> No puede ser $0
                                   </p>
                                 )}
                               </div>
-                              <div>
+                              <div className="flex-1 min-w-[100px]">
                                 <Label className="text-xs">
                                   Precio Venta
                                 </Label>
@@ -861,32 +868,48 @@ export const Compras: React.FC = () => {
                                       parseInt(e.target.value) || 0,
                                     )
                                   }
-                                  className={producto.id && producto.precioVenta <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
+                                  className={producto.id > 0 && producto.precioVenta <= 0 ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
-                                {producto.id && producto.precioVenta <= 0 && (
+                                {producto.id > 0 && producto.precioVenta <= 0 && (
                                   <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                                     <AlertTriangle className="h-3 w-3" /> No puede ser $0
                                   </p>
                                 )}
+                                </div>
+                              <div className="flex-1 min-w-[100px]">
+                                <Label className="text-xs">
+                                  Precio Mayorista
+                                </Label>
+                                <Input
+                                  placeholder="Opcional"
+                                  type="number"
+                                  value={producto.precioVentaMayorista || ""}
+                                  onChange={(e) =>
+                                    updateFormProducto(
+                                      index,
+                                      "precioVentaMayorista",
+                                      parseInt(e.target.value) || 0,
+                                    )
+                                  }
+                                />
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  removeProducto(index)
-                                }
-                                disabled={
-                                  newOrden.productos.length ===
-                                  1
-                                }
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="w-[45px] pt-6 flex flex-col justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    removeProducto(index)
+                                  }
+                                  disabled={
+                                    newOrden.productos.length ===
+                                    1
+                                  }
+                                  className="w-full text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                            {producto.id && (
-                              null
-                            )}
                           </div>
                         ),
                       )}
@@ -1061,16 +1084,15 @@ export const Compras: React.FC = () => {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          {orden.estado !== 3 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title="Anular orden"
-                              onClick={() => openAnularDialog(orden)}
-                            >
-                              <XCircle className="text-red-600 hover:text-red-700 hover:bg-red-50" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title={orden.estado === 3 ? "Ya anulada" : "Anular orden"}
+                            onClick={() => openAnularDialog(orden)}
+                            disabled={orden.estado === 3}
+                          >
+                            <XCircle className={orden.estado === 3 ? "text-gray-400" : "text-red-600 hover:text-red-700 hover:bg-red-50"} />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

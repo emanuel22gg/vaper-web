@@ -216,6 +216,11 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
         }
     };
 
+    const isMayorista = clienteEncontrado?.tipoCliente === 'Mayorista';
+    const getPrecioActual = (producto: Producto) => {
+        return isMayorista && producto.precioMayorista && producto.precioMayorista > 0 ? producto.precioMayorista : producto.precio;
+    };
+
     const agregarAlCarrito = (producto: Producto) => {
         setCarrito((prev) => {
             const existe = prev.find((item) => item.producto.id === producto.id);
@@ -286,7 +291,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
     };
 
     const calcularSubtotal = () => {
-        return carrito.reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0);
+        return carrito.reduce((sum, item) => sum + getPrecioActual(item.producto) * item.cantidad, 0);
     };
 
     const calcularTotal = () => {
@@ -324,12 +329,15 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                 total: calcularTotal(),
                 vigenciaDevolucion: vigenciaDevolucion,
                 tipoVenta: "Pedido",
-                detalleVenta_Pedido: carrito.map(item => ({
-                    productoId: item.producto.id,
-                    cantidad: item.cantidad,
-                    precioUnitario: item.producto.precio,
-                    subtotal: item.producto.precio * item.cantidad
-                }))
+                detalleVenta_Pedido: carrito.map(item => {
+                    const precioActual = getPrecioActual(item.producto);
+                    return {
+                        productoId: item.producto.id,
+                        cantidad: item.cantidad,
+                        precioUnitario: precioActual,
+                        subtotal: precioActual * item.cantidad
+                    };
+                })
             };
 
             const response = await createVentaPedido(pedidoData);
@@ -341,12 +349,13 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
 
             // Save order details (products) individually since the backend doesn't process them in the main request
             for (const item of carrito) {
+                const precioActual = getPrecioActual(item.producto);
                 const detalleData = {
                     ventaPedidoId: createdOrderId,
                     productoId: item.producto.id,
                     cantidad: item.cantidad,
-                    precioUnitario: item.producto.precio,
-                    subtotal: item.producto.precio * item.cantidad
+                    precioUnitario: precioActual,
+                    subtotal: precioActual * item.cantidad
                 };
                 await createDetalleVentaPedido(detalleData);
 
@@ -547,7 +556,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium truncate">{p.nombreProducto}</p>
                                                                     <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                                                                        <span>${p.precio.toLocaleString()}</span>
+                                                                        <span>${getPrecioActual(p).toLocaleString()}</span>
                                                                         <Badge variant="outline" className={cn(
                                                                             "text-xs font-normal",
                                                                             p.stock <= 5 ? "border-amber-200 bg-amber-50 text-amber-800" : ""
@@ -605,7 +614,7 @@ export const CreateVentaPedidoView: React.FC<CreateVentaPedidoViewProps> = ({
                                                                             <button type="button" onClick={() => actualizarCantidad(item.producto.id, 1)} className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded-sm text-muted-foreground"><Plus className="h-3.5 w-3.5" /></button>
                                                                         </div>
                                                                     </div>
-                                                                    <p className="text-sm font-medium mt-2">${(item.producto.precio * (Number(item.cantidad) || 0)).toLocaleString()}</p>
+                                                                    <p className="text-sm font-medium mt-2">${(getPrecioActual(item.producto) * (Number(item.cantidad) || 0)).toLocaleString()}</p>
                                                                 </div>
                                                                 <button type="button" onClick={() => eliminarDelCarrito(item.producto.id)} className="text-destructive hover:bg-destructive/10 p-2 rounded-md shrink-0" aria-label="Quitar">
                                                                     <Trash2 className="h-4 w-4" />

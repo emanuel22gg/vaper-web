@@ -133,6 +133,7 @@ interface ProductoDisponible {
   nombre: string;
   descripcion: string;
   precio: number;
+  precioMayorista?: number;
   categoria: string;
   stock: number;
 }
@@ -232,6 +233,7 @@ export const Cotizaciones: React.FC = () => {
           nombre: p.nombreProducto,
           descripcion: p.descripcion || p.nombreProducto,
           precio: p.precio,
+          precioMayorista: p.precioMayorista,
           categoria: p.categoria?.nombreCategoria || "General",
           stock: p.stock
         }));
@@ -339,13 +341,17 @@ export const Cotizaciones: React.FC = () => {
   const calcularTotales = (
     productos: Array<{ productoId: number; cantidad: number }>,
     descuentoPorcentaje: number = 0,
+    clienteId?: number | string | null
   ) => {
+    const isMayorista = clienteId ? clientesDisponibles.find((c) => c.id.toString() === clienteId?.toString())?.tipoCliente === 'Mayorista' : false;
+
     const subtotal = productos.reduce((sum, item) => {
       const producto = productosDisponibles.find(
         (p) => p.id === item.productoId,
       );
+      const precioUnitario = producto ? (isMayorista && producto.precioMayorista && producto.precioMayorista > 0 ? producto.precioMayorista : producto.precio) : 0;
       return (
-        sum + (producto ? producto.precio * item.cantidad : 0)
+        sum + (precioUnitario * item.cantidad)
       );
     }, 0);
 
@@ -549,6 +555,7 @@ export const Cotizaciones: React.FC = () => {
   // Confirmar anulación
   const confirmarAnulacion = async () => {
     if (cotizacionToDelete) {
+      setIsInitialLoading(true);
       try {
         const cotizacionActualizada: CotizacionDto = {
           nombreUsuario: cotizacionToDelete.cliente.nombre,
@@ -582,6 +589,8 @@ export const Cotizaciones: React.FC = () => {
       } catch (error) {
         console.error("Error al anular:", error);
         toast.error("Ocurrió un error al anular la cotización en el servidor");
+      } finally {
+        setIsInitialLoading(false);
       }
     }
   };
@@ -693,6 +702,7 @@ export const Cotizaciones: React.FC = () => {
       calcularTotales(
         formData.productos,
         formData.descuentoPorcentaje,
+        formData.clienteId
       );
 
     // Calcular vigencia en días
@@ -718,12 +728,14 @@ export const Cotizaciones: React.FC = () => {
       // 2. Crear detalles
       const detallesPromesas = formData.productos.map(p => {
         const prodInfo = productosDisponibles.find(pd => pd.id === p.productoId);
+        const isMayorista = clienteSeleccionado?.tipoCliente === 'Mayorista';
+        const precioUnitario = prodInfo ? (isMayorista && prodInfo.precioMayorista && prodInfo.precioMayorista > 0 ? prodInfo.precioMayorista : prodInfo.precio) : 0;
         const detalle: DetalleCotizacionDto = {
           cotizacionId: cotId,
           productoId: p.productoId,
           cantidad: p.cantidad,
-          precioUnitario: prodInfo?.precio || 0,
-          subtotal: (prodInfo?.precio || 0) * p.cantidad
+          precioUnitario: precioUnitario,
+          subtotal: precioUnitario * p.cantidad
         };
         return createDetalleCotizacion(detalle);
       });
@@ -1224,9 +1236,9 @@ export const Cotizaciones: React.FC = () => {
                           handleAnular(cotizacion)
                         }
                         disabled={cotizacion.estado === "anulada"}
-                        title="Anular cotización"
+                        title={cotizacion.estado === "anulada" ? "Ya anulada" : "Anular cotización"}
                       >
-                        <XCircle className="h-4 w-4" />
+                        <XCircle className={cotizacion.estado === "anulada" ? "text-gray-400" : "text-red-600 hover:text-red-700"} />
                       </Button>
                     </div>
                   </TableCell>
@@ -1809,6 +1821,7 @@ export const Cotizaciones: React.FC = () => {
                       } = calcularTotales(
                         formData.productos,
                         formData.descuentoPorcentaje,
+                        formData.clienteId
                       );
                       return (
                         <>
@@ -1851,13 +1864,21 @@ export const Cotizaciones: React.FC = () => {
               onClick={crearCotizacion}
               disabled={
                 !formData.clienteId ||
-                formData.productos.length === 0
+                formData.productos.length === 0 ||
+                isInitialLoading
               }
               className="min-w-[150px] bg-black hover:bg-gray-800 text-white"
             >
-              {isCreateDialogOpen
-                ? "Crear Cotización"
-                : "Actualizar Cotización"}
+              {isInitialLoading ? (
+                <span className="flex items-center">
+                  <span className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  Procesando...
+                </span>
+              ) : isCreateDialogOpen ? (
+                "Crear Cotización"
+              ) : (
+                "Actualizar Cotización"
+              )}
             </Button>
           </div>
         </DialogContent>
@@ -1907,9 +1928,17 @@ export const Cotizaciones: React.FC = () => {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmarAnulacion}
+              disabled={isInitialLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Anular Cotización
+              {isInitialLoading ? (
+                <span className="flex items-center">
+                  <span className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  Procesando...
+                </span>
+              ) : (
+                "Anular Cotización"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

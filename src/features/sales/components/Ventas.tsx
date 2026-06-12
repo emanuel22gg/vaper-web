@@ -118,6 +118,7 @@ interface Producto {
   id: number;
   nombre: string;
   precio: number;
+  precioMayorista?: number;
   stock: number;
   categoria: string;
 }
@@ -319,6 +320,7 @@ export const Ventas: React.FC = () => {
         id: p.id,
         nombre: p.nombreProducto,
         precio: p.precio,
+        precioMayorista: p.precioMayorista,
         stock: p.stock || 0,
         categoria: `Categoría ${p.categoriaId}`
       }));
@@ -836,6 +838,9 @@ export const Ventas: React.FC = () => {
     const producto = productosDisponibles.find(p => p.id === parseInt(selectedProducto));
     if (!producto) return;
 
+    const isMayorista = formData.tipoCliente === 'Mayorista';
+    const precioUnitario = isMayorista && producto.precioMayorista && producto.precioMayorista > 0 ? producto.precioMayorista : producto.precio;
+
     // Verificar si el producto ya existe en la lista
     const itemExistente = formData.items.find(item => item.productoId === producto.id);
     if (itemExistente) {
@@ -856,8 +861,8 @@ export const Ventas: React.FC = () => {
       productoId: producto.id,
       nombreProducto: producto.nombre,
       cantidad: cantidad as number,
-      precioUnitario: producto.precio,
-      subtotal: producto.precio * (cantidad as number)
+      precioUnitario: precioUnitario,
+      subtotal: precioUnitario * (cantidad as number)
     };
 
     setFormData({

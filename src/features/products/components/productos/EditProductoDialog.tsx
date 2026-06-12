@@ -46,6 +46,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
     descripcion: '',
     categoriaId: '',
     precio: '',
+    precioMayorista: '',
     stock: '',
     estado: true,
     imagen: '',
@@ -65,6 +66,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         descripcion: producto.descripcion,
         categoriaId: (producto.categoriaId || producto.categoria?.id || 0).toString(),
         precio: producto.precio.toString(),
+        precioMayorista: producto.precioMayorista?.toString() || '',
         stock: producto.stock.toString(),
         estado: producto.estado,
         imagen: producto.imagen || '',
@@ -193,6 +195,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
         descripcion: formData.descripcion.trim(),
         categoriaId: categoria.id,
         precio: formData.precio ? parseFloat(formData.precio) : 0,
+        precioMayorista: formData.precioMayorista ? parseFloat(formData.precioMayorista) : undefined,
         stock: formData.stock ? parseInt(formData.stock) : 0,
         estado: formData.estado,
         idImagen: finalIdImagen
@@ -261,7 +264,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
           </div>
 
           {/* Precio y Stock */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="precio">Precio de Venta *</Label>
               <Input
@@ -273,6 +276,19 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
                 onChange={(e) => handleInputChange('precio', e.target.value)}
                 placeholder="25000"
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="precioMayorista">Precio Mayorista (Opcional)</Label>
+              <Input
+                id="precioMayorista"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={formData.precioMayorista}
+                onChange={(e) => handleInputChange('precioMayorista', e.target.value)}
+                placeholder="20000"
               />
             </div>
 

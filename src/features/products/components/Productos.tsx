@@ -274,6 +274,7 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
     const data: ProductoDto = {
       nombreProducto: producto.nombreProducto,
       precio: producto.precio,
+      precioMayorista: producto.precioMayorista,
       stock: producto.stock,
       categoriaId: producto.categoriaId || producto.categoria?.id || 0,
       descripcion: producto.descripcion,
@@ -461,9 +462,16 @@ export const Productos: React.FC<ProductosProps> = ({ initialSearchTerm = '' }) 
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="font-medium">
-                            ${producto.precio.toLocaleString()}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              ${producto.precio.toLocaleString()}
+                            </span>
+                            {producto.precioMayorista ? (
+                              <span className="text-xs text-blue-600 font-medium">
+                                May: ${producto.precioMayorista.toLocaleString()}
+                              </span>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">

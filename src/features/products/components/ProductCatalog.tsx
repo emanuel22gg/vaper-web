@@ -3,16 +3,18 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/u
 import { Button } from '@/shared/ui/button';
 import { ShoppingCart, Plus, Minus, Loader2, ArrowLeft, Package, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/shared/contexts/CartContext';
+import { useAuth } from '@/shared/hooks/useAuth';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { getProductos, getCategorias, getAllImages } from '@/shared/services/api';
 import { Producto, Categoria } from '@/shared/types';
 
-const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
+const ProductCard: React.FC<{ product: Producto, isMayorista: boolean }> = ({ product, isMayorista }) => {
   const { cart, addToCart } = useCart();
   const quantityInCart = cart.find(item => item.id === product.id.toString())?.quantity || 0;
   const maxAvailable = product.stock - quantityInCart;
   const [quantity, setQuantity] = useState(1);
+  const currentPrice = isMayorista && product.precioMayorista && product.precioMayorista > 0 ? product.precioMayorista : product.precio;
 
   // Ajustar cantidad local si el stock disponible cambia (ej. al agregar al carrito)
   useEffect(() => {
@@ -30,7 +32,7 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
       {
         id: product.id.toString(),
         name: product.nombreProducto,
-        price: product.precio,
+        price: currentPrice,
         stock: product.stock,
         image: product.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
         category: product.categoria?.nombreCategoria || 'Sin Categoría',
@@ -98,11 +100,16 @@ const ProductCard: React.FC<{ product: Producto }> = ({ product }) => {
           </h3>
         </div>
         <div className="mt-auto pt-3 border-t border-gray-50">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xl font-bold text-black">${product.precio.toLocaleString('es-CO')}</span>
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
-              {product.stock > 0 ? `${product.stock} disp.` : "Agotado"}
-            </span>
+          <div className="flex flex-col mb-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xl font-bold text-black">${currentPrice.toLocaleString('es-CO')}</span>
+              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
+                {product.stock > 0 ? `${product.stock} disp.` : "Agotado"}
+              </span>
+            </div>
+            {isMayorista && product.precioMayorista && product.precioMayorista > 0 && product.precioMayorista < product.precio && (
+              <span className="text-xs text-gray-400 line-through mt-1">Normal: ${product.precio.toLocaleString('es-CO')}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -157,6 +164,8 @@ interface ProductCatalogProps {
 }
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' }) => {
+  const { user } = useAuth();
+  const isMayorista = user?.tipoCliente === 'Mayorista';
   const [apiProductos, setApiProductos] = useState<Producto[]>([]);
   const [apiCategorias, setApiCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -359,7 +368,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' 
             {categoryProducts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {categoryProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard key={product.id} product={product} isMayorista={isMayorista} />
                 ))}
               </div>
             ) : (
