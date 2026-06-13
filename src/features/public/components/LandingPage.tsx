@@ -54,7 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
       case 'shop': navigate('/shop'); break;
       case 'cart': navigate('/cart'); break;
       case 'checkout': navigate('/checkout'); break;
-      case 'profile': navigate('/profile'); break;
+      case 'profile': navigate(canAccessAdmin() ? '/admin/profile' : '/profile'); break;
       case 'admin': navigate('/admin'); break;
       case 'auth': navigate('/auth'); break;
       case 'pedidos': navigate('/pedidos'); break;

@@ -154,7 +154,7 @@ export function Header({ onMenuToggle, currentView, user, isAuthenticated, canAc
               <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-100 shadow-md">
                 <DropdownMenuLabel className="font-semibold text-gray-900">Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
-                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer hover:bg-gray-50 font-medium">
+                <DropdownMenuItem onClick={() => navigate(canAccessAdmin ? '/admin/profile' : '/profile')} className="cursor-pointer hover:bg-gray-50 font-medium">
                   <User className="mr-2 h-4 w-4" />
                   <span>Mi Perfil</span>
                 </DropdownMenuItem>
