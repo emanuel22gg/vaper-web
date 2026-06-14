@@ -24,10 +24,10 @@ const AppContent: React.FC = () => {
         (user.role.permissions && user.role.permissions.length > 0);
       const isClient = user.role.name === "Cliente" && (!user.role.permissions || user.role.permissions.length === 0);
 
-      // Redirigir al admin si entra a raíz o a auth
-      if (isAdminOrEmployee && (location.pathname === '/' || location.pathname === '/auth')) {
+      // Redirigir al admin si entra a auth
+      if (isAdminOrEmployee && location.pathname === '/auth') {
         navigate('/admin');
-      } else if (isClient && (location.pathname === '/auth')) {
+      } else if (isClient && location.pathname === '/auth') {
         navigate('/shop');
       }
     }

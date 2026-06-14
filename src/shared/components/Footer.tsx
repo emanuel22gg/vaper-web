@@ -1,38 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Download, Smartphone } from 'lucide-react';
+import { Phone, Mail, MapPin, Instagram, Download, Smartphone } from 'lucide-react';
 import logoImage from 'figma:asset/da58514cc4a62145203981edd12b890ba8690130.png';
-import { getCategorias } from '@/shared/services/api';
-import { Categoria } from '@/shared/types';
 
 interface FooterProps {}
 
 export function Footer({}: FooterProps = {}) {
-  const navigate = useNavigate();
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-
-  useEffect(() => {
-    getCategorias()
-      .then(data => setCategorias(data.filter(c => c.estado)))
-      .catch(err => console.error('Error cargando categorías en footer:', err));
-  }, []);
-
-  const handleCategoryClick = (categoriaId: number) => {
-    // Navegar a la página principal
-    navigate('/');
-    // Pequeño delay para que el catálogo se monte antes de disparar el evento
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent('selectCategory', { detail: { categoryId: categoriaId } })
-      );
-      // Scroll al catálogo
-      const catalogo = document.getElementById('catalogo');
-      if (catalogo) {
-        catalogo.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
-  };
-
   return (
     <footer id="footer" className="bg-black text-white relative pt-4">
       {/* Decorative Top Border Glow */}
@@ -40,7 +11,7 @@ export function Footer({}: FooterProps = {}) {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-24 bg-yellow-500/5 blur-[50px] rounded-full pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Logo y descripción */}
           <div className="space-y-4">
             <div className="flex items-center">
@@ -59,9 +30,15 @@ export function Footer({}: FooterProps = {}) {
               Ofrecemos los mejores productos con garantía y envío rápido.
             </p>
             <div className="flex space-x-4">
-              <Facebook className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
-              <Instagram className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
-              <Twitter className="h-5 w-5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
+              <a 
+                href="https://www.instagram.com/vaperonemede9_2?igsh=MWlpNGt3MDAycXQ4eQ==" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-gray-400 hover:text-yellow-500 transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
             </div>
 
             {/* Download App Button */}
@@ -78,34 +55,15 @@ export function Footer({}: FooterProps = {}) {
             </div>
           </div>
 
-          {/* Categorías */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-yellow-500">Categorías</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              {categorias.length > 0 ? (
-                categorias.map(cat => (
-                  <li
-                    key={cat.id}
-                    className="hover:text-white cursor-pointer transition-colors"
-                    onClick={() => handleCategoryClick(cat.id)}
-                  >
-                    {cat.nombreCategoria}
-                  </li>
-                ))
-              ) : (
-                <li className="text-gray-500 italic">Cargando...</li>
-              )}
-            </ul>
-          </div>
-
-
           {/* Contacto */}
           <div className="space-y-4">
             <h3 className="font-semibold text-yellow-500">Contacto</h3>
             <div className="space-y-3 text-sm text-gray-300">
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                <span>+57 (4) 123-4567</span>
+                <a href="tel:+573234190628" className="hover:text-yellow-500 transition-colors">
+                  323 4190628
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -146,3 +104,4 @@ export function Footer({}: FooterProps = {}) {
     </footer>
   );
 }
+
