@@ -565,9 +565,9 @@ export const AbonosIndividuales: React.FC<AbonosIndividualesProps> = ({ pedido, 
           )}
           <div className="px-8 py-6 border-t bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3">
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)} className="min-w-[100px]">Cerrar</Button>
-            <Button className="bg-[rgb(21,93,252)] hover:bg-blue-700 text-white min-w-[150px]" onClick={() => selectedAbono && handleExportarPDF(selectedAbono)}>
+            <Button className="bg-black hover:bg-gray-800 text-white min-w-[150px]" onClick={() => selectedAbono && handleExportarPDF(selectedAbono)}>
               <Download className="h-4 w-4 mr-2" />
-              Descargar Receipt
+              Descargar PDF
             </Button>
           </div>
         </DialogContent>

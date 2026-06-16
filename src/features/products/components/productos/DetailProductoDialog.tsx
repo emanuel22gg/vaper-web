@@ -237,6 +237,19 @@ export const DetailProductoDialog: React.FC<DetailProductoDialogProps> = ({
                         </p>
                       </div>
                     </div>
+                    {producto.precioMayorista ? (
+                      <div className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-xl shadow-sm">
+                        <div className="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                          <DollarSign className="h-6 w-6 text-indigo-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-tight mb-1">Precio Mayorista</p>
+                          <p className="text-2xl font-black text-gray-900 tabular-nums leading-none">
+                            ${producto.precioMayorista.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

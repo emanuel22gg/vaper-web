@@ -602,30 +602,155 @@ export const Devoluciones: React.FC = () => {
     doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
     doc.setFont("helvetica", "bold");
     doc.text("Concepto", margin + 5, y + 7);
-    doc.text("Monto Total Devuelto", margin + 110, y + 7);
 
     y += 10;
     doc.setFont("helvetica", "normal");
 
     // Table Content
     // Split concepto in multiple lines if it's too long
-    const splitConcepto = doc.splitTextToSize(concepto, 100);
+    const splitConcepto = doc.splitTextToSize(concepto, 170);
     doc.text(splitConcepto, margin + 5, y + 7);
-    doc.text(`$${devolucion.montoTotal.toLocaleString()}`, margin + 110, y + 7);
     
     y += (splitConcepto.length * 5) + 10;
     
+    y += 10;
+
+    // --- NUEVA SECCIÓN ---
+    // Parsear reposiciones
+    let reposicionesPdf: { cantidad: number, nombre: string, precioUnitario: number }[] = [];
+    if (desc.includes(" ||| REPOSICION: ")) {
+      let repString = desc.split(" ||| REPOSICION: ")[1];
+      if (repString.includes(" ||| FINANZAS: ")) {
+        repString = repString.split(" ||| FINANZAS: ")[0];
+      }
+      if (repString) {
+        const items = repString.split(", ");
+        reposicionesPdf = items.map(item => {
+          const match = item.match(/(\d+)x\s+(.*)/);
+          if (match) {
+            const qty = parseInt(match[1]);
+            const name = match[2];
+            const prod = productos.find(p => p.nombreProducto === name || (p as any).nombre === name);
+            return { cantidad: qty, nombre: name, precioUnitario: prod?.precio || 0 };
+          }
+          return { cantidad: 1, nombre: item, precioUnitario: 0 };
+        });
+      }
+    }
+
+    const devueltosPdf = detallesDevolucion.filter(det => Number(det.devolucionId) === Number(devolucion.id));
+    const totalDevueltoValorPdf = devolucion.montoTotal || 0;
+    const totalReposicionValorPdf = reposicionesPdf.reduce((acc, r) => acc + (r.precioUnitario * r.cantidad), 0);
+    const diferenciaPdf = totalReposicionValorPdf - totalDevueltoValorPdf;
+
+    // ARTÍCULOS DEVUELTOS (ENTRAN)
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(33, 33, 33);
+    doc.text("ARTÍCULOS DEVUELTOS (ENTRAN)", margin, y);
     y += 5;
+
+    // Table Header Devueltos
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Producto", margin + 5, y + 7);
+    doc.text("Cantidad", margin + 140, y + 7);
+    y += 10;
+
+    // Table Content Devueltos
+    doc.setFont("helvetica", "normal");
+    devueltosPdf.forEach(detalle => {
+      const dVenta = detallesVentas.find(d => Number(d.id) === Number(detalle.detalleVentaPedidoId));
+      const pData = productos.find(p => Number(p.id) === Number(dVenta?.productoId));
+      const nombre = pData?.nombreProducto || `Producto ID #${dVenta?.productoId || "N/A"}`;
+      
+      const splitNombre = doc.splitTextToSize(nombre, 120);
+      doc.text(splitNombre, margin + 5, y + 7);
+      doc.text(detalle.cantidad.toString(), margin + 140, y + 7);
+      y += (splitNombre.length * 5) + 5;
+    });
+
+    if (devueltosPdf.length === 0) {
+      doc.text("Sin artículos", margin + 5, y + 7);
+      y += 10;
+    }
+
+    y += 10;
+
+    // ARTÍCULOS ENTREGADOS (SALEN)
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(33, 33, 33);
+    doc.text("ARTÍCULOS ENTREGADOS (SALEN)", margin, y);
+    y += 5;
+
+    // Table Header Entregados
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Producto", margin + 5, y + 7);
+    doc.text("Cantidad", margin + 140, y + 7);
+    y += 10;
+
+    // Table Content Entregados
+    doc.setFont("helvetica", "normal");
+    reposicionesPdf.forEach(rep => {
+      const splitNombre = doc.splitTextToSize(rep.nombre, 120);
+      doc.text(splitNombre, margin + 5, y + 7);
+      doc.text(rep.cantidad.toString(), margin + 140, y + 7);
+      y += (splitNombre.length * 5) + 5;
+    });
+
+    if (reposicionesPdf.length === 0) {
+      doc.text("Sin artículos", margin + 5, y + 7);
+      y += 10;
+    }
+
+    y += 10;
+
+    // RESUMEN FINANCIERO
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("RESUMEN FINANCIERO", margin, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Total Entregado (A cargo):", margin, y);
+    doc.text(`$${totalReposicionValorPdf.toLocaleString()}`, margin + 60, y);
+    y += 6;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Diferencia Neta:", margin, y);
+    
+    let difText = "";
+    if (diferenciaPdf === 0) {
+      difText = `$0 (Mano a Mano)`;
+    } else if (diferenciaPdf > 0) {
+      difText = `+$${Math.abs(diferenciaPdf).toLocaleString()} (Cobrado al cliente)`;
+    } else {
+      difText = `-$${Math.abs(diferenciaPdf).toLocaleString()} (Saldo a favor cliente)`;
+    }
+    doc.text(difText, margin + 60, y);
+
+    y += 15;
+
+    // Totals (Moved to bottom)
+    doc.setDrawColor(33, 33, 33);
+    doc.setLineWidth(0.5);
     doc.line(margin, y, pageWidth - margin, y);
     y += 10;
 
-    // Totals
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text("TOTAL DEVUELTO:", margin + 80, y);
     doc.text(`$${devolucion.montoTotal.toLocaleString()}`, margin + 130, y);
 
-    y += 30;
+    y += 20;
+
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(`Generado el ${formatDate(new Date())} a las ${new Date().toLocaleTimeString("es-ES")}`, pageWidth / 2, y, { align: "center" });
