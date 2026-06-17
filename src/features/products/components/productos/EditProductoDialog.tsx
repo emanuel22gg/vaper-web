@@ -127,10 +127,7 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
       toast.error("El nombre del producto es obligatorio");
       return false;
     }
-    if (!formData.descripcion.trim()) {
-      toast.error("La descripción del producto es obligatoria");
-      return false;
-    }
+
     if (!formData.categoriaId) {
       toast.error("Debe seleccionar una categoría");
       return false;
@@ -317,14 +314,13 @@ export const EditProductoDialog: React.FC<EditProductoDialogProps> = ({
 
           {/* Descripción */}
           <div className="space-y-2">
-            <Label htmlFor="descripcion">Descripción *</Label>
+            <Label htmlFor="descripcion">Descripción (Opcional)</Label>
             <Textarea
               id="descripcion"
               value={formData.descripcion}
               onChange={(e) => handleInputChange('descripcion', e.target.value)}
               placeholder="Describe las características del producto..."
               rows={3}
-              required
             />
           </div>
 

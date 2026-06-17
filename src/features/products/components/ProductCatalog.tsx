@@ -6,6 +6,7 @@ import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
 import { getProductos, getCategorias, getAllImages } from '@/shared/services/api';
 import { Producto, Categoria } from '@/shared/types';
 
@@ -75,8 +76,14 @@ const ProductCard: React.FC<{ product: Producto, isMayorista: boolean }> = ({ pr
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1">
-      <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden p-4">
+    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 relative">
+      <div 
+        className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden p-4 cursor-pointer"
+        onClick={() => {
+          const detailEvent = new CustomEvent('showProductDetail', { detail: product });
+          window.dispatchEvent(detailEvent);
+        }}
+      >
         {product.imagen ? (
           <ImageWithFallback
             src={product.imagen}
@@ -87,7 +94,6 @@ const ProductCard: React.FC<{ product: Producto, isMayorista: boolean }> = ({ pr
           <Package className="h-10 w-10 text-gray-300 group-hover:text-yellow-500 transition-colors" />
         )}
 
-        {/* El badge de Agotado se movió debajo del nombre */}
       </div>
 
       <div className="p-4 flex-1 flex flex-col">
@@ -95,10 +101,22 @@ const ProductCard: React.FC<{ product: Producto, isMayorista: boolean }> = ({ pr
           <span className="text-[10px] font-bold tracking-wider uppercase text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">{product.categoria?.nombreCategoria || 'Sin Categoría'}</span>
         </div>
         <div style={{ height: "2.8rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} className="mb-1">
-          <h3 className="font-bold text-gray-900 text-base group-hover:text-yellow-600 transition-colors w-full leading-tight" title={product.nombreProducto}>
+          <h3 
+            className="font-bold text-gray-900 text-base group-hover:text-yellow-600 transition-colors w-full leading-tight cursor-pointer" 
+            title={product.nombreProducto}
+            onClick={() => {
+              const detailEvent = new CustomEvent('showProductDetail', { detail: product });
+              window.dispatchEvent(detailEvent);
+            }}
+          >
             {product.nombreProducto}
           </h3>
         </div>
+        {product.descripcion && (
+          <p className="text-gray-500 text-xs line-clamp-2 mb-2 leading-relaxed" title={product.descripcion}>
+            {product.descripcion}
+          </p>
+        )}
         <div className="mt-auto pt-3 border-t border-gray-50">
           <div className="flex flex-col mb-3">
             <div className="flex items-center justify-between">
@@ -143,15 +161,30 @@ const ProductCard: React.FC<{ product: Producto, isMayorista: boolean }> = ({ pr
               </Button>
             </div>
 
-            <Button
-              size="sm"
-              className="w-full text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-4 rounded-xl transition-all shadow-md shadow-yellow-500/20"
-              onClick={handleAddToCart}
-              disabled={product.stock === 0 || maxAvailable <= 0 || quantity === 0}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              {product.stock > 0 && maxAvailable <= 0 ? "En Carrito" : "Agregar"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 text-black bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 font-bold py-4 rounded-xl transition-all shadow-md shadow-yellow-500/20"
+                onClick={handleAddToCart}
+                disabled={product.stock === 0 || maxAvailable <= 0 || quantity === 0}
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">
+                  {product.stock > 0 && maxAvailable <= 0 ? "Límite" : "Agregar"}
+                </span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="hover:bg-gray-50 border-gray-200 py-4 rounded-xl px-3"
+                onClick={() => {
+                  const detailEvent = new CustomEvent('showProductDetail', { detail: product });
+                  window.dispatchEvent(detailEvent);
+                }}
+              >
+                Ver
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -170,6 +203,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' 
   const [apiCategorias, setApiCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all' | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const { cart, addToCart } = useCart();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -219,7 +254,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' 
     };
 
     window.addEventListener('selectCategory', handleCategorySelection);
-    return () => window.removeEventListener('selectCategory', handleCategorySelection);
+    
+    const handleShowDetail = (e: Event) => {
+      const customEvent = e as CustomEvent<Producto>;
+      setSelectedProduct(customEvent.detail);
+    };
+    window.addEventListener('showProductDetail', handleShowDetail);
+    
+    return () => {
+      window.removeEventListener('selectCategory', handleCategorySelection);
+      window.removeEventListener('showProductDetail', handleShowDetail);
+    };
   }, []);
 
   if (isLoading) {
@@ -376,6 +421,87 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ searchTerm = '' 
                 No hay productos disponibles en esta categoría.
               </div>
             )}
+            
+            {/* Dialog de producto detallado */}
+            <Dialog
+              open={!!selectedProduct}
+              onOpenChange={() => setSelectedProduct(null)}
+            >
+              <DialogContent className="sm:max-w-2xl">
+                {selectedProduct && (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {selectedProduct.nombreProducto}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <ImageWithFallback
+                          src={selectedProduct.imagen || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"}
+                          alt={selectedProduct.nombreProducto}
+                          className="w-full h-64 object-cover rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-gray-600 mb-4 text-lg">
+                            {selectedProduct.descripcion}
+                          </p>
+
+                          <div className="flex flex-col mb-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-3xl font-bold text-green-600">
+                                $
+                                {isMayorista && selectedProduct.precioMayorista && selectedProduct.precioMayorista > 0 ? selectedProduct.precioMayorista.toLocaleString() : selectedProduct.precio.toLocaleString()}
+                              </span>
+                            </div>
+                            {isMayorista && selectedProduct.precioMayorista && selectedProduct.precioMayorista > 0 && selectedProduct.precioMayorista < selectedProduct.precio && (
+                              <span className="text-sm text-gray-400 line-through mt-1">Normal: ${selectedProduct.precio.toLocaleString()}</span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm">
+                              <Package className="h-4 w-4 inline mr-1" />
+                              {selectedProduct.stock} disponibles
+                            </p>
+                            <p className="text-sm border p-2 rounded-md inline-block bg-gray-50">
+                              Categoría: <span className="font-semibold">{selectedProduct.categoria?.nombreCategoria || "Sin categoría"}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <DialogFooter>
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          addToCart({
+                            id: selectedProduct.id.toString(),
+                            name: selectedProduct.nombreProducto,
+                            price: isMayorista && selectedProduct.precioMayorista && selectedProduct.precioMayorista > 0 ? selectedProduct.precioMayorista : selectedProduct.precio,
+                            stock: selectedProduct.stock,
+                            image: selectedProduct.imagen || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+                            category: selectedProduct.categoria?.nombreCategoria || 'Sin Categoría',
+                          }, 1);
+                          setSelectedProduct(null);
+                          toast.success(`1 ${selectedProduct.nombreProducto} agregado al carrito`);
+                        }}
+                        disabled={selectedProduct.stock === 0}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {selectedProduct.stock === 0 ? "Producto Agotado" : "Agregar al Carrito"}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+
           </div>
         )}
       </div>

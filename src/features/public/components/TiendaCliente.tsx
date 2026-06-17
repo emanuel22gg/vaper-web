@@ -570,6 +570,12 @@ export const TiendaCliente: React.FC = () => {
                           {product.nombreProducto}
                         </h3>
 
+                        {product.descripcion && (
+                          <p className="text-gray-500 text-xs line-clamp-2 mb-3 leading-relaxed" title={product.descripcion}>
+                            {product.descripcion}
+                          </p>
+                        )}
+
                         <div className="mt-auto pt-3 border-t border-gray-50">
                           <div className="flex flex-col mb-3">
                             <div className="flex items-center justify-between">

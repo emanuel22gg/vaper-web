@@ -73,10 +73,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
       toast.error("El precio del producto debe ser mayor a 0");
       return false;
     }
-    if (!formData.descripcion.trim()) {
-      toast.error("La descripción del producto es obligatoria");
-      return false;
-    }
+
     if (!formData.categoriaId) {
       toast.error("Debe seleccionar una categoría");
       return false;
@@ -343,7 +340,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción *</Label>
+                <Label htmlFor="descripcion">Descripción (Opcional)</Label>
                 <Textarea
                   id="descripcion"
                   value={formData.descripcion}
@@ -351,7 +348,6 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
                   placeholder="Describe las características del producto..."
                   rows={4}
                   className="resize-none"
-                  required
                 />
               </div>
             </TabsContent>
@@ -364,7 +360,7 @@ export const CreateProductoDialog: React.FC<CreateProductoDialogProps> = ({
             <Button 
               type="submit" 
               className="bg-black hover:bg-gray-800 text-white border-none"
-              disabled={isLoading || !formData.nombreProducto || !formData.categoriaId || !formData.precio || parseFloat(formData.precio) <= 0 || !formData.descripcion}
+              disabled={isLoading || !formData.nombreProducto || !formData.categoriaId || !formData.precio || parseFloat(formData.precio) <= 0}
             >
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isLoading ? 'Creando...' : 'Crear Producto'}
