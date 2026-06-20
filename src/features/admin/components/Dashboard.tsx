@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Button } from "@/shared/ui/button";
 import {
@@ -575,68 +575,68 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return hasPermission("Gestionar Usuarios") ? (
           <GestionUsuarios />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "roles":
         return hasPermission("Gestionar Roles") ? (
           <GestionRoles />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "proveedores":
         return hasPermission("Gestionar Proveedores") ||
           hasPermission("Ver Proveedores") ? (
           <Proveedores />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "categorias":
         return hasPermission("Gestionar Categorías") ? (
           <Categorias />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "productos":
         return hasPermission("Gestionar Productos") ? (
           <Productos initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "compras":
         return hasPermission("Gestionar Compras") ? (
           <Compras />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "clientes":
         return hasPermission("Gestionar Clientes") ? (
           <Clientes initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "cotizaciones":
         return hasPermission("Gestionar Cotizaciones") ? (
           <Cotizaciones />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "pedidos":
         return hasPermission("Gestionar Pedidos") ? (
           <Pedidos initialSearchTerm={navigationPayload?.toString() || ''} />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "ventas":
         return hasPermission("Gestionar Ventas") ? (
           <Ventas />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "devoluciones":
         return hasPermission("Gestionar Devoluciones") ? (
           <Devoluciones />
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
       case "cartera":
         return hasPermission("Gestionar Pedidos") ? (
@@ -649,7 +649,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Cartera onVerAbonos={(p) => setSubViewPedido(p)} initialSearchTerm={navigationPayload?.toString() || ''} />
           )
         ) : (
-          <div>Sin permisos</div>
+          <Navigate to="/" replace />
         );
 
       case "notificaciones":

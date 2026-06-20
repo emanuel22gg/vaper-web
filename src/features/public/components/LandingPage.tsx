@@ -134,16 +134,12 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                 activeAdminView={activeAdminView}
               />
             ) : (
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-red-600 mb-4">Acceso Denegado</h2>
-                  <p className="text-gray-600">No tienes permisos para acceder al panel administrativo.</p>
-                </div>
-              </div>
+              <Navigate to="/" replace />
             )
           } />
           <Route path="/auth" element={<AuthForm onSuccess={handleAuthSuccess} />} />
           <Route path="/pedidos" element={<PedidosCliente />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     );

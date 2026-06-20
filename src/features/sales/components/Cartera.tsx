@@ -16,6 +16,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/shared/ui/pagination';
 import { Badge } from '@/shared/ui/badge';
 import { getVentaPedidos, getUsuarios, getAbonos } from '@/shared/services/api';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
@@ -50,6 +58,10 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState(initialSearchTerm);
     const [hasSearched, setHasSearched] = useState(!!initialSearchTerm);
+
+    // Paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
 
     useEffect(() => {
         fetchData();
@@ -192,6 +204,7 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setHasSearched(true);
+        setCurrentPage(1); // Reiniciar página al buscar
         
         const search = searchQuery.trim();
         if (search) {
@@ -203,6 +216,16 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 }
             }
         }
+    };
+
+    // Cálculos de paginación
+    const totalPages = Math.ceil(processedResults.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = processedResults.slice(startIndex, endIndex);
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
     };
 
     const getStatusBadge = (alerta: string, dias: number) => {
@@ -274,51 +297,34 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                 </Card>
             </div>
 
-            {/* Buscador Simplificado */}
-            <div className="py-4">
-                <Card className="max-w-4xl mx-auto border-2 border-gray-100 shadow-md overflow-hidden">
-                    <div className="bg-gray-800 px-6 py-4 border-b border-gray-700">
-                        <p className="text-white text-sm font-semibold">Ingresa el nombre del cliente, cédula o número de pedido para ver el estado de cuenta</p>
-                    </div>
-                    <CardContent className="p-6">
-                        <form onSubmit={handleSearch} className="flex gap-4">
-                            <div className="relative flex-1">
+            {/* Resultados de Cartera */}
+            <div className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div>
+                                <CardTitle>{searchQuery ? "Resultados de la Búsqueda" : "Deudas Activas"}</CardTitle>
+                                <CardDescription>
+                                    {searchQuery 
+                                        ? `Se encontraron ${processedResults.length} registros para "${searchQuery}"`
+                                        : `Mostrando ${processedResults.length} clientes con deudas activas.`}
+                                </CardDescription>
+                            </div>
+                            <div className="w-full md:w-auto relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                                 <Input
-                                    placeholder="Ej: Juan Perez, 1085233... o Pedido #125"
-                                    className="h-14 text-lg border-2 border-gray-100 focus:border-gray-500 rounded-xl bg-gray-50/50"
+                                    placeholder="Buscar por cliente, doc o pedido..."
+                                    className="pl-10 w-full md:w-80 border-gray-200"
                                     value={searchQuery}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
+                                        setCurrentPage(1);
                                         if (e.target.value === '') setHasSearched(false);
                                     }}
                                 />
                             </div>
-                            <Button 
-                                type="submit" 
-                                className="h-14 px-8 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-bold text-lg transition-all active:scale-95"
-                            >
-                                Buscar
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Resultados de Cartera */}
-            <div className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>{searchQuery ? "Resultados de la Búsqueda" : "Deudas Activas"}</CardTitle>
-                                    <CardDescription>
-                                        {searchQuery 
-                                            ? `Se encontraron ${processedResults.length} registros para "${searchQuery}"`
-                                            : `Mostrando ${processedResults.length} clientes con deudas activas.`}
-                                    </CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
+                        </div>
+                    </CardHeader>
                         <CardContent>
                             <div className="rounded-xl border overflow-hidden">
                                 <Table>
@@ -339,14 +345,14 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                                                     <LoadingScreen message="Cargando datos de cartera..." />
                                                 </TableCell>
                                             </TableRow>
-                                        ) : processedResults.length === 0 ? (
+                                        ) : currentItems.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={6} className="text-center py-12 text-gray-500 font-medium">
                                                     No se encontraron deudas activas con esos términos.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            processedResults.map((item) => (
+                                            currentItems.map((item) => (
                                                 <TableRow key={item.pedidoId} className="hover:bg-gray-50/50 transition-colors">
                                                     <TableCell>
                                                         <div className="flex flex-col">
@@ -408,6 +414,59 @@ export const Cartera: React.FC<CarteraProps> = ({ onVerAbonos, initialSearchTerm
                                         )}
                                     </TableBody>
                                 </Table>
+                            </div>
+
+                            {/* Controles de Paginación */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-center mt-6">
+                                    <Pagination>
+                                        <PaginationContent>
+                                            <PaginationItem>
+                                                <PaginationPrevious 
+                                                    onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                                                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                                >
+                                                    Anterior
+                                                </PaginationPrevious>
+                                            </PaginationItem>
+                                            
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                .filter(p => p === 1 || p === totalPages || Math.abs(currentPage - p) <= 1)
+                                                .map((page, index, array) => (
+                                                    <React.Fragment key={page}>
+                                                        {index > 0 && array[index - 1] !== page - 1 && (
+                                                            <PaginationItem>
+                                                                <span className="px-3 py-2 text-gray-400">...</span>
+                                                            </PaginationItem>
+                                                        )}
+                                                        <PaginationItem>
+                                                            <PaginationLink
+                                                                onClick={() => handlePageChange(page)}
+                                                                isActive={currentPage === page}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                {page}
+                                                            </PaginationLink>
+                                                        </PaginationItem>
+                                                    </React.Fragment>
+                                                ))
+                                            }
+
+                                            <PaginationItem>
+                                                <PaginationNext 
+                                                    onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                                                    className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                                >
+                                                    Siguiente
+                                                </PaginationNext>
+                                            </PaginationItem>
+                                        </PaginationContent>
+                                    </Pagination>
+                                </div>
+                            )}
+                            
+                            <div className="text-sm text-gray-500 text-center mt-3">
+                                Mostrando {processedResults.length > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, processedResults.length)} de {processedResults.length} registros
                             </div>
                         </CardContent>
                     </Card>

@@ -261,7 +261,6 @@ export const GestionUsuarios: React.FC = () => {
   const normalizeTipoDocumento = (tipo?: string) => {
     if (!tipo) return 'C.C';
     const normalized = tipo.toUpperCase().replace(/\./g, '');
-    if (normalized === 'TI') return 'T.I';
     if (normalized === 'CC') return 'C.C';
     if (normalized === 'CE') return 'C.E';
     if (normalized === 'NIT') return 'NIT';
@@ -552,7 +551,6 @@ export const GestionUsuarios: React.FC = () => {
                                 <SelectValue placeholder="Seleccionar tipo" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
                                 <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
                                 <SelectItem value="C.E">Cédula de Extranjería (C.E)</SelectItem>
                                 <SelectItem value="NIT">NIT</SelectItem>
@@ -944,7 +942,6 @@ export const GestionUsuarios: React.FC = () => {
                         <SelectValue placeholder="Seleccionar tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="T.I">Tarjeta de Identidad (T.I)</SelectItem>
                         <SelectItem value="C.C">Cédula de Ciudadanía (C.C)</SelectItem>
                         <SelectItem value="C.E">Cédula de Extranjería (C.E)</SelectItem>
                         <SelectItem value="NIT">NIT</SelectItem>
@@ -1171,8 +1168,7 @@ export const GestionUsuarios: React.FC = () => {
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-gray-500">Tipo de Documento</Label>
                         <p className="text-sm font-medium text-gray-900">
-                          {selectedUser.tipoDocumento === 'T.I' ? 'Tarjeta de Identidad (T.I)' :
-                            selectedUser.tipoDocumento === 'C.C' || selectedUser.tipoDocumento === 'CC' ? 'Cédula de Ciudadanía (C.C)' :
+                          {selectedUser.tipoDocumento === 'C.C' || selectedUser.tipoDocumento === 'CC' ? 'Cédula de Ciudadanía (C.C)' :
                             selectedUser.tipoDocumento === 'C.E' || selectedUser.tipoDocumento === 'CE' ? 'Cédula de Extranjería (C.E)' :
                             selectedUser.tipoDocumento === 'NIT' ? 'NIT' :
                             selectedUser.tipoDocumento === 'P.P' || selectedUser.tipoDocumento === 'PP' ? 'Pasaporte (P.P)' :

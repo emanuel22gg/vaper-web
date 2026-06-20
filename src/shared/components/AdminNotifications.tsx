@@ -164,17 +164,16 @@ export function AdminNotifications({}: AdminNotificationsProps = {}) {
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
-      className="relative text-gray-500 hover:text-blue-600 transition-colors"
+      variant="outline"
+      className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 transition-all rounded-full h-9 px-3 flex items-center justify-center gap-2 shadow-sm"
       onClick={handleNavigateToCenter}
       title="Centro de Notificaciones"
     >
-      <Bell className="h-6 w-6" />
+      <Bell className="h-4 w-4" />
       {totalAlerts > 0 && (
-        <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-full border-2 border-white shadow-sm">
+        <span className="text-red-500 text-sm font-bold">
           {totalAlerts > 99 ? '99+' : totalAlerts}
-        </Badge>
+        </span>
       )}
     </Button>
   );

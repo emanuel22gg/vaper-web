@@ -361,7 +361,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onCancel 
                 </SelectTrigger>
                 <SelectContent className="bg-gray-900 border-gray-700 text-white rounded-xl">
                   <SelectItem value="CC" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">CC - Cédula de Ciudadanía</SelectItem>
-                  <SelectItem value="TI" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">TI - Tarjeta de Identidad</SelectItem>
+                  <SelectItem value="CE" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">CE - Cédula de Extranjería</SelectItem>
+                  <SelectItem value="PP" className="text-sm text-white data-[highlighted]:bg-yellow-500/20 data-[highlighted]:text-yellow-400 cursor-pointer">PP - Pasaporte</SelectItem>
                 </SelectContent>
               </Select>
             </div>

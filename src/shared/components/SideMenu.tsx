@@ -138,9 +138,9 @@ export function SideMenu({
                   onClick={() => handleAdminNavigation('dashboard')}
                   title="Dashboard"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <BarChart3 className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
-                    {isOpen && <span className="truncate">Dashboard</span>}
+                    {isOpen && <span className="truncate"> Dashboard</span>}
                   </div>
                 </Button>
               )}
@@ -153,7 +153,7 @@ export function SideMenu({
                   onClick={() => handleAdminNavigation('usuarios')}
                   title="Usuarios"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <Users className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Usuarios</span>}
                   </div>
@@ -168,7 +168,7 @@ export function SideMenu({
                   onClick={() => handleAdminNavigation('roles')}
                   title="Roles y Permisos"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <Shield className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Roles</span>}
                   </div>
@@ -186,7 +186,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('proveedores')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Building className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Proveedores</span>
                       </div>
@@ -199,7 +199,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('categorias')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Tag className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Categorías</span>
                       </div>
@@ -212,7 +212,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('productos')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Package2 className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Productos</span>
                       </div>
@@ -225,7 +225,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('compras')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <ClipboardList className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Compras</span>
                       </div>
@@ -241,7 +241,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('clientes')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <UserCheck className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Clientes</span>
                       </div>
@@ -254,7 +254,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('cotizaciones')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <FileText className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Cotizaciones</span>
                       </div>
@@ -267,7 +267,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('pedidos')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <ShoppingBag className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Pedidos</span>
                       </div>
@@ -280,7 +280,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('ventas')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <DollarSign className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Ventas</span>
                       </div>
@@ -293,7 +293,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('devoluciones')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <RotateCcw className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Devoluciones</span>
                       </div>
@@ -306,7 +306,7 @@ export function SideMenu({
                       style={{ fontSize: '12.5px' }}
                       onClick={() => handleAdminNavigation('cartera')}
                     >
-                      <div className="flex items-center min-w-0 flex-1">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <CreditCard className="h-4 w-4 mr-2.5 flex-shrink-0" />
                         <span className="truncate">Cartera</span>
                       </div>
@@ -376,7 +376,7 @@ export function SideMenu({
                 onClick={() => handleNavigation('home')}
                 title="Tienda"
               >
-                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                   <Home className={`${isOpen ? 'h-3.5 w-3.5 mr-2 flex-shrink-0' : 'h-6 w-6'}`} />
                   {isOpen && <span className="truncate">Tienda</span>}
                 </div>
@@ -392,7 +392,7 @@ export function SideMenu({
                 onClick={() => handleNavigation('home')}
                 title="Inicio"
               >
-                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                   <Home className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                   {isOpen && <span className="truncate">Inicio</span>}
                 </div>
@@ -405,7 +405,7 @@ export function SideMenu({
                 onClick={() => handleNavigation('shop')}
                 title="Tienda"
               >
-                <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                   <ShoppingCart className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                   {isOpen && <span className="truncate">Tienda</span>}
                 </div>
@@ -419,7 +419,7 @@ export function SideMenu({
                   onClick={() => handleNavigation('profile')}
                   title="Mi Perfil"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <User className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Mi Perfil</span>}
                   </div>
@@ -434,7 +434,7 @@ export function SideMenu({
                   onClick={() => handleNavigation('pedidos')}
                   title="Mis Pedidos"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <Package className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate">Mis Pedidos</span>}
                   </div>
@@ -449,7 +449,7 @@ export function SideMenu({
                   onClick={() => handleNavigation('admin')}
                   title="Administración"
                 >
-                  <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+                  <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
                     <Settings className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
                     {isOpen && <span className="truncate font-semibold">Admin</span>}
                   </div>
@@ -484,7 +484,7 @@ export function SideMenu({
             onClick={handleLogout}
             title="Cerrar Sesión"
           >
-            <div className={`flex items-center min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
+            <div className={`flex items-center gap-3 min-w-0 ${isOpen ? 'flex-1' : 'justify-center w-full'}`}>
               <LogOut className={`${isOpen ? 'h-4 w-4 mr-2.5 flex-shrink-0' : 'h-6 w-6'}`} />
               {isOpen && <span className="truncate">Cerrar Sesión</span>}
             </div>

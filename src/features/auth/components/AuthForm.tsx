@@ -68,22 +68,27 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
       onSuccess?.();
     } catch (err: any) {
       console.error('Error en handleLogin:', err);
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
+      if (err.message === 'UserNotFound') {
+        setError('Usuario no encontrado');
+        // No sumamos intentos fallidos porque el usuario no existe
+      } else if (err.message === 'InvalidCredentials') {
+        const newAttempts = failedAttempts + 1;
+        setFailedAttempts(newAttempts);
 
-      if (newAttempts >= 3) {
-        setLockoutTime(30);
-        setError('Demasiados intentos fallidos. Cuenta bloqueada temporalmente.');
-      } else {
-        if (err.message === 'UserDeactivated') {
-          setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
-        } else if (err.message === 'UserPendingApproval') {
-          setError('Tu cuenta aún no ha sido aprobada. Estamos verificando tu documento.');
-        } else if (err.message === 'RoleDeactivated') {
-          setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
+        if (newAttempts >= 3) {
+          setLockoutTime(30);
+          setError('Demasiados intentos fallidos. Cuenta bloqueada temporalmente.');
         } else {
           setError(`Credenciales incorrectas. Te quedan ${3 - newAttempts} intento(s).`);
         }
+      } else if (err.message === 'UserDeactivated') {
+        setError('Tu cuenta ha sido desactivada. Por favor, contacta al administrador.');
+      } else if (err.message === 'UserPendingApproval') {
+        setError('Tu cuenta aún no ha sido aprobada. Estamos verificando tu documento.');
+      } else if (err.message === 'RoleDeactivated') {
+        setError('Tu rol asignado ha sido desactivado. Por favor, contacta al administrador.');
+      } else {
+        setError('Error al iniciar sesión. Intenta nuevamente.');
       }
     } finally {
       setIsLoading(false);
