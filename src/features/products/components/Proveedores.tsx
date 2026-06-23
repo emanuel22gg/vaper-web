@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect } from "react";
 import { Button } from "@/shared/ui/button";
 import {
   Card,
@@ -255,6 +255,12 @@ export const Proveedores: React.FC = () => {
         });
         return;
       }
+      if (newProveedor.cedula && newProveedor.cedula.length > 15) {
+        toast.error("Validación", {
+          description: "La cédula no puede exceder los 15 caracteres.",
+        });
+        return;
+      }
     } else {
       if (
         !newProveedor.razonSocial ||
@@ -264,6 +270,12 @@ export const Proveedores: React.FC = () => {
         toast.error("Campos requeridos", {
           description:
             "Por favor complete razón social, NIT y representante legal.",
+        });
+        return;
+      }
+      if (newProveedor.nit && newProveedor.nit.length > 15) {
+        toast.error("Validación", {
+          description: "El NIT no puede exceder los 15 caracteres.",
         });
         return;
       }
@@ -354,10 +366,22 @@ export const Proveedores: React.FC = () => {
       toast.success("Proveedor creado", {
         description: `${nombreCompleto} ha sido registrado exitosamente.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al crear proveedor:", error);
-      toast.error("Error", {
-        description: "No se pudo crear el proveedor. Verifique que los datos sean correctos.",
+      setIsConfirmDialogOpen(false);
+      let errorMessage = "No se pudo crear el proveedor. Verifique que los datos sean correctos.";
+      
+      if (error.response?.data?.errors) {
+        const firstErrorKey = Object.keys(error.response.data.errors)[0];
+        errorMessage = error.response.data.errors[firstErrorKey][0];
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data;
+      }
+
+      toast.error("Error de validación", {
+        description: errorMessage,
       });
     }
   };
@@ -408,10 +432,22 @@ export const Proveedores: React.FC = () => {
           description:
             "La información del proveedor ha sido actualizada correctamente.",
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error al actualizar proveedor:", error);
-        toast.error("Error", {
-          description: "No se pudo actualizar el proveedor.",
+        setIsEditDialogOpen(false);
+        let errorMessage = "No se pudo actualizar el proveedor.";
+        
+        if (error.response?.data?.errors) {
+          const firstErrorKey = Object.keys(error.response.data.errors)[0];
+          errorMessage = error.response.data.errors[firstErrorKey][0];
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error.response?.data === 'string') {
+          errorMessage = error.response.data;
+        }
+
+        toast.error("Error de validación", {
+          description: errorMessage,
         });
       }
     }

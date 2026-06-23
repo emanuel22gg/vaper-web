@@ -9,23 +9,24 @@ import * as apiService from '@/shared/services/api';
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  // Cargar usuario del localStorage al iniciar
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      // Convertir fechas de string a Date si es necesario
-      if (parsedUser.createdAt && typeof parsedUser.createdAt === 'string') {
-        parsedUser.createdAt = new Date(parsedUser.createdAt);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser.createdAt && typeof parsedUser.createdAt === 'string') {
+          parsedUser.createdAt = new Date(parsedUser.createdAt);
+        }
+        if (parsedUser.lastLogin && typeof parsedUser.lastLogin === 'string') {
+          parsedUser.lastLogin = new Date(parsedUser.lastLogin);
+        }
+        return parsedUser;
       }
-      if (parsedUser.lastLogin && typeof parsedUser.lastLogin === 'string') {
-        parsedUser.lastLogin = new Date(parsedUser.lastLogin);
-      }
-      setUser(parsedUser);
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
     }
-  }, []);
+    return null;
+  });
 
   const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
     try {

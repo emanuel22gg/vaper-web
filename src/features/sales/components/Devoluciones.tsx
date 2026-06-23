@@ -148,6 +148,7 @@ export const Devoluciones: React.FC = () => {
 
   const [busquedaReposicion, setBusquedaReposicion] = useState("");
   const [loadingProductosReposicion, setLoadingProductosReposicion] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [saleValidity, setSaleValidity] = useState<{ isValid: boolean; message: string; daysLeft?: number } | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -296,12 +297,13 @@ export const Devoluciones: React.FC = () => {
         setVentaEncontrada(vendaConDetalles);
         setFormData(prev => ({ ...prev, ventaPedidoId: ventaId }));
 
-        // Calcular vigencia real (ahora usando el nuevo campo)
-        if (venda.fechaCreacion) {
-          const fechaVenta = new Date(venda.fechaCreacion);
+        // Calcular vigencia real (reinicia al actualizar fechaEntrega)
+        const fechaParaGarantia = venda.fechaEntrega ? venda.fechaEntrega : venda.fechaCreacion;
+        if (fechaParaGarantia) {
+          const fechaVenta = new Date(fechaParaGarantia);
           const hoy = new Date();
           // Dejar la devolución fija en 1 mes por acuerdo con el cliente
-          const mesesVigencia = 1;
+          const mesesVigencia = venda.vigenciaDevolucion || 1;
 
           const fechaLimite = new Date(fechaVenta);
           fechaLimite.setMonth(fechaLimite.getMonth() + mesesVigencia);
@@ -356,6 +358,7 @@ export const Devoluciones: React.FC = () => {
 
   const handleGuardarDevolucion = async () => {
     if (!ventaEncontrada) return;
+    setIsSubmitting(true);
     try {
       const totalDevuelto = formData.productosSeleccionados.reduce((acc, p) => {
         const prod = productos.find(pr => pr.id === p.productoId);
@@ -482,7 +485,7 @@ export const Devoluciones: React.FC = () => {
         usuarioId: ventaEncontrada.usuarioId,
         estadoId: ventaEncontrada.estadoId,
         fechaCreacion: ventaEncontrada.fechaCreacion,
-        fechaEntrega: ventaEncontrada.fechaEntrega,
+        fechaEntrega: new Date().toISOString(), // Reinicia la garantía al entregar el nuevo producto
         metodoPago: ventaEncontrada.metodoPago || "Transferencia",
         direccionEntrega: ventaEncontrada.direccionEntrega || "Venta Presencial",
         ciudadEntrega: ventaEncontrada.ciudadEntrega || "Local",
@@ -507,6 +510,8 @@ export const Devoluciones: React.FC = () => {
     } catch (error) {
       console.error(error);
       toast.error("Error al procesar la devolución");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1768,9 +1773,14 @@ export const Devoluciones: React.FC = () => {
                 <AlertDialogCancel className="rounded-xl font-bold text-xs h-11 flex-1 border-slate-200">Revisar</AlertDialogCancel>
                 <AlertDialogAction 
                   className="rounded-xl font-black text-xs h-11 flex-1 bg-black hover:bg-slate-800"
-                  onClick={handleGuardarDevolucion}
+                  onClick={(e) => {
+                    e.preventDefault(); // Evitar comportamientos por defecto del dialog si los hubiera
+                    handleGuardarDevolucion();
+                  }}
+                  disabled={isSubmitting}
                 >
-                  Confirmar
+                  {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {isSubmitting ? "Procesando..." : "Confirmar"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
